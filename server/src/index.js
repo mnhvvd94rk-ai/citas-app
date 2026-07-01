@@ -7,6 +7,7 @@ import authRouter from './routes/authRoutes.js'
 import disponibilidadRouter from './routes/disponibilidadRoutes.js'
 import citaRouter from './routes/citaRoutes.js'
 import pacienteRouter from './routes/pacienteRoutes.js'
+import notaRouter from './routes/notaRoutes.js'
 import { runDailySummary } from './jobs/dailySummary.js'
 
 const app = express()
@@ -22,6 +23,7 @@ app.use('/auth', authRouter)
 app.use('/disponibilidad', disponibilidadRouter)
 app.use('/citas', citaRouter)
 app.use('/pacientes', pacienteRouter)
+app.use('/notas', notaRouter)
 
 app.get('/', (req, res) => {
   res.json({ message: 'Citas App API — hola mundo' })

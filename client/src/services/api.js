@@ -113,9 +113,9 @@ export const disponibilidadApi = {
 // ── Pacientes / notas ────────────────────────────────────────────────────────
 export const pacientesApi = {
   listar: () => request('/pacientes'),
-  notas: (pacienteId) => request(`/pacientes/${pacienteId}/notas`),
+  notas: (pacienteId) => request(`/notas/${pacienteId}`),
   agregarNota: (pacienteId, texto) =>
-    request(`/pacientes/${pacienteId}/notas`, { method: 'POST', body: { texto } }),
+    request('/notas', { method: 'POST', body: { pacienteId, texto } }),
 }
 
 export { BASE_URL }
