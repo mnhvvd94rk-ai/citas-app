@@ -1,0 +1,142 @@
+// Prisma schema — Citas App
+// Basado en CONTEXT.md secciones 4 (modelo de datos) y 5 (reglas de negocio).
+// Docs: https://pris.ly/d/prisma-schema
+//
+// ─────────────────────────────────────────────────────────────────────────
+// DECISIONES DE DISEÑO (documentadas según pedido):
+//
+// 1. PROVIDER = postgresql (producción, p.ej. Supabase). El proyecto se
+//    desarrolló inicialmente sobre SQLite, lo que dejó dos decisiones que se
+//    MANTIENEN tal cual para no romper la lógica ya construida:
+//      a) Los "enum" del CONTEXT.md se modelan como `String` con @default y
+//         la lista de valores válidos documentada junto al campo; la
+//         validación se hace en la capa de servicios. (Ahora que el motor es
+//         Postgres, podrían convertirse a enums nativos en una migración
+//         futura, pero NO se hace todavía.)
+//      b) `fecha` es `DateTime` (no hay tipo `Date` puro en el modelado
+//         actual). Postgres lo soporta sin cambios; opcionalmente migrable a
+//         @db.Date más adelante.
+//
+// 2. IDs = Int autoincrement. Criterio: simplicidad en desarrollo. Se puede
+//    cambiar a uuid (String @default(uuid())) sin afectar la lógica.
+//
+// 3. horaInicio / horaFin = String "HH:mm". Criterio: el día ya lo aporta
+//    `fecha`; guardar la hora como "HH:mm" mantiene la aritmética de slots
+//    (slotEngine, bloques de 45 min) simple y libre de zonas horarias.
+//
+// 4. Cita NO tiene FK a Disponibilidad. Criterio: los slots de 45 min son
+//    derivados/calculados desde los rangos de Disponibilidad por el
+//    slotEngine, no filas persistidas; además una Cita puede abarcar 2 slots
+//    consecutivos. Ligarla a una sola fila de Disponibilidad sería ambiguo.
+//    La Cita guarda fecha/horaInicio/horaFin directamente y la validación
+//    contra la disponibilidad se hace en servicios. Por eso Disponibilidad
+//    tampoco expone una relación a Cita.
+//
+// 5. Notificacion.destinatarioId = Int SIN FK. Criterio: el destinatario
+//    puede ser Usuario(paciente) o Medico; una FK estricta no puede apuntar
+//    a dos tablas. `tipoDestinatario` (PACIENTE | MEDICO) desambigua a qué
+//    tabla pertenece el id. La integridad se garantiza en la capa de app.
+// ─────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Paciente. estado: NUEVO | CONTINUIDAD (ver CONTEXT.md §5.4).
+model Usuario {
+  id                 Int            @id @default(autoincrement())
+  nombre             String
+  apellido           String
+  documentoIdentidad String         @unique
+  fotoIdentidadUrl   String?
+  firmaUrl           String?
+  telefono           String
+  correo             String         @unique
+  passwordHash       String
+  estado             String         @default("NUEVO") // NUEVO | CONTINUIDAD
+  fechaRegistro      DateTime       @default(now())
+
+  citas              Cita[]
+  notas              NotaPaciente[]
+}
+
+/// Gestor / médico.
+model Medico {
+  id               Int              @id @default(autoincrement())
+  nombre           String
+  especialidad     String
+  correo           String           @unique
+  passwordHash     String
+
+  disponibilidades Disponibilidad[]
+  citas            Cita[]
+  notas            NotaPaciente[]
+}
+
+/// Rango de disponibilidad de un médico en un día. El slotEngine lo trocea
+/// en bloques de 45 min consecutivos sin huecos (CONTEXT.md §5.1).
+model Disponibilidad {
+  id         Int      @id @default(autoincrement())
+  medico     Medico   @relation(fields: [medicoId], references: [id])
+  medicoId   Int
+  fecha      DateTime // se usa solo la parte de fecha (ver decisión §1.b)
+  horaInicio String   // "HH:mm"
+  horaFin    String   // "HH:mm"
+
+  @@index([medicoId, fecha])
+}
+
+/// Cita reservada. estado: PENDIENTE | CONFIRMADA | ANULADA | COMPLETADA.
+model Cita {
+  id             Int      @id @default(autoincrement())
+  paciente       Usuario  @relation(fields: [pacienteId], references: [id])
+  pacienteId     Int
+  medico         Medico   @relation(fields: [medicoId], references: [id])
+  medicoId       Int
+  fecha          DateTime // se usa solo la parte de fecha (ver decisión §1.b)
+  horaInicio     String   // "HH:mm"
+  horaFin        String   // "HH:mm"
+  numeroSlots    Int      @default(1) // 1 o 2 (CONTEXT.md §5.2 / §5.3)
+  estado         String   @default("PENDIENTE") // PENDIENTE | CONFIRMADA | ANULADA | COMPLETADA
+  motivoConsulta String?  // solo si el paciente es NUEVO
+  notaAnulacion  String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([medicoId, fecha])
+  @@index([pacienteId])
+}
+
+/// Nota libre del médico sobre un paciente. Historial abierto, no atado a una
+/// cita concreta (CONTEXT.md §5.7). `texto` se almacena como TEXT en SQLite.
+model NotaPaciente {
+  id         Int      @id @default(autoincrement())
+  paciente   Usuario  @relation(fields: [pacienteId], references: [id])
+  pacienteId Int
+  medico     Medico   @relation(fields: [medicoId], references: [id])
+  medicoId   Int
+  texto      String
+  fecha      DateTime @default(now())
+
+  @@index([pacienteId])
+}
+
+/// Registro de notificación enviada/encolada. destinatarioId sin FK (ver §5).
+model Notificacion {
+  id               Int       @id @default(autoincrement())
+  destinatarioId   Int       // sin FK: id de Usuario o Medico según tipoDestinatario
+  tipoDestinatario String    // PACIENTE | MEDICO
+  tipo             String    // ANULACION | RESUMEN_DIARIO
+  canal            String    // EMAIL | SMS | PUSH
+  estadoEnvio      String    @default("PENDIENTE") // PENDIENTE | ENVIADO | FALLIDO
+  fechaEnvio       DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([destinatarioId, tipoDestinatario])
+}
