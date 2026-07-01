@@ -1,11 +1,26 @@
+@import 'tailwindcss';
+
+/* Paleta: teal-600 (#0d9488) como color principal, consistente con el
+   theme_color del manifest. Se usa la paleta `teal` nativa de Tailwind. */
+
 :root {
   color-scheme: light;
 }
 
-* {
-  box-sizing: border-box;
+html,
+body,
+#root {
+  min-height: 100%;
 }
 
 body {
   margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f8fafc; /* slate-50 */
+  color: #0f172a; /* slate-900 */
+}
+
+/* Evita el resaltado azul al tocar botones en móvil. */
+button {
+  -webkit-tap-highlight-color: transparent;
 }

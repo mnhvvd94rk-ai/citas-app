@@ -1,21 +1,65 @@
-function App() {
+import { Routes, Route, Navigate } from 'react-router-dom'
+import ProtectedRoute from './components/ProtectedRoute.jsx'
+import GestorLayout from './components/GestorLayout.jsx'
+
+import Landing from './views/Landing.jsx'
+import RegistroPaciente from './views/RegistroPaciente.jsx'
+import LoginPaciente from './views/LoginPaciente.jsx'
+import LoginMedico from './views/LoginMedico.jsx'
+
+import MisCitas from './views/paciente/MisCitas.jsx'
+import NuevaCita from './views/paciente/NuevaCita.jsx'
+
+import Agenda from './views/gestor/Agenda.jsx'
+import Disponibilidad from './views/gestor/Disponibilidad.jsx'
+import Pacientes from './views/gestor/Pacientes.jsx'
+import CitasPendientes from './views/gestor/CitasPendientes.jsx'
+
+export default function App() {
   return (
-    <main
-      style={{
-        fontFamily: 'system-ui, sans-serif',
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '0.5rem',
-        color: '#134e4a',
-      }}
-    >
-      <h1 style={{ color: '#0d9488' }}>Citas App 🩺</h1>
-      <p>Hola mundo — client (React + Vite + PWA) funcionando.</p>
-    </main>
+    <Routes>
+      {/* Públicas */}
+      <Route path="/" element={<Landing />} />
+      <Route path="/registro-paciente" element={<RegistroPaciente />} />
+      <Route path="/login-paciente" element={<LoginPaciente />} />
+      <Route path="/login-medico" element={<LoginMedico />} />
+
+      {/* Paciente */}
+      <Route
+        path="/paciente/citas"
+        element={
+          <ProtectedRoute rol="PACIENTE">
+            <MisCitas />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/paciente/nueva-cita"
+        element={
+          <ProtectedRoute rol="PACIENTE">
+            <NuevaCita />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Gestor (layout con pestañas) */}
+      <Route
+        path="/gestor"
+        element={
+          <ProtectedRoute rol="MEDICO">
+            <GestorLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="agenda" replace />} />
+        <Route path="agenda" element={<Agenda />} />
+        <Route path="citas-pendientes" element={<CitasPendientes />} />
+        <Route path="disponibilidad" element={<Disponibilidad />} />
+        <Route path="pacientes" element={<Pacientes />} />
+      </Route>
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
-
-export default App
