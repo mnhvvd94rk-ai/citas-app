@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { citasApi } from '../../services/api.js'
+import { citasApi, medicosApi } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 import Navbar from '../../components/Navbar.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import { hoyISO, formatFechaLarga } from '../../lib/format.js'
-
-const MEDICO_ID = 1 // por ahora solo hay un profesional
 
 const slotKey = (s) => `${s.horaInicio}-${s.horaFin}`
 const consecutivos = (a, b) => a.horaFin === b.horaInicio || b.horaFin === a.horaInicio
@@ -18,6 +16,11 @@ export default function NuevaCita() {
   const { user } = useAuth()
   const { t } = useLanguage()
   const esNuevo = user?.estado === 'NUEVO'
+
+  // Agenda personal: hay un único profesional. Se resuelve desde el backend.
+  const [medico, setMedico] = useState(null)
+  const [cargandoMedico, setCargandoMedico] = useState(true)
+  const [errorMedico, setErrorMedico] = useState(null)
 
   const [fecha, setFecha] = useState(hoyISO())
   const [motivo, setMotivo] = useState('')
@@ -30,12 +33,28 @@ export default function NuevaCita() {
   const [errorReserva, setErrorReserva] = useState(null)
   const [exito, setExito] = useState(null)
 
-  async function cargarSlots(f) {
+  async function cargarMedico() {
+    setCargandoMedico(true)
+    setErrorMedico(null)
+    try {
+      setMedico(await medicosApi.primero())
+    } catch (err) {
+      setErrorMedico(err)
+    } finally {
+      setCargandoMedico(false)
+    }
+  }
+
+  useEffect(() => {
+    cargarMedico()
+  }, [])
+
+  async function cargarSlots(medicoId, f) {
     setCargandoSlots(true)
     setErrorSlots(null)
     setSeleccion([])
     try {
-      const res = await citasApi.slotsDisponibles(MEDICO_ID, f)
+      const res = await citasApi.slotsDisponibles(medicoId, f)
       setSlots(res.slots || [])
     } catch (err) {
       setErrorSlots(err)
@@ -45,10 +64,11 @@ export default function NuevaCita() {
     }
   }
 
+  // Carga slots cuando ya se conoce el profesional y la fecha.
   useEffect(() => {
-    cargarSlots(fecha)
+    if (medico?.id) cargarSlots(medico.id, fecha)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fecha])
+  }, [medico, fecha])
 
   const seleccionadas = new Set(seleccion.map(slotKey))
   const candidatos = new Set()
@@ -78,12 +98,13 @@ export default function NuevaCita() {
 
   async function reservar() {
     setErrorReserva(null)
+    if (!medico?.id) return
     if (seleccion.length === 0) return setErrorReserva(t('newAppt.errSelect'))
     if (esNuevo && !motivo.trim()) return setErrorReserva(t('newAppt.errDesc'))
     setReservando(true)
     try {
       const payload = {
-        medicoId: MEDICO_ID,
+        medicoId: medico.id,
         fecha,
         slotsElegidos: seleccion.map((s) => ({ horaInicio: s.horaInicio, horaFin: s.horaFin })),
       }
@@ -139,79 +160,97 @@ export default function NuevaCita() {
           ← {t('newAppt.backLink')}
         </button>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-navy-800">{t('newAppt.title')}</h1>
+        {medico && (
+          <p className="mt-1 text-sm font-medium text-navy-700">
+            {medico.nombre}
+            {medico.especialidad ? ` · ${medico.especialidad}` : ''}
+          </p>
+        )}
         <p className="mt-1 text-sm text-navy-500">
           {esNuevo ? t('newAppt.descNew') : t('newAppt.descReturning')}
         </p>
 
-        {esNuevo && (
-          <div className="mt-5">
-            <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('newAppt.descLabel')}</label>
-            <textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} placeholder={t('newAppt.descPlaceholder')} className={inputCls} />
-          </div>
+        {cargandoMedico ? (
+          <Spinner />
+        ) : errorMedico ? (
+          <ErrorMessage
+            error={errorMedico.status === 404 ? t('newAppt.noProfessional') : errorMedico}
+            onRetry={cargarMedico}
+            className="mt-4"
+          />
+        ) : (
+          <>
+            {esNuevo && (
+              <div className="mt-5">
+                <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('newAppt.descLabel')}</label>
+                <textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} placeholder={t('newAppt.descPlaceholder')} className={inputCls} />
+              </div>
+            )}
+
+            <div className="mt-5">
+              <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('newAppt.date')}</label>
+              <input type="date" value={fecha} min={hoyISO()} onChange={(e) => setFecha(e.target.value)} className={inputCls} />
+            </div>
+
+            <div className="mt-6">
+              <h2 className="mb-2 text-sm font-semibold text-navy-700">{t('newAppt.slots')}</h2>
+              {cargandoSlots ? (
+                <Spinner label={t('newAppt.searching')} />
+              ) : errorSlots ? (
+                <ErrorMessage error={errorSlots} onRetry={() => cargarSlots(medico.id, fecha)} />
+              ) : slots.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-navy-200 bg-white py-10 text-center text-navy-500">
+                  {t('newAppt.noSlots')}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {slots.map((s) => {
+                    const key = slotKey(s)
+                    const activa = seleccionadas.has(key)
+                    const candidato = candidatos.has(key)
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => toggleSlot(s)}
+                        className={`rounded-xl border px-2 py-2.5 text-sm font-semibold transition ${
+                          activa
+                            ? 'border-navy-700 bg-navy-700 text-white'
+                            : candidato
+                              ? 'border-gold-400 bg-gold-50 text-gold-600 ring-2 ring-gold-200'
+                              : 'border-navy-200 bg-white text-navy-700 hover:border-navy-400'
+                        }`}
+                      >
+                        {s.horaInicio}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+              {!esNuevo && seleccion.length === 1 && candidatos.size > 0 && (
+                <p className="mt-2 text-xs text-gold-600">{t('newAppt.consecutiveHint')}</p>
+              )}
+            </div>
+
+            {errorReserva && <ErrorMessage error={errorReserva} className="mt-4" />}
+
+            <div className="mt-6">
+              {seleccion.length > 0 && (
+                <p className="mb-2 text-sm text-navy-600">
+                  {t('newAppt.selected')}{' '}
+                  <span className="font-semibold">{seleccion[0].horaInicio} – {seleccion[seleccion.length - 1].horaFin}</span>{' '}
+                  {seleccion.length === 2 ? t('newAppt.min90') : t('newAppt.min45')}
+                </p>
+              )}
+              <button
+                onClick={reservar}
+                disabled={reservando || seleccion.length === 0}
+                className="w-full rounded-xl bg-navy-700 py-3.5 font-semibold text-white shadow-lg shadow-navy-900/20 transition hover:bg-navy-800 disabled:bg-navy-300"
+              >
+                {reservando ? t('newAppt.reserving') : t('newAppt.reserve')}
+              </button>
+            </div>
+          </>
         )}
-
-        <div className="mt-5">
-          <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('newAppt.date')}</label>
-          <input type="date" value={fecha} min={hoyISO()} onChange={(e) => setFecha(e.target.value)} className={inputCls} />
-        </div>
-
-        <div className="mt-6">
-          <h2 className="mb-2 text-sm font-semibold text-navy-700">{t('newAppt.slots')}</h2>
-          {cargandoSlots ? (
-            <Spinner label={t('newAppt.searching')} />
-          ) : errorSlots ? (
-            <ErrorMessage error={errorSlots} onRetry={() => cargarSlots(fecha)} />
-          ) : slots.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-navy-200 bg-white py-10 text-center text-navy-500">
-              {t('newAppt.noSlots')}
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {slots.map((s) => {
-                const key = slotKey(s)
-                const activa = seleccionadas.has(key)
-                const candidato = candidatos.has(key)
-                return (
-                  <button
-                    key={key}
-                    onClick={() => toggleSlot(s)}
-                    className={`rounded-xl border px-2 py-2.5 text-sm font-semibold transition ${
-                      activa
-                        ? 'border-navy-700 bg-navy-700 text-white'
-                        : candidato
-                          ? 'border-gold-400 bg-gold-50 text-gold-600 ring-2 ring-gold-200'
-                          : 'border-navy-200 bg-white text-navy-700 hover:border-navy-400'
-                    }`}
-                  >
-                    {s.horaInicio}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-          {!esNuevo && seleccion.length === 1 && candidatos.size > 0 && (
-            <p className="mt-2 text-xs text-gold-600">{t('newAppt.consecutiveHint')}</p>
-          )}
-        </div>
-
-        {errorReserva && <ErrorMessage error={errorReserva} className="mt-4" />}
-
-        <div className="mt-6">
-          {seleccion.length > 0 && (
-            <p className="mb-2 text-sm text-navy-600">
-              {t('newAppt.selected')}{' '}
-              <span className="font-semibold">{seleccion[0].horaInicio} – {seleccion[seleccion.length - 1].horaFin}</span>{' '}
-              {seleccion.length === 2 ? t('newAppt.min90') : t('newAppt.min45')}
-            </p>
-          )}
-          <button
-            onClick={reservar}
-            disabled={reservando || seleccion.length === 0}
-            className="w-full rounded-xl bg-navy-700 py-3.5 font-semibold text-white shadow-lg shadow-navy-900/20 transition hover:bg-navy-800 disabled:bg-navy-300"
-          >
-            {reservando ? t('newAppt.reserving') : t('newAppt.reserve')}
-          </button>
-        </div>
       </main>
     </div>
   )

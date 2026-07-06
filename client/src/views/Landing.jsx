@@ -36,27 +36,27 @@ export default function Landing() {
             {t('common.tagline')}
           </p>
 
-          <div className="mt-12 space-y-3">
+          <div className="mt-12">
             <button
               onClick={() => navigate('/login-paciente')}
-              className="w-full rounded-xl bg-navy-700 py-4 text-base font-semibold text-white shadow-lg shadow-navy-900/15 transition hover:-translate-y-0.5 hover:bg-navy-800"
+              className="w-full rounded-xl bg-navy-700 py-4 text-lg font-semibold text-white shadow-lg shadow-navy-900/15 transition hover:-translate-y-0.5 hover:bg-navy-800"
             >
-              {t('landing.clientBtn')}
-            </button>
-            <button
-              onClick={() => navigate('/login-medico')}
-              className="w-full rounded-xl border-2 border-navy-700 bg-transparent py-4 text-base font-semibold text-navy-700 transition hover:-translate-y-0.5 hover:bg-navy-50"
-            >
-              {t('landing.proBtn')}
+              {t('landing.bookAppt')}
             </button>
           </div>
 
-          <p className="mt-10 text-sm text-slate-500">
+          <p className="mt-6 text-sm text-slate-500">
             {t('landing.firstTime')}{' '}
             <Link to="/registro-paciente" className="font-semibold text-navy-700 hover:text-gold-600">
               {t('landing.registerCta')}
             </Link>
           </p>
+
+          <div className="mt-12 border-t border-slate-200 pt-6">
+            <Link to="/login-medico" className="text-sm font-medium text-slate-400 hover:text-navy-700">
+              {t('landing.proAccess')} →
+            </Link>
+          </div>
         </div>
       </main>
 

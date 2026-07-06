@@ -84,6 +84,11 @@ export const authApi = {
   me: () => request('/auth/me'),
 }
 
+// ── Profesional (agenda personal: hay uno solo) ──────────────────────────────
+export const medicosApi = {
+  primero: () => request('/medicos/primero'),
+}
+
 // ── Citas ────────────────────────────────────────────────────────────────────
 export const citasApi = {
   slotsDisponibles: (medicoId, fecha) =>
