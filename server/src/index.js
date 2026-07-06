@@ -40,6 +40,7 @@ cron.schedule('0 6 * * *', async () => {
   }
 })
 
-app.listen(PORT, () => {
+// Escucha en 0.0.0.0 (todas las interfaces) — requerido por Railway.
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server escuchando en http://localhost:${PORT}`)
 })
