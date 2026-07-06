@@ -17,6 +17,7 @@ const PACIENTE_SELECT = {
   correo: true,
   estado: true,
   fechaRegistro: true,
+  fotoIdentidadUrl: true,
 }
 
 // ── GET /pacientes ───────────────────────────────────────────────────────────
