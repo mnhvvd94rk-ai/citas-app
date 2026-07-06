@@ -150,7 +150,7 @@ export default function Agenda() {
                     onClick={() => setSelectedDay(iso)}
                     className={`flex min-h-[68px] flex-col rounded-lg border p-1 text-left transition ${
                       sel ? 'border-navy-500 ring-2 ring-navy-200' : 'border-slate-100 hover:border-navy-300'
-                    } ${tieneDisp ? 'bg-navy-50/60' : 'bg-white'}`}
+                    } ${tieneDisp ? 'bg-indigo-100' : 'bg-white'}`}
                   >
                     <span className={`mb-0.5 text-xs font-semibold ${esHoy ? 'flex h-5 w-5 items-center justify-center rounded-full bg-navy-700 text-white' : 'text-navy-600'}`}>
                       {d}
@@ -173,7 +173,7 @@ export default function Agenda() {
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-navy-500">
             <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" />{t('calendar.legendConfirmed')}</span>
             <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-400" />{t('calendar.legendPending')}</span>
-            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-navy-100 ring-1 ring-navy-200" />{t('calendar.legendAvailable')}</span>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-indigo-100 ring-1 ring-indigo-300" />{t('calendar.legendAvailable')}</span>
           </div>
         </div>
 

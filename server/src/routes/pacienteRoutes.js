@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
         take: 1,
       },
     },
-    orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
+    orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }],
   })
   // Aplana la última cita a `ultimaCita` (o null) para el frontend.
   const salida = pacientes.map(({ citas, ...p }) => ({
