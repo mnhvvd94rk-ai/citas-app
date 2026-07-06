@@ -1,9 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useLanguage } from '../context/LanguageContext.jsx'
+import LanguageSelector from './LanguageSelector.jsx'
 
-// Barra superior. Muestra la marca y, si hay sesión, el usuario y "Cerrar sesión".
+// Barra superior premium. Marca + selector de idioma + cerrar sesión.
 export default function Navbar() {
   const { isAuthenticated, user, tipo, logout } = useAuth()
+  const { t } = useLanguage()
   const navigate = useNavigate()
 
   function handleLogout() {
@@ -13,28 +16,33 @@ export default function Navbar() {
 
   const nombre = user
     ? tipo === 'MEDICO'
-      ? `Dr(a). ${user.nombre}`
+      ? user.nombre
       : `${user.nombre} ${user.apellido || ''}`.trim()
     : null
 
   return (
-    <header className="sticky top-0 z-20 border-b border-teal-700 bg-teal-600 text-white shadow-sm">
+    <header className="sticky top-0 z-20 bg-navy-800 text-white shadow-sm">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2 font-semibold">
-          <span aria-hidden className="text-lg">🩺</span>
-          <span>Citas App</span>
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-gold-500/40 bg-white/5 text-sm font-bold text-gold-400">
+            B
+          </span>
+          <span className="font-bold tracking-tight">{t('common.appName')}</span>
         </div>
-        {isAuthenticated && (
-          <div className="flex items-center gap-3 text-sm">
-            <span className="hidden max-w-[10rem] truncate opacity-90 sm:inline">{nombre}</span>
-            <button
-              onClick={handleLogout}
-              className="rounded-md bg-teal-700 px-3 py-1.5 font-medium hover:bg-teal-800"
-            >
-              Cerrar sesión
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <LanguageSelector variant="dark" />
+          {isAuthenticated && (
+            <>
+              <span className="hidden max-w-[9rem] truncate text-sm text-white/70 sm:inline">{nombre}</span>
+              <button
+                onClick={handleLogout}
+                className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium transition hover:bg-white/20"
+              >
+                {t('common.logout')}
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </header>
   )

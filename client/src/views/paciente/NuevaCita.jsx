@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { citasApi } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
+import { useLanguage } from '../../context/LanguageContext.jsx'
 import Navbar from '../../components/Navbar.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import { hoyISO, formatFechaLarga } from '../../lib/format.js'
 
-const MEDICO_ID = 1 // por ahora solo hay un médico
+const MEDICO_ID = 1 // por ahora solo hay un profesional
 
 const slotKey = (s) => `${s.horaInicio}-${s.horaFin}`
 const consecutivos = (a, b) => a.horaFin === b.horaInicio || b.horaFin === a.horaInicio
@@ -15,6 +16,7 @@ const consecutivos = (a, b) => a.horaFin === b.horaInicio || b.horaFin === a.hor
 export default function NuevaCita() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { t } = useLanguage()
   const esNuevo = user?.estado === 'NUEVO'
 
   const [fecha, setFecha] = useState(hoyISO())
@@ -49,7 +51,6 @@ export default function NuevaCita() {
   }, [fecha])
 
   const seleccionadas = new Set(seleccion.map(slotKey))
-  // Candidatos consecutivos a resaltar (solo continuidad con 1 slot elegido).
   const candidatos = new Set()
   if (!esNuevo && seleccion.length === 1) {
     for (const s of slots) {
@@ -64,29 +65,21 @@ export default function NuevaCita() {
       setSeleccion(seleccionadas.has(key) ? [] : [slot])
       return
     }
-    // Continuidad: 1 o 2 consecutivos.
     if (seleccionadas.has(key)) {
       setSeleccion(seleccion.filter((s) => slotKey(s) !== key))
     } else if (seleccion.length === 0) {
       setSeleccion([slot])
     } else if (seleccion.length === 1 && consecutivos(seleccion[0], slot)) {
-      const par = [seleccion[0], slot].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
-      setSeleccion(par)
+      setSeleccion([seleccion[0], slot].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio)))
     } else {
-      setSeleccion([slot]) // reinicia la selección
+      setSeleccion([slot])
     }
   }
 
   async function reservar() {
     setErrorReserva(null)
-    if (seleccion.length === 0) {
-      setErrorReserva('Selecciona al menos un horario.')
-      return
-    }
-    if (esNuevo && !motivo.trim()) {
-      setErrorReserva('Indica el motivo de consulta.')
-      return
-    }
+    if (seleccion.length === 0) return setErrorReserva(t('newAppt.errSelect'))
+    if (esNuevo && !motivo.trim()) return setErrorReserva(t('newAppt.errDesc'))
     setReservando(true)
     try {
       const payload = {
@@ -95,8 +88,7 @@ export default function NuevaCita() {
         slotsElegidos: seleccion.map((s) => ({ horaInicio: s.horaInicio, horaFin: s.horaFin })),
       }
       if (esNuevo) payload.motivoConsulta = motivo.trim()
-      const cita = await citasApi.reservar(payload)
-      setExito(cita)
+      setExito(await citasApi.reservar(payload))
     } catch (err) {
       setErrorReserva(err)
     } finally {
@@ -104,31 +96,34 @@ export default function NuevaCita() {
     }
   }
 
+  const inputCls =
+    'w-full rounded-xl border border-navy-200 px-4 py-3 text-navy-900 transition focus:border-navy-500 focus:ring-4 focus:ring-navy-100 focus:outline-none'
+
   if (exito) {
     const confirmada = exito.estado === 'CONFIRMADA'
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-navy-50">
         <Navbar />
         <main className="mx-auto max-w-md px-4 py-10 text-center">
-          <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-            <div className="text-5xl">{confirmada ? '✅' : '⏳'}</div>
-            <h1 className="mt-4 text-xl font-bold text-slate-800">
-              {confirmada ? 'Cita confirmada' : 'Solicitud enviada'}
+          <div className="rounded-2xl bg-white p-8 shadow-xl shadow-navy-900/5 ring-1 ring-navy-100">
+            <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${confirmada ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+              <span className="text-2xl font-bold">{confirmada ? '✓' : '⌛'}</span>
+            </div>
+            <h1 className="mt-4 text-xl font-bold text-navy-800">
+              {confirmada ? t('newAppt.successConfirmedTitle') : t('newAppt.successPendingTitle')}
             </h1>
-            <p className="mt-2 text-slate-600">
-              {confirmada
-                ? 'Tu cita ha quedado confirmada.'
-                : 'Tu cita queda pendiente de aprobación por el profesional.'}
+            <p className="mt-2 text-navy-500">
+              {confirmada ? t('newAppt.successConfirmedMsg') : t('newAppt.successPendingMsg')}
             </p>
-            <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+            <div className="mt-4 rounded-xl bg-navy-50 p-3 text-sm text-navy-600">
               <p>{formatFechaLarga(exito.fecha)}</p>
-              <p className="mt-1 font-medium">🕒 {exito.horaInicio} – {exito.horaFin}</p>
+              <p className="mt-1 font-semibold">{exito.horaInicio} – {exito.horaFin}</p>
             </div>
             <button
               onClick={() => navigate('/paciente/citas')}
-              className="mt-6 w-full rounded-lg bg-teal-600 py-3 font-semibold text-white hover:bg-teal-700"
+              className="mt-6 w-full rounded-xl bg-navy-700 py-3.5 font-semibold text-white transition hover:bg-navy-800"
             >
-              Ver mis citas
+              {t('newAppt.viewAppts')}
             </button>
           </div>
         </main>
@@ -137,52 +132,38 @@ export default function NuevaCita() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-navy-50">
       <Navbar />
-      <main className="mx-auto max-w-2xl px-4 py-5">
-        <button onClick={() => navigate('/paciente/citas')} className="text-sm text-teal-700 hover:underline">
-          ← Mis citas
+      <main className="mx-auto max-w-2xl px-4 py-6">
+        <button onClick={() => navigate('/paciente/citas')} className="text-sm font-medium text-navy-500 hover:text-navy-700">
+          ← {t('newAppt.backLink')}
         </button>
-        <h1 className="mt-2 text-xl font-bold text-slate-800">Reservar nueva cita</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {esNuevo
-            ? 'Como paciente nuevo, indica el motivo y elige 1 horario. Tu cita quedará pendiente de aprobación.'
-            : 'Puedes reservar 1 o 2 horarios consecutivos (máx. 90 min).'}
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-navy-800">{t('newAppt.title')}</h1>
+        <p className="mt-1 text-sm text-navy-500">
+          {esNuevo ? t('newAppt.descNew') : t('newAppt.descReturning')}
         </p>
 
         {esNuevo && (
           <div className="mt-5">
-            <label className="mb-1 block text-sm font-medium text-slate-700">Motivo de consulta</label>
-            <textarea
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              rows={3}
-              placeholder="Describe brevemente el motivo de tu consulta…"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 focus:outline-none"
-            />
+            <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('newAppt.descLabel')}</label>
+            <textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} placeholder={t('newAppt.descPlaceholder')} className={inputCls} />
           </div>
         )}
 
         <div className="mt-5">
-          <label className="mb-1 block text-sm font-medium text-slate-700">Fecha</label>
-          <input
-            type="date"
-            value={fecha}
-            min={hoyISO()}
-            onChange={(e) => setFecha(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 focus:outline-none"
-          />
+          <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('newAppt.date')}</label>
+          <input type="date" value={fecha} min={hoyISO()} onChange={(e) => setFecha(e.target.value)} className={inputCls} />
         </div>
 
         <div className="mt-6">
-          <h2 className="mb-2 text-sm font-semibold text-slate-700">Horarios disponibles</h2>
+          <h2 className="mb-2 text-sm font-semibold text-navy-700">{t('newAppt.slots')}</h2>
           {cargandoSlots ? (
-            <Spinner label="Buscando horarios…" />
+            <Spinner label={t('newAppt.searching')} />
           ) : errorSlots ? (
             <ErrorMessage error={errorSlots} onRetry={() => cargarSlots(fecha)} />
           ) : slots.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white py-10 text-center text-slate-500">
-              No hay horarios disponibles para esta fecha.
+            <div className="rounded-xl border border-dashed border-navy-200 bg-white py-10 text-center text-navy-500">
+              {t('newAppt.noSlots')}
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -194,12 +175,12 @@ export default function NuevaCita() {
                   <button
                     key={key}
                     onClick={() => toggleSlot(s)}
-                    className={`rounded-lg border px-2 py-2.5 text-sm font-medium transition ${
+                    className={`rounded-xl border px-2 py-2.5 text-sm font-semibold transition ${
                       activa
-                        ? 'border-teal-600 bg-teal-600 text-white'
+                        ? 'border-navy-700 bg-navy-700 text-white'
                         : candidato
-                          ? 'border-teal-400 bg-teal-50 text-teal-700 ring-2 ring-teal-200'
-                          : 'border-slate-300 bg-white text-slate-700 hover:border-teal-400'
+                          ? 'border-gold-400 bg-gold-50 text-gold-600 ring-2 ring-gold-200'
+                          : 'border-navy-200 bg-white text-navy-700 hover:border-navy-400'
                     }`}
                   >
                     {s.horaInicio}
@@ -209,9 +190,7 @@ export default function NuevaCita() {
             </div>
           )}
           {!esNuevo && seleccion.length === 1 && candidatos.size > 0 && (
-            <p className="mt-2 text-xs text-teal-700">
-              Los horarios resaltados son consecutivos: puedes añadir uno para una cita de 90 min.
-            </p>
+            <p className="mt-2 text-xs text-gold-600">{t('newAppt.consecutiveHint')}</p>
           )}
         </div>
 
@@ -219,17 +198,18 @@ export default function NuevaCita() {
 
         <div className="mt-6">
           {seleccion.length > 0 && (
-            <p className="mb-2 text-sm text-slate-600">
-              Seleccionado: <span className="font-semibold">{seleccion[0].horaInicio} – {seleccion[seleccion.length - 1].horaFin}</span>
-              {seleccion.length === 2 ? ' (90 min)' : ' (45 min)'}
+            <p className="mb-2 text-sm text-navy-600">
+              {t('newAppt.selected')}{' '}
+              <span className="font-semibold">{seleccion[0].horaInicio} – {seleccion[seleccion.length - 1].horaFin}</span>{' '}
+              {seleccion.length === 2 ? t('newAppt.min90') : t('newAppt.min45')}
             </p>
           )}
           <button
             onClick={reservar}
             disabled={reservando || seleccion.length === 0}
-            className="w-full rounded-lg bg-teal-600 py-3 font-semibold text-white hover:bg-teal-700 disabled:bg-slate-300"
+            className="w-full rounded-xl bg-navy-700 py-3.5 font-semibold text-white shadow-lg shadow-navy-900/20 transition hover:bg-navy-800 disabled:bg-navy-300"
           >
-            {reservando ? 'Reservando…' : 'Reservar'}
+            {reservando ? t('newAppt.reserving') : t('newAppt.reserve')}
           </button>
         </div>
       </main>

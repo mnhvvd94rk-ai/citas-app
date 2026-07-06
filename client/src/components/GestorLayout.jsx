@@ -1,39 +1,40 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import Navbar from './Navbar.jsx'
+import { useLanguage } from '../context/LanguageContext.jsx'
 
-const TABS = [
-  { to: '/gestor/agenda', label: 'Agenda', icon: '📅' },
-  { to: '/gestor/citas-pendientes', label: 'Pendientes', icon: '⏳' },
-  { to: '/gestor/disponibilidad', label: 'Horarios', icon: '🕒' },
-  { to: '/gestor/pacientes', label: 'Pacientes', icon: '👥' },
-]
-
-// Layout del gestor: navbar + pestañas de navegación + contenido (Outlet).
+// Layout del profesional: navbar + pestañas de navegación + contenido (Outlet).
 export default function GestorLayout() {
+  const { t } = useLanguage()
+  const tabs = [
+    { to: '/gestor/agenda', label: t('tabs.agenda') },
+    { to: '/gestor/citas-pendientes', label: t('tabs.pending') },
+    { to: '/gestor/disponibilidad', label: t('tabs.availability') },
+    { to: '/gestor/pacientes', label: t('tabs.clients') },
+  ]
+
   return (
     <div className="min-h-screen">
       <Navbar />
-      <nav className="sticky top-[57px] z-10 border-b border-slate-200 bg-white">
+      <nav className="sticky top-[57px] z-10 border-b border-navy-100 bg-white">
         <div className="mx-auto flex max-w-3xl gap-1 overflow-x-auto px-2">
-          {TABS.map((t) => (
+          {tabs.map((tab) => (
             <NavLink
-              key={t.to}
-              to={t.to}
+              key={tab.to}
+              to={tab.to}
               className={({ isActive }) =>
-                `flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-3 text-sm font-medium transition-colors ${
+                `shrink-0 border-b-2 px-4 py-3.5 text-sm font-semibold transition-colors ${
                   isActive
-                    ? 'border-teal-600 text-teal-700'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                    ? 'border-gold-500 text-navy-800'
+                    : 'border-transparent text-navy-400 hover:text-navy-700'
                 }`
               }
             >
-              <span aria-hidden>{t.icon}</span>
-              {t.label}
+              {tab.label}
             </NavLink>
           ))}
         </div>
       </nav>
-      <main className="mx-auto max-w-3xl px-4 py-5">
+      <main className="mx-auto max-w-3xl px-4 py-6">
         <Outlet />
       </main>
     </div>

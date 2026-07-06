@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLanguage } from '../context/LanguageContext.jsx'
 
 // Captura de foto del documento con la cámara (getUserMedia).
 // Fallback: <input type="file" capture="environment"> para móviles sin soporte.
 // Downscala a máx 1000px y exporta JPEG (q=0.7) para no exceder el body del POST.
 export default function CameraCapture({ value, onCapture }) {
+  const { t } = useLanguage()
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [activo, setActivo] = useState(false)
@@ -17,12 +19,12 @@ export default function CameraCapture({ value, onCapture }) {
     setActivo(false)
   }
 
-  useEffect(() => detener, []) // limpia el stream al desmontar
+  useEffect(() => detener, [])
 
   async function abrirCamara() {
     setError(null)
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError('Este dispositivo no soporta cámara en el navegador. Usa "Subir imagen".')
+      setError(t('camera.errUnsupported'))
       return
     }
     try {
@@ -32,7 +34,6 @@ export default function CameraCapture({ value, onCapture }) {
       })
       streamRef.current = stream
       setActivo(true)
-      // El <video> se monta al pasar `activo` a true.
       requestAnimationFrame(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream
@@ -40,7 +41,7 @@ export default function CameraCapture({ value, onCapture }) {
         }
       })
     } catch {
-      setError('No se pudo acceder a la cámara. Revisa permisos o usa "Subir imagen".')
+      setError(t('camera.errAccess'))
     }
   }
 
@@ -57,8 +58,7 @@ export default function CameraCapture({ value, onCapture }) {
   function tomarFoto() {
     const video = videoRef.current
     if (!video) return
-    const dataUrl = reducirYExportar(video, video.videoWidth, video.videoHeight)
-    onCapture(dataUrl)
+    onCapture(reducirYExportar(video, video.videoWidth, video.videoHeight))
     detener()
   }
 
@@ -74,70 +74,43 @@ export default function CameraCapture({ value, onCapture }) {
     reader.readAsDataURL(file)
   }
 
+  const primary =
+    'w-full rounded-xl bg-navy-700 py-3 font-semibold text-white transition hover:bg-navy-800'
+  const secondary =
+    'w-full rounded-xl border border-navy-200 py-3 text-sm font-medium text-navy-700 transition hover:bg-navy-50'
+
   return (
     <div className="space-y-3">
       {value ? (
         <div className="space-y-3">
-          <img
-            src={value}
-            alt="Documento capturado"
-            className="mx-auto max-h-64 rounded-lg border border-slate-200 object-contain"
-          />
-          <button
-            type="button"
-            onClick={() => onCapture(null)}
-            className="w-full rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Volver a capturar
+          <img src={value} alt="" className="mx-auto max-h-64 rounded-xl border border-navy-100 object-contain" />
+          <button type="button" onClick={() => onCapture(null)} className={secondary}>
+            {t('camera.recapture')}
           </button>
         </div>
       ) : activo ? (
         <div className="space-y-3">
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            className="w-full rounded-lg border border-slate-200 bg-black"
-          />
+          <video ref={videoRef} playsInline muted className="w-full rounded-xl border border-navy-100 bg-black" />
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={tomarFoto}
-              className="flex-1 rounded-lg bg-teal-600 py-2.5 font-medium text-white hover:bg-teal-700"
-            >
-              📸 Tomar foto
+            <button type="button" onClick={tomarFoto} className={primary}>
+              {t('camera.take')}
             </button>
-            <button
-              type="button"
-              onClick={detener}
-              className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Cancelar
+            <button type="button" onClick={detener} className="rounded-xl border border-navy-200 px-4 text-sm font-medium text-navy-700 hover:bg-navy-50">
+              {t('common.cancel')}
             </button>
           </div>
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 py-10 text-slate-400">
-            <span className="text-4xl">🪪</span>
-            <p className="mt-2 text-sm">Sin foto todavía</p>
+          <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-navy-200 bg-navy-50 py-12 text-navy-300">
+            <p className="text-sm">{t('camera.noPhoto')}</p>
           </div>
-          <button
-            type="button"
-            onClick={abrirCamara}
-            className="w-full rounded-lg bg-teal-600 py-2.5 font-medium text-white hover:bg-teal-700"
-          >
-            📷 Abrir cámara
+          <button type="button" onClick={abrirCamara} className={primary}>
+            {t('camera.open')}
           </button>
-          <label className="block w-full cursor-pointer rounded-lg border border-slate-300 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50">
-            Subir imagen
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={onFile}
-              className="hidden"
-            />
+          <label className="block w-full cursor-pointer rounded-xl border border-navy-200 py-3 text-center text-sm font-medium text-navy-700 transition hover:bg-navy-50">
+            {t('camera.upload')}
+            <input type="file" accept="image/*" capture="environment" onChange={onFile} className="hidden" />
           </label>
         </div>
       )}

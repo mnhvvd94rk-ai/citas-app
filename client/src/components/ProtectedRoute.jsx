@@ -14,7 +14,7 @@ export default function ProtectedRoute({ children, rol }) {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Spinner label="Validando sesión…" />
+        <Spinner />
       </div>
     )
   }

@@ -15,12 +15,12 @@ export default defineConfig({
         enabled: true,
       },
       manifest: {
-        name: 'Citas App',
-        short_name: 'Citas',
-        description: 'Gestión de citas médicas',
+        name: 'BookTime',
+        short_name: 'BookTime',
+        description: 'Smart Appointment Scheduling',
         display: 'standalone',
-        theme_color: '#0d9488',
-        background_color: '#ffffff',
+        theme_color: '#1e3a5f',
+        background_color: '#101f33',
         start_url: '/',
         icons: [
           {

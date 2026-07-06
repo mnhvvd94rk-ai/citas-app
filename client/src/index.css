@@ -1,7 +1,32 @@
 @import 'tailwindcss';
 
-/* Paleta: teal-600 (#0d9488) como color principal, consistente con el
-   theme_color del manifest. Se usa la paleta `teal` nativa de Tailwind. */
+/* ─────────────────────────────────────────────────────────────────────────
+   BookTime — sistema de diseño premium.
+   Paleta: azul profundo (#1e3a5f) como color principal + dorado sutil
+   (#c9a94e) como acento. Tipografía moderna (Inter).
+   ───────────────────────────────────────────────────────────────────────── */
+@theme {
+  --color-navy-50: #f2f5f9;
+  --color-navy-100: #e2e9f1;
+  --color-navy-200: #c4d2e2;
+  --color-navy-300: #97afca;
+  --color-navy-400: #5f7ea3;
+  --color-navy-500: #3a5a80;
+  --color-navy-600: #274a75;
+  --color-navy-700: #1e3a5f;
+  --color-navy-800: #172d4a;
+  --color-navy-900: #101f33;
+
+  --color-gold-50: #faf6ea;
+  --color-gold-100: #f3ecd4;
+  --color-gold-200: #e9dcae;
+  --color-gold-300: #e0cd93;
+  --color-gold-400: #d4b968;
+  --color-gold-500: #c9a94e;
+  --color-gold-600: #ad8f3c;
+
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
 
 :root {
   color-scheme: light;
@@ -15,12 +40,12 @@ body,
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background-color: #f8fafc; /* slate-50 */
-  color: #0f172a; /* slate-900 */
+  font-family: var(--font-sans);
+  background-color: #f6f8fb;
+  color: var(--color-navy-900);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Evita el resaltado azul al tocar botones en móvil. */
 button {
   -webkit-tap-highlight-color: transparent;
 }

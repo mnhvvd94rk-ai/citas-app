@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { disponibilidadApi } from '../../services/api.js'
+import { useLanguage } from '../../context/LanguageContext.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import { hoyISO, formatFechaCorta } from '../../lib/format.js'
 
-// CRUD de disponibilidad horaria del médico.
+// CRUD de disponibilidad horaria del profesional.
 export default function Disponibilidad() {
+  const { t } = useLanguage()
   const [lista, setLista] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
@@ -62,84 +64,61 @@ export default function Disponibilidad() {
     }
   }
 
+  const inputCls =
+    'w-full rounded-xl border border-navy-200 px-4 py-3 focus:border-navy-500 focus:ring-4 focus:ring-navy-100 focus:outline-none'
+
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-800">Disponibilidad horaria</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Define rangos horarios. El sistema los divide en bloques de 45 minutos.
-      </p>
+      <h1 className="text-2xl font-bold tracking-tight text-navy-800">{t('availability.title')}</h1>
+      <p className="mt-1 text-sm text-navy-500">{t('availability.subtitle')}</p>
 
-      {/* Formulario de creación */}
-      <form onSubmit={crear} className="mt-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+      <form onSubmit={crear} className="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy-100">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Fecha</label>
-            <input
-              type="date"
-              name="fecha"
-              value={form.fecha}
-              min={hoyISO()}
-              onChange={setCampo}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 focus:outline-none"
-            />
+            <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.date')}</label>
+            <input type="date" name="fecha" value={form.fecha} min={hoyISO()} onChange={setCampo} className={inputCls} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Hora inicio</label>
-            <input
-              type="time"
-              name="horaInicio"
-              value={form.horaInicio}
-              onChange={setCampo}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 focus:outline-none"
-            />
+            <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.start')}</label>
+            <input type="time" name="horaInicio" value={form.horaInicio} onChange={setCampo} className={inputCls} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Hora fin</label>
-            <input
-              type="time"
-              name="horaFin"
-              value={form.horaFin}
-              onChange={setCampo}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 focus:outline-none"
-            />
+            <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.end')}</label>
+            <input type="time" name="horaFin" value={form.horaFin} onChange={setCampo} className={inputCls} />
           </div>
         </div>
         {errorForm && <ErrorMessage error={errorForm} className="mt-3" />}
         <button
           type="submit"
           disabled={creando}
-          className="mt-3 w-full rounded-lg bg-teal-600 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:bg-slate-300 sm:w-auto sm:px-6"
+          className="mt-3 w-full rounded-xl bg-navy-700 py-3 font-semibold text-white transition hover:bg-navy-800 disabled:bg-navy-300 sm:w-auto sm:px-6"
         >
-          {creando ? 'Añadiendo…' : 'Añadir disponibilidad'}
+          {creando ? t('availability.adding') : t('availability.add')}
         </button>
       </form>
 
-      {/* Lista */}
-      <h2 className="mt-6 mb-2 text-sm font-semibold text-slate-700">Disponibilidades registradas</h2>
+      <h2 className="mt-6 mb-2 text-sm font-semibold text-navy-700">{t('availability.listTitle')}</h2>
       {error && <ErrorMessage error={error} className="mb-3" />}
       {cargando ? (
-        <Spinner label="Cargando…" />
+        <Spinner label={t('availability.loading')} />
       ) : lista.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-12 text-center text-slate-500">
-          No hay disponibilidades registradas.
+        <div className="rounded-2xl border border-dashed border-navy-200 bg-white py-12 text-center text-navy-500">
+          {t('availability.empty')}
         </div>
       ) : (
         <ul className="space-y-2">
           {lista.map((d) => (
-            <li
-              key={d.id}
-              className="flex items-center justify-between rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-200"
-            >
+            <li key={d.id} className="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm ring-1 ring-navy-100">
               <div>
-                <p className="font-medium text-slate-800">{formatFechaCorta(d.fecha)}</p>
-                <p className="text-sm text-slate-500">🕒 {d.horaInicio} – {d.horaFin}</p>
+                <p className="font-semibold text-navy-800">{formatFechaCorta(d.fecha)}</p>
+                <p className="text-sm text-navy-500">{d.horaInicio} – {d.horaFin}</p>
               </div>
               <button
                 disabled={busy === d.id}
                 onClick={() => eliminar(d.id)}
-                className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                className="rounded-lg border border-red-300 px-3.5 py-1.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
               >
-                {busy === d.id ? '…' : 'Eliminar'}
+                {busy === d.id ? '…' : t('availability.delete')}
               </button>
             </li>
           ))}

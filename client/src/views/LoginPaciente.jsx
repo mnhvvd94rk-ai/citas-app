@@ -2,12 +2,15 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authApi } from '../services/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useLanguage } from '../context/LanguageContext.jsx'
 import ErrorMessage from '../components/ErrorMessage.jsx'
+import LanguageSelector from '../components/LanguageSelector.jsx'
 
-// Login del paciente.
+// Login del cliente.
 export default function LoginPaciente() {
   const navigate = useNavigate()
   const { login } = useAuth()
+  const { t } = useLanguage()
   const [correo, setCorreo] = useState('')
   const [password, setPassword] = useState('')
   const [cargando, setCargando] = useState(false)
@@ -28,56 +31,52 @@ export default function LoginPaciente() {
     }
   }
 
+  const inputCls =
+    'w-full rounded-xl border border-navy-200 px-4 py-3 text-navy-900 transition focus:border-navy-500 focus:ring-4 focus:ring-navy-100 focus:outline-none'
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-6 py-12">
-      <div className="w-full max-w-sm">
-        <Link to="/" className="text-sm text-teal-700 hover:underline">← Volver</Link>
-        <div className="mt-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="mb-6 text-center">
-            <div className="text-4xl">🧑</div>
-            <h1 className="mt-2 text-xl font-bold text-slate-800">Acceso de Paciente</h1>
+    <div className="flex min-h-screen flex-col bg-navy-50 px-6 py-8">
+      <div className="flex items-center justify-between">
+        <Link to="/" className="text-sm font-medium text-navy-500 hover:text-navy-700">
+          ← {t('common.back')}
+        </Link>
+        <LanguageSelector />
+      </div>
+
+      <div className="flex flex-1 items-center justify-center">
+        <div className="w-full max-w-sm">
+          <div className="rounded-2xl bg-white p-7 shadow-xl shadow-navy-900/5 ring-1 ring-navy-100">
+            <h1 className="mb-6 text-center text-2xl font-bold tracking-tight text-navy-800">
+              {t('loginClient.title')}
+            </h1>
+
+            {error && <ErrorMessage error={error} className="mb-4" />}
+
+            <form onSubmit={onSubmit} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('common.email')}</label>
+                <input type="email" required value={correo} onChange={(e) => setCorreo(e.target.value)} className={inputCls} placeholder="tu@correo.com" />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('common.password')}</label>
+                <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className={inputCls} placeholder="••••••••" />
+              </div>
+              <button
+                type="submit"
+                disabled={cargando}
+                className="w-full rounded-xl bg-navy-700 py-3.5 font-semibold text-white shadow-lg shadow-navy-900/20 transition hover:bg-navy-800 disabled:bg-navy-300"
+              >
+                {cargando ? t('common.entering') : t('common.enter')}
+              </button>
+            </form>
+
+            <p className="mt-6 text-center text-sm text-navy-500">
+              {t('loginClient.noAccount')}{' '}
+              <Link to="/registro-paciente" className="font-semibold text-navy-700 hover:text-gold-600">
+                {t('loginClient.register')}
+              </Link>
+            </p>
           </div>
-
-          {error && <ErrorMessage error={error} className="mb-4" />}
-
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Correo</label>
-              <input
-                type="email"
-                required
-                value={correo}
-                onChange={(e) => setCorreo(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 focus:outline-none"
-                placeholder="tucorreo@ejemplo.com"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Contraseña</label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 focus:outline-none"
-                placeholder="••••••••"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={cargando}
-              className="w-full rounded-lg bg-teal-600 py-3 font-semibold text-white hover:bg-teal-700 disabled:bg-slate-300"
-            >
-              {cargando ? 'Entrando…' : 'Entrar'}
-            </button>
-          </form>
-
-          <p className="mt-5 text-center text-sm text-slate-500">
-            ¿No tienes cuenta?{' '}
-            <Link to="/registro-paciente" className="font-semibold text-teal-700 hover:underline">
-              Regístrate
-            </Link>
-          </p>
         </div>
       </div>
     </div>

@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLanguage } from '../context/LanguageContext.jsx'
 
 // Firma digital en canvas (táctil o mouse). Exporta PNG con "Confirmar firma".
 export default function SignaturePad({ value, onConfirm }) {
+  const { t } = useLanguage()
   const canvasRef = useRef(null)
   const dibujando = useRef(false)
   const [vacio, setVacio] = useState(true)
 
-  // Prepara el canvas al montar (resolución acorde al tamaño en pantalla).
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -19,7 +20,7 @@ export default function SignaturePad({ value, onConfirm }) {
     ctx.lineWidth = 2.5
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
-    ctx.strokeStyle = '#0f172a'
+    ctx.strokeStyle = '#101f33'
   }, [])
 
   function posicion(e) {
@@ -53,8 +54,7 @@ export default function SignaturePad({ value, onConfirm }) {
 
   function limpiar() {
     const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height)
     setVacio(true)
     onConfirm(null)
   }
@@ -64,21 +64,16 @@ export default function SignaturePad({ value, onConfirm }) {
     onConfirm(canvasRef.current.toDataURL('image/png'))
   }
 
-  // Si ya hay una firma confirmada, muéstrala como preview.
   if (value) {
     return (
       <div className="space-y-3">
-        <img
-          src={value}
-          alt="Firma"
-          className="mx-auto h-40 w-full rounded-lg border border-slate-200 bg-white object-contain"
-        />
+        <img src={value} alt="" className="mx-auto h-40 w-full rounded-xl border border-navy-100 bg-white object-contain" />
         <button
           type="button"
           onClick={() => onConfirm(null)}
-          className="w-full rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="w-full rounded-xl border border-navy-200 py-3 text-sm font-medium text-navy-700 transition hover:bg-navy-50"
         >
-          Volver a firmar
+          {t('signature.resign')}
         </button>
       </div>
     )
@@ -88,7 +83,7 @@ export default function SignaturePad({ value, onConfirm }) {
     <div className="space-y-3">
       <canvas
         ref={canvasRef}
-        className="h-40 w-full touch-none rounded-lg border-2 border-dashed border-slate-300 bg-white"
+        className="h-40 w-full touch-none rounded-xl border-2 border-dashed border-navy-200 bg-white"
         onMouseDown={empezar}
         onMouseMove={mover}
         onMouseUp={terminar}
@@ -97,22 +92,22 @@ export default function SignaturePad({ value, onConfirm }) {
         onTouchMove={mover}
         onTouchEnd={terminar}
       />
-      <p className="text-center text-xs text-slate-400">Firma con el dedo o el ratón</p>
+      <p className="text-center text-xs text-navy-400">{t('signature.hint')}</p>
       <div className="flex gap-2">
         <button
           type="button"
           onClick={limpiar}
-          className="flex-1 rounded-lg border border-slate-300 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="flex-1 rounded-xl border border-navy-200 py-3 text-sm font-medium text-navy-700 transition hover:bg-navy-50"
         >
-          Limpiar
+          {t('signature.clear')}
         </button>
         <button
           type="button"
           onClick={confirmar}
           disabled={vacio}
-          className="flex-1 rounded-lg bg-teal-600 py-2.5 font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="flex-1 rounded-xl bg-navy-700 py-3 font-semibold text-white transition hover:bg-navy-800 disabled:bg-navy-200"
         >
-          Confirmar firma
+          {t('signature.confirm')}
         </button>
       </div>
     </div>
