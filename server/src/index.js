@@ -13,7 +13,18 @@ import { runDailySummary } from './jobs/dailySummary.js'
 const app = express()
 const PORT = process.env.PORT || 3001
 
-app.use(cors())
+// Orígenes permitidos: localhost (dev) y el frontend desplegado (Vercel),
+// configurado vía FRONTEND_URL. `.filter(Boolean)` descarta el valor si la
+// variable no está definida.
+const allowedOrigins = [
+  "http://localhost:5173",
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 // Límite amplio: el registro de paciente envía foto de identidad y firma como
 // data URLs (base64) en el body.
 app.use(express.json({ limit: '20mb' }))
