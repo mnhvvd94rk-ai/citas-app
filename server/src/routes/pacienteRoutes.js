@@ -23,22 +23,30 @@ const PACIENTE_SELECT = {
 // ── GET /pacientes ───────────────────────────────────────────────────────────
 // Lista todos los pacientes (sin passwordHash), ordenados por apellido, con su
 // última cita (fecha/hora/estado). Las notas viven en su propio router (/notas).
+const CITAS_ACTIVAS = ['CONFIRMADA', 'COMPLETADA']
+
 router.get('/', async (req, res) => {
   const pacientes = await prisma.usuario.findMany({
     select: {
       ...PACIENTE_SELECT,
       citas: {
-        select: { fecha: true, horaInicio: true, estado: true },
+        select: { id: true, fecha: true, horaInicio: true, horaFin: true, estado: true },
         orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }],
-        take: 1,
       },
     },
     orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }],
   })
-  // Aplana la última cita a `ultimaCita` (o null) para el frontend.
+
+  // Deriva estadísticas por cliente. `edad` = null: no hay fecha de nacimiento
+  // en el modelo (el OCR del documento no está implementado), así que no se
+  // puede calcular una edad real sin inventarla.
   const salida = pacientes.map(({ citas, ...p }) => ({
     ...p,
-    ultimaCita: citas[0] || null,
+    edad: null,
+    ultimaCita: citas[0] || null, // orden desc → la primera es la más reciente
+    primeraCita: citas.length ? citas[citas.length - 1].fecha : null,
+    totalCitas: citas.filter((c) => CITAS_ACTIVAS.includes(c.estado)).length,
+    historial: citas, // todas las citas (desc) para el panel expandido
   }))
   res.json(salida)
 })

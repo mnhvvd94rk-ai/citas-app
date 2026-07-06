@@ -123,8 +123,12 @@ model NotaPaciente {
   medicoId   Int
   texto      String
   fecha      DateTime @default(now())
+  // Opcional: si la nota está vinculada a una cita concreta. `null` = nota
+  // general del cliente. Ref suelta (sin FK), como Notificacion.destinatarioId.
+  citaId     Int?
 
   @@index([pacienteId])
+  @@index([citaId])
 }
 
 /// Registro de notificación enviada/encolada. destinatarioId sin FK (ver §5).

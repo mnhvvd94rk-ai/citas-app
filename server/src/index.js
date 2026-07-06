@@ -8,6 +8,7 @@ import disponibilidadRouter from './routes/disponibilidadRoutes.js'
 import citaRouter from './routes/citaRoutes.js'
 import pacienteRouter from './routes/pacienteRoutes.js'
 import notaRouter from './routes/notaRoutes.js'
+import notaCitaRouter from './routes/notaCitaRoutes.js'
 import medicoRouter from './routes/medicoRoutes.js'
 import { runDailySummary } from './jobs/dailySummary.js'
 
@@ -30,6 +31,7 @@ app.use('/disponibilidad', disponibilidadRouter)
 app.use('/citas', citaRouter)
 app.use('/pacientes', pacienteRouter)
 app.use('/notas', notaRouter)
+app.use('/notas-por-cita', notaCitaRouter)
 app.use('/medicos', medicoRouter)
 
 app.get('/', (req, res) => {

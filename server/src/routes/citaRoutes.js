@@ -208,6 +208,19 @@ async function cargarCitaPropia(req, res) {
   return cita
 }
 
+// ── GET /citas/:id/notas ─────────────────────────────────────────────────────
+// Notas vinculadas a una cita concreta (medico dueño de la cita).
+router.get('/:id/notas', requireAuth, requireRole('MEDICO'), async (req, res) => {
+  const cita = await cargarCitaPropia(req, res)
+  if (!cita) return
+  const notas = await prisma.notaPaciente.findMany({
+    where: { citaId: cita.id },
+    include: { medico: { select: { id: true, nombre: true } } },
+    orderBy: { fecha: 'desc' },
+  })
+  res.json(notas)
+})
+
 // ── PATCH /citas/:id/aprobar ─────────────────────────────────────────────────
 router.patch('/:id/aprobar', requireAuth, requireRole('MEDICO'), async (req, res) => {
   const cita = await cargarCitaPropia(req, res)

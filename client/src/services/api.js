@@ -104,6 +104,7 @@ export const citasApi = {
     const q = qs.toString()
     return request(`/citas/agenda${q ? `?${q}` : ''}`)
   },
+  notasDeCita: (id) => request(`/citas/${id}/notas`),
   aprobar: (id) => request(`/citas/${id}/aprobar`, { method: 'PATCH' }),
   anular: (id, notaAnulacion) =>
     request(`/citas/${id}/anular`, { method: 'PATCH', body: { notaAnulacion } }),
@@ -134,6 +135,8 @@ export const pacientesApi = {
   notas: (pacienteId) => request(`/notas/${pacienteId}`),
   agregarNota: (pacienteId, texto) =>
     request('/notas', { method: 'POST', body: { pacienteId, texto } }),
+  agregarNotaCita: (citaId, texto) =>
+    request('/notas-por-cita', { method: 'POST', body: { citaId, texto } }),
 }
 
 export { BASE_URL }

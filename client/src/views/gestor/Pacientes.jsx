@@ -1,17 +1,31 @@
 import { useEffect, useState } from 'react'
-import { pacientesApi } from '../../services/api.js'
+import { pacientesApi, citasApi } from '../../services/api.js'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
+import EstadoBadge from '../../components/EstadoBadge.jsx'
 import { formatFechaCorta } from '../../lib/format.js'
 
-// Lista de clientes como tarjetas visuales (tipo contacto profesional).
+// ── Avatar de documento (o placeholder de iniciales) ─────────────────────────
+function Foto({ cliente, className }) {
+  const iniciales = `${cliente.nombre?.[0] || ''}${cliente.apellido?.[0] || ''}`.toUpperCase()
+  if (cliente.fotoIdentidadUrl) {
+    return <img src={cliente.fotoIdentidadUrl} alt="" className={`object-cover ${className}`} />
+  }
+  return (
+    <div className={`flex items-center justify-center bg-navy-700 font-bold text-gold-400 ${className}`}>
+      {iniciales || '·'}
+    </div>
+  )
+}
+
+// ── Vista principal: lista escalonada de clientes ────────────────────────────
 export default function Pacientes() {
   const { t } = useLanguage()
   const [clientes, setClientes] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
-  const [notasDe, setNotasDe] = useState(null) // cliente con el modal de notas abierto
+  const [detalle, setDetalle] = useState(null)
 
   async function cargar() {
     setCargando(true)
@@ -44,77 +58,137 @@ export default function Pacientes() {
             {t('clients.empty')}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {clientes.map((c) => (
-              <ClienteCard key={c.id} cliente={c} onVerNotas={() => setNotasDe(c)} />
+          <ul className="flex flex-col gap-3">
+            {clientes.map((c, i) => (
+              <ClienteRow key={c.id} cliente={c} index={i} onExpandir={() => setDetalle(c)} />
             ))}
-          </div>
+          </ul>
         )}
       </div>
 
-      {notasDe && <NotasModal cliente={notasDe} onClose={() => setNotasDe(null)} />}
+      {detalle && <ClienteModal cliente={detalle} onClose={() => setDetalle(null)} />}
     </div>
   )
 }
 
-// ── Tarjeta de cliente ───────────────────────────────────────────────────────
-function ClienteCard({ cliente, onVerNotas }) {
+// ── Tarjeta rectangular (colapsada), con indentación escalonada ──────────────
+function ClienteRow({ cliente, index, onExpandir }) {
   const { t } = useLanguage()
-  const iniciales = `${cliente.nombre?.[0] || ''}${cliente.apellido?.[0] || ''}`.toUpperCase()
-  const ultima = cliente.ultimaCita
-    ? `${formatFechaCorta(cliente.ultimaCita.fecha)} · ${cliente.ultimaCita.horaInicio}`
-    : t('clients.noAppts')
+  const indent = Math.min(index, 6) * 18 // margen izquierdo escalonado (cap)
 
   return (
-    <div className="flex flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy-100">
-      {/* Foto / avatar + nombre */}
-      <div className="flex flex-col items-center text-center">
-        {cliente.fotoIdentidadUrl ? (
-          <img
-            src={cliente.fotoIdentidadUrl}
-            alt=""
-            className="h-24 w-24 rounded-2xl object-cover ring-1 ring-navy-100"
-          />
-        ) : (
-          <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-navy-700 text-2xl font-bold text-gold-400">
-            {iniciales || '👤'}
+    <li style={{ marginLeft: `${indent}px` }} className="w-[92%] max-w-2xl">
+      <button
+        onClick={onExpandir}
+        className="flex w-full items-center gap-4 overflow-hidden rounded-2xl bg-white text-left shadow-sm ring-1 ring-navy-100 transition hover:-translate-y-0.5 hover:shadow-md"
+      >
+        <Foto cliente={cliente} className="h-[120px] w-[80px] shrink-0" />
+        <div className="min-w-0 flex-1 py-3">
+          <p className="truncate font-semibold text-navy-800">{cliente.nombre} {cliente.apellido}</p>
+          <p className="truncate text-sm text-navy-500">
+            {cliente.correo}{cliente.telefono ? ` · ${cliente.telefono}` : ''}
+          </p>
+          <span className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${cliente.estado === 'NUEVO' ? 'bg-gold-100 text-gold-600' : 'bg-navy-100 text-navy-700'}`}>
+            {cliente.estado === 'NUEVO' ? t('citaCard.newClient') : t('citaCard.returning')}
+          </span>
+        </div>
+        <span className="shrink-0 pr-4 text-lg text-navy-300">›</span>
+      </button>
+    </li>
+  )
+}
+
+// ── Modal expandido: ficha completa + historial ──────────────────────────────
+function ClienteModal({ cliente, onClose }) {
+  const { t } = useLanguage()
+  const [citaNotas, setCitaNotas] = useState(null) // cita cuyo modal de notas está abierto
+
+  const edad = cliente.edad != null ? cliente.edad : t('clients.ageUnknown')
+  const desde = cliente.primeraCita ? formatFechaCorta(cliente.primeraCita) : t('clients.noAppts')
+  const historial = cliente.historial || []
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-navy-900/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        {/* Cabecera */}
+        <div className="relative shrink-0">
+          <button onClick={onClose} className="absolute right-3 top-3 z-10 rounded-lg bg-white/80 p-1 text-navy-500 hover:bg-white" aria-label={t('agenda.close')}>✕</button>
+          <div className="flex items-center gap-4 border-b border-navy-100 p-5">
+            <Foto cliente={cliente} className="h-24 w-20 shrink-0 rounded-xl ring-1 ring-navy-100" />
+            <div className="min-w-0">
+              <h3 className="truncate text-lg font-bold text-navy-800">{cliente.nombre} {cliente.apellido}</h3>
+              <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${cliente.estado === 'NUEVO' ? 'bg-gold-100 text-gold-600' : 'bg-navy-100 text-navy-700'}`}>
+                {cliente.estado === 'NUEVO' ? t('citaCard.newClient') : t('citaCard.returning')}
+              </span>
+            </div>
           </div>
-        )}
-        <p className="mt-3 text-base font-semibold text-navy-800">{cliente.nombre} {cliente.apellido}</p>
-        <span className={`mt-1 rounded-full px-2 py-0.5 text-xs font-semibold ${cliente.estado === 'NUEVO' ? 'bg-gold-100 text-gold-600' : 'bg-navy-100 text-navy-700'}`}>
-          {cliente.estado === 'NUEVO' ? t('citaCard.newClient') : t('citaCard.returning')}
-        </span>
+        </div>
+
+        {/* Cuerpo scrollable */}
+        <div className="overflow-y-auto px-5 py-4">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+            <Dato label={t('clients.document')} valor={cliente.documentoIdentidad} />
+            <Dato label={t('clients.age')} valor={edad} />
+            <Dato label={t('common.email')} valor={cliente.correo} className="col-span-2" />
+            {cliente.telefono && <Dato label={t('clients.phone')} valor={cliente.telefono} />}
+          </dl>
+
+          {/* Estadísticas */}
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-navy-50 p-3">
+              <p className="text-xs text-navy-400">{t('clients.firstAppt')}</p>
+              <p className="mt-0.5 font-semibold text-navy-800">{t('clients.since')}: {desde}</p>
+            </div>
+            <div className="rounded-xl bg-navy-50 p-3">
+              <p className="text-xs text-navy-400">{t('clients.totalAppts')}</p>
+              <p className="mt-0.5 font-semibold text-navy-800">{cliente.totalCitas ?? 0}</p>
+            </div>
+          </div>
+
+          {/* Historial de citas */}
+          <h4 className="mt-5 mb-2 text-sm font-semibold text-navy-700">{t('clients.apptHistory')}</h4>
+          {historial.length === 0 ? (
+            <p className="py-3 text-center text-sm text-navy-400">{t('clients.noAppts')}</p>
+          ) : (
+            <ul className="space-y-2">
+              {historial.map((c) => (
+                <li key={c.id} className="rounded-xl border border-navy-100 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-navy-800">{formatFechaCorta(c.fecha)}</p>
+                      <p className="text-xs text-navy-500">{c.horaInicio} – {c.horaFin}</p>
+                    </div>
+                    <EstadoBadge estado={c.estado} />
+                  </div>
+                  <button
+                    onClick={() => setCitaNotas(c)}
+                    className="mt-2 text-xs font-semibold text-navy-600 hover:text-gold-600"
+                  >
+                    {t('clients.notesForAppt')} →
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
-      {/* Datos */}
-      <dl className="mt-4 space-y-2 border-t border-navy-100 pt-4 text-sm">
-        <Campo label={t('clients.document')} valor={cliente.documentoIdentidad} />
-        <Campo label={t('common.email')} valor={cliente.correo} />
-        {cliente.telefono && <Campo label={t('clients.phone')} valor={cliente.telefono} />}
-        <Campo label={t('clients.lastAppt')} valor={ultima} />
-      </dl>
-
-      <button
-        onClick={onVerNotas}
-        className="mt-4 w-full rounded-xl bg-navy-700 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-800"
-      >
-        {t('clients.viewNotes')}
-      </button>
+      {citaNotas && <CitaNotasModal cita={citaNotas} onClose={() => setCitaNotas(null)} />}
     </div>
   )
 }
 
-function Campo({ label, valor }) {
+function Dato({ label, valor, className = '' }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt className="shrink-0 text-xs text-navy-400">{label}</dt>
-      <dd className="min-w-0 truncate text-right font-medium text-navy-700">{valor}</dd>
+    <div className={`min-w-0 ${className}`}>
+      <dt className="text-xs text-navy-400">{label}</dt>
+      <dd className="truncate font-medium text-navy-700">{valor}</dd>
     </div>
   )
 }
 
-// ── Modal de notas del cliente ───────────────────────────────────────────────
-function NotasModal({ cliente, onClose }) {
+// ── Modal de notas específicas de una cita ───────────────────────────────────
+function CitaNotasModal({ cita, onClose }) {
   const { t } = useLanguage()
   const [notas, setNotas] = useState(null)
   const [cargando, setCargando] = useState(true)
@@ -122,11 +196,11 @@ function NotasModal({ cliente, onClose }) {
   const [texto, setTexto] = useState('')
   const [guardando, setGuardando] = useState(false)
 
-  async function cargarNotas() {
+  async function cargar() {
     setCargando(true)
     setError(null)
     try {
-      setNotas(await pacientesApi.notas(cliente.id))
+      setNotas(await citasApi.notasDeCita(cita.id))
     } catch (err) {
       setError(err)
     } finally {
@@ -135,7 +209,7 @@ function NotasModal({ cliente, onClose }) {
   }
 
   useEffect(() => {
-    cargarNotas()
+    cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -145,7 +219,7 @@ function NotasModal({ cliente, onClose }) {
     setGuardando(true)
     setError(null)
     try {
-      const nueva = await pacientesApi.agregarNota(cliente.id, texto.trim())
+      const nueva = await pacientesApi.agregarNotaCita(cita.id, texto.trim())
       setNotas((prev) => [nueva, ...(prev || [])])
       setTexto('')
     } catch (err) {
@@ -156,12 +230,12 @@ function NotasModal({ cliente, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/50 p-0 sm:items-center sm:p-4" onClick={onClose}>
       <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-t-2xl bg-white sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-navy-100 px-5 py-4">
           <div className="min-w-0">
-            <h3 className="truncate font-bold text-navy-800">{cliente.nombre} {cliente.apellido}</h3>
-            <p className="text-xs text-navy-400">{t('clients.newNote')}</p>
+            <h3 className="truncate font-bold text-navy-800">{t('clients.notesForAppt')}</h3>
+            <p className="text-xs text-navy-400">{formatFechaCorta(cita.fecha)} · {cita.horaInicio}</p>
           </div>
           <button onClick={onClose} className="rounded-lg p-1 text-navy-400 hover:bg-navy-50" aria-label={t('agenda.close')}>✕</button>
         </div>
