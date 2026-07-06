@@ -101,24 +101,35 @@ function ClienteItem({ cliente, abierto, onToggle }) {
     }
   }
 
+  const ultima = cliente.ultimaCita
+    ? `${formatFechaCorta(cliente.ultimaCita.fecha)} · ${cliente.ultimaCita.horaInicio}`
+    : t('clients.noAppts')
+
   return (
     <li className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-navy-100">
-      <button onClick={onToggle} className="flex w-full items-center justify-between px-5 py-4 text-left transition hover:bg-navy-50">
-        <div className="min-w-0">
-          <p className="truncate font-semibold text-navy-800">{cliente.nombre} {cliente.apellido}</p>
-          <p className="truncate text-xs text-navy-500">{cliente.correo}</p>
-          <p className="mt-0.5 text-xs text-navy-400">
-            {t('clients.lastAppt')}:{' '}
-            {cliente.ultimaCita ? formatFechaCorta(cliente.ultimaCita.fecha) : t('clients.noAppts')}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cliente.estado === 'NUEVO' ? 'bg-gold-100 text-gold-600' : 'bg-navy-100 text-navy-700'}`}>
+      {/* Ficha del cliente */}
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <p className="truncate text-base font-semibold text-navy-800">{cliente.nombre} {cliente.apellido}</p>
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${cliente.estado === 'NUEVO' ? 'bg-gold-100 text-gold-600' : 'bg-navy-100 text-navy-700'}`}>
             {cliente.estado === 'NUEVO' ? t('citaCard.newClient') : t('citaCard.returning')}
           </span>
-          <span className="text-navy-300">{abierto ? '▲' : '▼'}</span>
         </div>
-      </button>
+
+        <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-2">
+          <Campo label={t('common.email')} valor={cliente.correo} />
+          {cliente.telefono && <Campo label={t('clients.phone')} valor={cliente.telefono} />}
+          <Campo label={t('clients.lastAppt')} valor={ultima} />
+        </dl>
+
+        <button
+          onClick={onToggle}
+          className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-navy-200 px-4 py-2 text-sm font-semibold text-navy-700 transition hover:bg-navy-50"
+        >
+          {abierto ? t('clients.hideNotes') : t('clients.viewNotes')}
+          <span className="text-navy-400">{abierto ? '▲' : '▼'}</span>
+        </button>
+      </div>
 
       {abierto && (
         <div className="border-t border-navy-100 bg-navy-50 px-5 py-4">
@@ -161,5 +172,14 @@ function ClienteItem({ cliente, abierto, onToggle }) {
         </div>
       )}
     </li>
+  )
+}
+
+function Campo({ label, valor }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-navy-400">{label}</dt>
+      <dd className="truncate font-medium text-navy-700">{valor}</dd>
+    </div>
   )
 }
