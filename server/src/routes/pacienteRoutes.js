@@ -20,14 +20,26 @@ const PACIENTE_SELECT = {
 }
 
 // ── GET /pacientes ───────────────────────────────────────────────────────────
-// Lista todos los pacientes (sin passwordHash), ordenados por apellido.
-// Las notas viven en su propio router (/notas).
+// Lista todos los pacientes (sin passwordHash), ordenados por apellido, con su
+// última cita (fecha/hora/estado). Las notas viven en su propio router (/notas).
 router.get('/', async (req, res) => {
   const pacientes = await prisma.usuario.findMany({
-    select: PACIENTE_SELECT,
+    select: {
+      ...PACIENTE_SELECT,
+      citas: {
+        select: { fecha: true, horaInicio: true, estado: true },
+        orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }],
+        take: 1,
+      },
+    },
     orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
   })
-  res.json(pacientes)
+  // Aplana la última cita a `ultimaCita` (o null) para el frontend.
+  const salida = pacientes.map(({ citas, ...p }) => ({
+    ...p,
+    ultimaCita: citas[0] || null,
+  }))
+  res.json(salida)
 })
 
 export default router

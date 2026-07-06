@@ -164,11 +164,17 @@ router.get('/mis-citas', requireAuth, requireRole('PACIENTE'), async (req, res) 
 // ── GET /citas/agenda ────────────────────────────────────────────────────────
 router.get('/agenda', requireAuth, requireRole('MEDICO'), async (req, res) => {
   const where = { medicoId: req.user.id }
-  if (req.query.fecha && FECHA_RE.test(req.query.fecha)) {
-    where.fecha = parseFecha(req.query.fecha)
+  const { fecha, desde, hasta, estado } = req.query
+  if (fecha && FECHA_RE.test(fecha)) {
+    where.fecha = parseFecha(fecha)
+  } else if (desde || hasta) {
+    // Rango de fechas (para la vista de calendario del mes).
+    where.fecha = {}
+    if (desde && FECHA_RE.test(desde)) where.fecha.gte = parseFecha(desde)
+    if (hasta && FECHA_RE.test(hasta)) where.fecha.lte = parseFecha(hasta)
   }
-  if (req.query.estado) {
-    where.estado = req.query.estado
+  if (estado) {
+    where.estado = estado
   }
 
   const citas = await prisma.cita.findMany({

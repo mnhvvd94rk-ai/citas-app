@@ -13,7 +13,6 @@ import NuevaCita from './views/paciente/NuevaCita.jsx'
 import Agenda from './views/gestor/Agenda.jsx'
 import Disponibilidad from './views/gestor/Disponibilidad.jsx'
 import Pacientes from './views/gestor/Pacientes.jsx'
-import CitasPendientes from './views/gestor/CitasPendientes.jsx'
 
 export default function App() {
   return (
@@ -53,7 +52,8 @@ export default function App() {
       >
         <Route index element={<Navigate to="agenda" replace />} />
         <Route path="agenda" element={<Agenda />} />
-        <Route path="citas-pendientes" element={<CitasPendientes />} />
+        {/* /gestor/citas-pendientes se integró en la agenda (calendario) */}
+        <Route path="citas-pendientes" element={<Navigate to="/gestor/agenda" replace />} />
         <Route path="disponibilidad" element={<Disponibilidad />} />
         <Route path="pacientes" element={<Pacientes />} />
       </Route>

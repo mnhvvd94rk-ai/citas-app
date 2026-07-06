@@ -95,9 +95,11 @@ export const citasApi = {
     request(`/citas/slots-disponibles?medicoId=${medicoId}&fecha=${fecha}`),
   reservar: (payload) => request('/citas/reservar', { method: 'POST', body: payload }),
   misCitas: () => request('/citas/mis-citas'),
-  agenda: ({ fecha, estado } = {}) => {
+  agenda: ({ fecha, desde, hasta, estado } = {}) => {
     const qs = new URLSearchParams()
     if (fecha) qs.set('fecha', fecha)
+    if (desde) qs.set('desde', desde)
+    if (hasta) qs.set('hasta', hasta)
     if (estado) qs.set('estado', estado)
     const q = qs.toString()
     return request(`/citas/agenda${q ? `?${q}` : ''}`)
@@ -110,7 +112,18 @@ export const citasApi = {
 
 // ── Disponibilidad ───────────────────────────────────────────────────────────
 export const disponibilidadApi = {
-  listar: (fecha) => request(`/disponibilidad${fecha ? `?fecha=${fecha}` : ''}`),
+  // listar() → todas; listar('YYYY-MM-DD') → un día; listar({desde,hasta}) → rango.
+  listar: (params) => {
+    const qs = new URLSearchParams()
+    if (typeof params === 'string') qs.set('fecha', params)
+    else if (params) {
+      if (params.fecha) qs.set('fecha', params.fecha)
+      if (params.desde) qs.set('desde', params.desde)
+      if (params.hasta) qs.set('hasta', params.hasta)
+    }
+    const q = qs.toString()
+    return request(`/disponibilidad${q ? `?${q}` : ''}`)
+  },
   crear: (payload) => request('/disponibilidad', { method: 'POST', body: payload }),
   eliminar: (id) => request(`/disponibilidad/${id}`, { method: 'DELETE' }),
 }

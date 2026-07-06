@@ -106,7 +106,11 @@ function ClienteItem({ cliente, abierto, onToggle }) {
       <button onClick={onToggle} className="flex w-full items-center justify-between px-5 py-4 text-left transition hover:bg-navy-50">
         <div className="min-w-0">
           <p className="truncate font-semibold text-navy-800">{cliente.nombre} {cliente.apellido}</p>
-          <p className="text-xs text-navy-500">{cliente.correo} · {t('citaCard.doc')}: {cliente.documentoIdentidad}</p>
+          <p className="truncate text-xs text-navy-500">{cliente.correo}</p>
+          <p className="mt-0.5 text-xs text-navy-400">
+            {t('clients.lastAppt')}:{' '}
+            {cliente.ultimaCita ? formatFechaCorta(cliente.ultimaCita.fecha) : t('clients.noAppts')}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cliente.estado === 'NUEVO' ? 'bg-gold-100 text-gold-600' : 'bg-navy-100 text-navy-700'}`}>
