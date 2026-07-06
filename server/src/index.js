@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3001
 // Orígenes permitidos: localhost (dev) y el frontend desplegado en Vercel.
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://citas-app.vercel.app"
+  "https://citas-app-client.vercel.app"
 ];
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 // Límite amplio: el registro de paciente envía foto de identidad y firma como
