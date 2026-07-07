@@ -8,8 +8,27 @@ import { prisma } from './db.js'
 // El envío es best-effort: nunca lanza al llamador. Devuelve
 //   { ok: true, notificacionId } | { ok: false, error }
 
-// ── Construcción del mensaje según el tipo ────────────────────────────────────
-function construirMensaje(tipo, payload = {}) {
+// Plantillas de recordatorio de cita en 3 idiomas (payload: { marca, hora, profesional }).
+const REMINDER_MESSAGES = {
+  ES: {
+    '48h': () => ({ asunto: 'Recordatorio: tu cita en 48 horas', texto: '📅 Recordatorio: Tu cita en 48 horas. Cancélala antes de esta fecha si necesitas.' }),
+    '24h': (p) => ({ asunto: 'Recordatorio: tu cita mañana', texto: `📅 ¡Mañana es tu cita! A las ${p.hora} con ${p.profesional}.` }),
+    '3h': () => ({ asunto: 'Tu cita comienza en 3 horas', texto: '⏰ Tu cita comienza en 3 horas. Llega 10 minutos antes.' }),
+  },
+  EN: {
+    '48h': () => ({ asunto: 'Reminder: your appointment in 48 hours', texto: '📅 Reminder: Your appointment in 48 hours. Cancel before this date if needed.' }),
+    '24h': (p) => ({ asunto: 'Reminder: your appointment tomorrow', texto: `📅 Your appointment is tomorrow! At ${p.hora} with ${p.profesional}.` }),
+    '3h': () => ({ asunto: 'Your appointment starts in 3 hours', texto: '⏰ Your appointment starts in 3 hours. Arrive 10 minutes early.' }),
+  },
+  FR: {
+    '48h': () => ({ asunto: 'Rappel : votre rendez-vous dans 48 heures', texto: '📅 Rappel: Votre rendez-vous dans 48 heures. Annulez avant cette date si nécessaire.' }),
+    '24h': (p) => ({ asunto: 'Rappel : votre rendez-vous demain', texto: `📅 Votre rendez-vous est demain! À ${p.hora} avec ${p.profesional}.` }),
+    '3h': () => ({ asunto: 'Votre rendez-vous commence dans 3 heures', texto: '⏰ Votre rendez-vous commence dans 3 heures. Arrivez 10 minutes plus tôt.' }),
+  },
+}
+
+// ── Construcción del mensaje según el tipo (y el idioma para recordatorios) ───
+function construirMensaje(tipo, payload = {}, idioma = 'ES') {
   if (tipo === 'ANULACION') {
     const lineas = [
       'Hola,',
@@ -39,11 +58,13 @@ function construirMensaje(tipo, payload = {}) {
     }
   }
 
-  // Recordatorio automático de cita: el asunto/texto ya vienen construidos
-  // (localizados) desde el job de notificaciones automáticas.
+  // Recordatorio automático de cita: se construye en el idioma del cliente.
   if (tipo === 'RECORDATORIO_CITA') {
-    const asunto = payload.asunto || 'Recordatorio de cita'
-    const texto = payload.texto || ''
+    const lang = REMINDER_MESSAGES[idioma] ? idioma : 'ES'
+    const fn = REMINDER_MESSAGES[lang][payload.marca]
+    const { asunto, texto } = fn
+      ? fn(payload)
+      : { asunto: 'Recordatorio de cita', texto: payload.texto || '' }
     return { asunto, texto, html: `<p>${texto.replace(/\n/g, '<br>')}</p>` }
   }
 
@@ -175,7 +196,7 @@ async function enviarPush({ destinatario, asunto, texto }) {
  * }} args
  * @returns {Promise<{ok:true,notificacionId:number,previewUrl?:string}|{ok:false,error:string,notificacionId?:number}>}
  */
-async function send({ tipo, canal, destinatario, payload }) {
+async function send({ tipo, canal, idioma = 'ES', destinatario, payload }) {
   let notificacion
   try {
     // a) Registro PENDIENTE antes de intentar el envío.
@@ -189,7 +210,7 @@ async function send({ tipo, canal, destinatario, payload }) {
       },
     })
 
-    const { asunto, texto, html } = construirMensaje(tipo, payload)
+    const { asunto, texto, html } = construirMensaje(tipo, payload, idioma)
 
     // b) Delegación por canal.
     let resultado

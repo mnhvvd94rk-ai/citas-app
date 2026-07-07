@@ -60,6 +60,7 @@ model Usuario {
   passwordHash       String
   estado             String         @default("NUEVO") // NUEVO | CONTINUIDAD
   fechaRegistro      DateTime       @default(now())
+  idiomaPreferido    String         @default("ES") // ES | EN | FR (para notificaciones)
 
   // Gestión del cliente por el profesional (no proviene del registro):
   edadManual              Int?      // edad introducida a mano (no hay fecha de nacimiento)

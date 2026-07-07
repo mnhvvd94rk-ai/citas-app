@@ -153,6 +153,8 @@ const translations = {
       penaltyWillApply: 'Se aplicará penalización de ${cost}',
       noBack: 'No, volver atrás',
       cancelledOk: 'Cita cancelada',
+      languageUpdated: 'Idioma actualizado',
+      notificationsNowIn: 'Recibirás tus recordatorios en este idioma.',
     },
     navbar: {
       // marca + logout viven en common
@@ -405,6 +407,8 @@ const translations = {
       penaltyWillApply: 'A penalty of ${cost} will apply',
       noBack: 'No, go back',
       cancelledOk: 'Appointment cancelled',
+      languageUpdated: 'Language updated',
+      notificationsNowIn: 'You will receive your reminders in this language.',
     },
     navbar: {},
     tabs: {
@@ -655,6 +659,8 @@ const translations = {
       penaltyWillApply: 'Une pénalité de ${cost} sera appliquée',
       noBack: 'Non, retour',
       cancelledOk: 'Rendez-vous annulé',
+      languageUpdated: 'Langue mise à jour',
+      notificationsNowIn: 'Vous recevrez vos rappels dans cette langue.',
     },
     navbar: {},
     tabs: {

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { citasApi, medicosApi } from '../../services/api.js'
+import { citasApi, medicosApi, authApi } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 import Navbar from '../../components/Navbar.jsx'
@@ -15,7 +15,9 @@ const esActiva = (c) => ['PENDIENTE', 'CONFIRMADA'].includes(c.estado)
 export default function DashboardCliente() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+  const langRef = useRef(lang)
+  const [langAviso, setLangAviso] = useState(null)
   const [citas, setCitas] = useState([])
   const [medico, setMedico] = useState(null)
   const [cargando, setCargando] = useState(true)
@@ -45,6 +47,21 @@ export default function DashboardCliente() {
   useEffect(() => {
     cargar()
   }, [])
+
+  // Al cambiar el idioma en el navbar, el cliente guarda su preferencia para
+  // que los recordatorios (email/WhatsApp) lleguen en ese idioma.
+  useEffect(() => {
+    if (langRef.current === lang) return // sin cambio (o montaje inicial)
+    langRef.current = lang
+    authApi
+      .actualizarIdioma(lang.toUpperCase())
+      .then(() => {
+        setLangAviso(`${t('clientDash.languageUpdated')} · ${t('clientDash.notificationsNowIn')}`)
+        setTimeout(() => setLangAviso(null), 4000)
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang])
 
   const hoy = hoyISO()
   // Próxima cita = la más cercana futura y activa.
@@ -120,6 +137,11 @@ export default function DashboardCliente() {
         {aviso && (
           <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             {aviso}
+          </div>
+        )}
+        {langAviso && (
+          <div className="mt-4 rounded-xl border border-navy-200 bg-navy-50 px-4 py-3 text-sm text-navy-700">
+            {langAviso}
           </div>
         )}
         {resultado && (

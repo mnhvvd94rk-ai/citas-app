@@ -82,6 +82,8 @@ export const authApi = {
   loginMedico: (correo, password) =>
     request('/auth/login-medico', { method: 'POST', body: { correo, password }, auth: false }),
   me: () => request('/auth/me'),
+  actualizarIdioma: (idiomaPreferido) =>
+    request('/auth/me', { method: 'PATCH', body: { idiomaPreferido } }),
 }
 
 // ── Profesional (agenda personal: hay uno solo) ──────────────────────────────
