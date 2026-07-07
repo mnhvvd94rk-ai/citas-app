@@ -144,4 +144,9 @@ export const pacientesApi = {
     request('/notas-por-cita', { method: 'POST', body: { citaId, texto } }),
 }
 
+// ── Contacto (público) ───────────────────────────────────────────────────────
+export const contactoApi = {
+  enviar: (payload) => request('/contacto', { method: 'POST', body: payload, auth: false }),
+}
+
 export { BASE_URL }

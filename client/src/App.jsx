@@ -7,6 +7,7 @@ import LandingPage from './views/LandingPage.jsx' // eager: primera pintura
 
 // Code-splitting por ruta: cada vista se carga bajo demanda para reducir el
 // bundle inicial.
+const ContactoPage = lazy(() => import('./views/ContactoPage.jsx'))
 const TerminosPage = lazy(() => import('./views/legal/TerminosPage.jsx'))
 const PrivacyPage = lazy(() => import('./views/legal/PrivacyPage.jsx'))
 const RegistroPaciente = lazy(() => import('./views/RegistroPaciente.jsx'))
@@ -41,6 +42,8 @@ export default function App() {
         <Route path="/privacidad" element={<PrivacyPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/politique-confidentialite" element={<PrivacyPage />} />
+        <Route path="/contacto" element={<ContactoPage />} />
+        <Route path="/contact" element={<ContactoPage />} />
         <Route path="/registro-paciente" element={<RegistroPaciente />} />
         <Route path="/login-paciente" element={<LoginPaciente />} />
         <Route path="/login-medico" element={<LoginMedico />} />

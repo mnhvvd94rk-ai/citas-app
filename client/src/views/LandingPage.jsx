@@ -227,7 +227,7 @@ export default function LandingPage() {
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/70">
             <Link to="/terminos" className="hover:text-green-300">{t('landingPublic.footerTerms')}</Link>
             <Link to="/privacidad" className="hover:text-green-300">{t('landingPublic.footerPrivacy')}</Link>
-            <a href="#" className="hover:text-green-300">{t('landingPublic.footerContact')}</a>
+            <Link to="/contacto" className="hover:text-green-300">{t('landingPublic.footerContact')}</Link>
             <a href="#" className="hover:text-green-300">{t('landingPublic.footerBlog')}</a>
           </div>
           <div className="flex items-center gap-3 text-white/60">
