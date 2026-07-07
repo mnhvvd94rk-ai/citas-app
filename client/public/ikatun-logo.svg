@@ -9,14 +9,11 @@
       <rect x="0" y="0" width="512" height="512" rx="112"/>
     </clipPath>
   </defs>
-  <g clip-path="url(#rounded)" transform="rotate(270 256 256) scale(-1,1) translate(-512,0)">
+  <g clip-path="url(#rounded)">
     <rect x="0" y="0" width="512" height="512" fill="url(#fire)"/>
-    <path d="M 200 40
-             C 230 110, 175 150, 210 205
-             C 235 245, 300 260, 285 320
-             C 272 370, 210 400, 235 460"
-          fill="none" stroke="#2C7C79" stroke-width="20" stroke-linecap="round"/>
-    <circle cx="145" cy="313" r="46" fill="#2C7C79"/>
-    <circle cx="160" cy="410" r="38" fill="#2C7C79"/>
+    <path d="M 280 80 C 300 150, 250 200, 280 260 C 310 320, 280 380, 260 450"
+          fill="none" stroke="#2C7C79" stroke-width="24" stroke-linecap="round"/>
+    <circle cx="360" cy="120" r="50" fill="#2C7C79"/>
+    <circle cx="120" cy="420" r="45" fill="#2C7C79"/>
   </g>
 </svg>
