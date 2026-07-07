@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { z } from 'zod'
 import { prisma } from '../services/db.js'
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js'
 
@@ -18,13 +19,39 @@ const PACIENTE_SELECT = {
   estado: true,
   fechaRegistro: true,
   fotoIdentidadUrl: true,
+  edadManual: true,
+  estadoTratamiento: true,
+  tratamientoFinalizadoEn: true,
+}
+
+const ESTADOS_TRATAMIENTO = ['ACTIVO', 'COMPLETADO', 'EN_PAUSA']
+const ACTIVAS = ['PENDIENTE', 'CONFIRMADA']
+
+/** "YYYY-MM-DD" de hoy (para calcular la próxima cita). */
+function hoyISO() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+/** Deriva las estadísticas y el resumen visual de un cliente a partir de sus citas. */
+function conResumen({ citas, ...p }) {
+  const hoy = hoyISO()
+  const futurasActivas = citas
+    .filter((c) => c.fecha.toISOString().slice(0, 10) >= hoy && ACTIVAS.includes(c.estado))
+    .sort((a, b) => (a.fecha > b.fecha ? 1 : a.fecha < b.fecha ? -1 : a.horaInicio.localeCompare(b.horaInicio)))
+  return {
+    ...p,
+    edad: p.edadManual ?? null, // sin fecha de nacimiento: solo la manual, si existe
+    primeraCita: citas.length ? citas[citas.length - 1].fecha : null,
+    totalCitasCompletadas: citas.filter((c) => c.estado === 'COMPLETADA').length,
+    totalCitasAnuladas: citas.filter((c) => c.estado === 'ANULADA').length,
+    proximaCita: futurasActivas[0]
+      ? { fecha: futurasActivas[0].fecha, horaInicio: futurasActivas[0].horaInicio }
+      : null,
+    historial: citas, // todas las citas (desc) para el panel expandido
+  }
 }
 
 // ── GET /pacientes ───────────────────────────────────────────────────────────
-// Lista todos los pacientes (sin passwordHash), ordenados por apellido, con su
-// última cita (fecha/hora/estado). Las notas viven en su propio router (/notas).
-const CITAS_ACTIVAS = ['CONFIRMADA', 'COMPLETADA']
-
 router.get('/', async (req, res) => {
   const pacientes = await prisma.usuario.findMany({
     select: {
@@ -36,19 +63,58 @@ router.get('/', async (req, res) => {
     },
     orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }],
   })
+  res.json(pacientes.map(conResumen))
+})
 
-  // Deriva estadísticas por cliente. `edad` = null: no hay fecha de nacimiento
-  // en el modelo (el OCR del documento no está implementado), así que no se
-  // puede calcular una edad real sin inventarla.
-  const salida = pacientes.map(({ citas, ...p }) => ({
-    ...p,
-    edad: null,
-    ultimaCita: citas[0] || null, // orden desc → la primera es la más reciente
-    primeraCita: citas.length ? citas[citas.length - 1].fecha : null,
-    totalCitas: citas.filter((c) => CITAS_ACTIVAS.includes(c.estado)).length,
-    historial: citas, // todas las citas (desc) para el panel expandido
-  }))
-  res.json(salida)
+// ── PATCH /pacientes/:id ─────────────────────────────────────────────────────
+// Actualiza la gestión del cliente: edad (manual) y estado de tratamiento.
+const patchSchema = z
+  .object({
+    edadManual: z.number().int().min(0).max(150).nullable().optional(),
+    estadoTratamiento: z.enum(ESTADOS_TRATAMIENTO).optional(),
+  })
+  .refine((d) => d.edadManual !== undefined || d.estadoTratamiento !== undefined, {
+    message: 'Nada que actualizar',
+  })
+
+router.patch('/:id', async (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'id inválido' })
+
+  const parsed = patchSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: 'Datos inválidos',
+      detalles: parsed.error.issues.map((i) => ({ campo: i.path.join('.'), mensaje: i.message })),
+    })
+  }
+
+  const actual = await prisma.usuario.findUnique({ where: { id } })
+  if (!actual) return res.status(404).json({ error: 'Cliente no encontrado' })
+
+  const data = {}
+  if (parsed.data.edadManual !== undefined) data.edadManual = parsed.data.edadManual
+  if (parsed.data.estadoTratamiento !== undefined) {
+    data.estadoTratamiento = parsed.data.estadoTratamiento
+    // Marca/limpia la fecha de finalización al pasar a/desde COMPLETADO.
+    if (parsed.data.estadoTratamiento === 'COMPLETADO') {
+      data.tratamientoFinalizadoEn = actual.tratamientoFinalizadoEn || new Date()
+    } else {
+      data.tratamientoFinalizadoEn = null
+    }
+  }
+
+  const actualizado = await prisma.usuario.update({
+    where: { id },
+    data,
+    select: {
+      id: true,
+      edadManual: true,
+      estadoTratamiento: true,
+      tratamientoFinalizadoEn: true,
+    },
+  })
+  res.json({ ...actualizado, edad: actualizado.edadManual ?? null })
 })
 
 export default router

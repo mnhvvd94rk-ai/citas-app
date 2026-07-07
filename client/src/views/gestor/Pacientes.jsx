@@ -1,31 +1,44 @@
 import { useEffect, useState } from 'react'
-import { pacientesApi, citasApi } from '../../services/api.js'
+import { pacientesApi } from '../../services/api.js'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
-import EstadoBadge from '../../components/EstadoBadge.jsx'
-import { formatFechaCorta } from '../../lib/format.js'
+import { formatFechaCorta, soloFecha, hoyISO } from '../../lib/format.js'
 
-// ── Avatar de documento (o placeholder de iniciales) ─────────────────────────
-function Foto({ cliente, className }) {
-  const iniciales = `${cliente.nombre?.[0] || ''}${cliente.apellido?.[0] || ''}`.toUpperCase()
-  if (cliente.fotoIdentidadUrl) {
-    return <img src={cliente.fotoIdentidadUrl} alt="" className={`object-cover ${className}`} />
-  }
-  return (
-    <div className={`flex items-center justify-center bg-navy-700 font-bold text-gold-400 ${className}`}>
-      {iniciales || '·'}
-    </div>
-  )
+const ESTADOS_TRAT = ['ACTIVO', 'COMPLETADO', 'EN_PAUSA']
+
+// Clave de traducción de la etiqueta de cada estado de tratamiento.
+const TRAT_KEY = { ACTIVO: 'stActive', COMPLETADO: 'stCompleted', EN_PAUSA: 'stOnHold' }
+
+// Estilos de los botones de estado de tratamiento (colores dinámicos).
+const TRAT_STYLE = {
+  ACTIVO: { on: 'bg-emerald-500 text-white border-emerald-500', off: 'border-emerald-300 text-emerald-700 hover:bg-emerald-50', dot: 'bg-emerald-500' },
+  COMPLETADO: { on: 'bg-gray-400 text-white border-gray-400', off: 'border-gray-300 text-gray-600 hover:bg-gray-50', dot: 'bg-gray-400' },
+  EN_PAUSA: { on: 'bg-amber-400 text-white border-amber-400', off: 'border-amber-300 text-amber-700 hover:bg-amber-50', dot: 'bg-amber-400' },
 }
 
-// ── Vista principal: lista escalonada de clientes ────────────────────────────
+// Color del punto de una cita según estado.
+function dotEstado(estado) {
+  switch (estado) {
+    case 'COMPLETADA': return 'bg-emerald-500'
+    case 'ANULADA': return 'bg-red-500'
+    case 'CONFIRMADA': return 'bg-blue-500'
+    case 'PENDIENTE': return 'bg-amber-400'
+    default: return 'bg-slate-300'
+  }
+}
+
+function Foto({ cliente, className }) {
+  const ini = `${cliente.nombre?.[0] || ''}${cliente.apellido?.[0] || ''}`.toUpperCase()
+  if (cliente.fotoIdentidadUrl) return <img src={cliente.fotoIdentidadUrl} alt="" className={`object-cover ${className}`} />
+  return <div className={`flex items-center justify-center bg-navy-700 font-bold text-gold-400 ${className}`}>{ini || '·'}</div>
+}
+
 export default function Pacientes() {
   const { t } = useLanguage()
   const [clientes, setClientes] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
-  const [detalle, setDetalle] = useState(null)
 
   async function cargar() {
     setCargando(true)
@@ -59,136 +72,175 @@ export default function Pacientes() {
           </div>
         ) : (
           <ul className="flex flex-col gap-3">
-            {clientes.map((c, i) => (
-              <ClienteRow key={c.id} cliente={c} index={i} onExpandir={() => setDetalle(c)} />
-            ))}
+            {clientes.map((c) => <ClienteCard key={c.id} cliente={c} />)}
           </ul>
         )}
       </div>
-
-      {detalle && <ClienteModal cliente={detalle} onClose={() => setDetalle(null)} />}
     </div>
   )
 }
 
-// ── Tarjeta rectangular (colapsada), con indentación escalonada ──────────────
-function ClienteRow({ cliente, index, onExpandir }) {
+function ClienteCard({ cliente }) {
   const { t } = useLanguage()
-  const indent = Math.min(index, 6) * 18 // margen izquierdo escalonado (cap)
+  const [abierto, setAbierto] = useState(false)
+
+  // Estado editable local (se sincroniza con el backend vía PATCH).
+  const [edad, setEdad] = useState(cliente.edad)
+  const [estadoTrat, setEstadoTrat] = useState(cliente.estadoTratamiento || 'ACTIVO')
+  const [finalizadoEn, setFinalizadoEn] = useState(cliente.tratamientoFinalizadoEn)
+  const [guardandoTrat, setGuardandoTrat] = useState(false)
+  const [editandoEdad, setEditandoEdad] = useState(false)
+  const [inputEdad, setInputEdad] = useState(cliente.edad ?? '')
+
+  const historial = cliente.historial || []
+  const hoy = hoyISO()
+  const restantes = historial.filter(
+    (c) => soloFecha(c.fecha) >= hoy && ['PENDIENTE', 'CONFIRMADA'].includes(c.estado),
+  ).length
+
+  async function cambiarEstado(nuevo) {
+    if (nuevo === estadoTrat || guardandoTrat) return
+    setGuardandoTrat(true)
+    try {
+      const r = await pacientesApi.actualizar(cliente.id, { estadoTratamiento: nuevo })
+      setEstadoTrat(r.estadoTratamiento)
+      setFinalizadoEn(r.tratamientoFinalizadoEn)
+    } catch {
+      /* noop: se conserva el estado anterior */
+    } finally {
+      setGuardandoTrat(false)
+    }
+  }
+
+  async function guardarEdad() {
+    const val = inputEdad === '' ? null : Number(inputEdad)
+    try {
+      const r = await pacientesApi.actualizar(cliente.id, { edadManual: val })
+      setEdad(r.edad)
+    } catch {
+      /* noop */
+    } finally {
+      setEditandoEdad(false)
+    }
+  }
 
   return (
-    <li style={{ marginLeft: `${indent}px` }} className="w-[92%] max-w-2xl">
-      <button
-        onClick={onExpandir}
-        className="flex w-full items-center gap-4 overflow-hidden rounded-2xl bg-white text-left shadow-sm ring-1 ring-navy-100 transition hover:-translate-y-0.5 hover:shadow-md"
-      >
-        <Foto cliente={cliente} className="h-[120px] w-[80px] shrink-0" />
-        <div className="min-w-0 flex-1 py-3">
-          <p className="truncate font-semibold text-navy-800">{cliente.nombre} {cliente.apellido}</p>
-          <p className="truncate text-sm text-navy-500">
-            {cliente.correo}{cliente.telefono ? ` · ${cliente.telefono}` : ''}
-          </p>
-          <span className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${cliente.estado === 'NUEVO' ? 'bg-gold-100 text-gold-600' : 'bg-navy-100 text-navy-700'}`}>
+    <li className="w-full overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-navy-100">
+      {/* Cabecera colapsada: 3 columnas */}
+      <button onClick={() => setAbierto((v) => !v)} className="flex w-full items-stretch gap-4 text-left transition hover:bg-navy-50/40">
+        <Foto cliente={cliente} className="h-[160px] w-[120px] shrink-0" />
+        <div className="flex min-w-0 flex-1 flex-col justify-center py-3">
+          <p className="truncate text-lg font-bold text-navy-800">{cliente.nombre} {cliente.apellido}</p>
+          <p className="truncate text-sm text-navy-500">{cliente.correo}{cliente.telefono ? ` · ${cliente.telefono}` : ''}</p>
+          <span className={`mt-2 inline-block w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${cliente.estado === 'NUEVO' ? 'bg-gold-100 text-gold-600' : 'bg-navy-100 text-navy-700'}`}>
             {cliente.estado === 'NUEVO' ? t('citaCard.newClient') : t('citaCard.returning')}
           </span>
         </div>
-        <span className="shrink-0 pr-4 text-lg text-navy-300">›</span>
+        <div className="hidden shrink-0 flex-col justify-center gap-1 py-3 pr-4 text-sm sm:flex">
+          <span className="flex items-center gap-1.5 text-emerald-600"><b>✓</b> {cliente.totalCitasCompletadas} {t('clients.completed')}</span>
+          <span className="flex items-center gap-1.5 text-red-500"><b>✗</b> {cliente.totalCitasAnuladas} {t('clients.cancelled')}</span>
+          <span className="flex items-center gap-1.5 text-blue-500"><b>→</b> {cliente.proximaCita ? formatFechaCorta(cliente.proximaCita.fecha) : '—'}</span>
+          <span className={`mt-1 inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ${TRAT_STYLE[estadoTrat].on}`}>
+            {t('clients.' + TRAT_KEY[estadoTrat])}
+          </span>
+        </div>
       </button>
+
+      {abierto && (
+        <div className="border-t border-navy-100 bg-navy-50/40 px-4 py-4 sm:px-5">
+          {/* SECCIÓN 1 — Info */}
+          <Section title={t('clients.clientInfo')}>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <dt className="text-xs text-navy-400">{t('clients.age')}:</dt>
+                {editandoEdad ? (
+                  <span className="flex items-center gap-1">
+                    <input type="number" min="0" max="150" value={inputEdad} onChange={(e) => setInputEdad(e.target.value)} className="w-16 rounded-lg border border-navy-200 px-2 py-1 text-sm focus:outline-none" />
+                    <button onClick={guardarEdad} className="rounded-md bg-navy-700 px-2 py-1 text-xs font-semibold text-white">{t('clients.save')}</button>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <dd className="font-medium text-navy-700">{edad ?? t('clients.ageUnknown')}</dd>
+                    <button onClick={() => { setInputEdad(edad ?? ''); setEditandoEdad(true) }} className="text-xs font-semibold text-navy-500 hover:text-gold-600">{t('clients.edit')}</button>
+                  </span>
+                )}
+              </div>
+              <div>
+                <dt className="text-xs text-navy-400">{t('clients.firstAppt')}</dt>
+                <dd className="font-medium text-navy-700">{t('clients.since')}: {cliente.primeraCita ? formatFechaCorta(cliente.primeraCita) : t('clients.noAppts')}</dd>
+              </div>
+            </dl>
+          </Section>
+
+          {/* SECCIÓN 2 — Estado del tratamiento */}
+          <Section title={t('clients.treatmentStatus')}>
+            <div className="flex gap-2">
+              {ESTADOS_TRAT.map((e) => (
+                <button
+                  key={e}
+                  onClick={() => cambiarEstado(e)}
+                  disabled={guardandoTrat}
+                  className={`flex-1 rounded-xl border-2 py-2.5 text-sm font-semibold transition disabled:opacity-60 ${e === estadoTrat ? TRAT_STYLE[e].on : `bg-white ${TRAT_STYLE[e].off}`}`}
+                >
+                  {t('clients.' + TRAT_KEY[e])}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-sm text-navy-500">
+              {estadoTrat === 'COMPLETADO' && finalizadoEn
+                ? `${t('clients.finishedOn')}: ${formatFechaCorta(finalizadoEn)}`
+                : estadoTrat === 'ACTIVO'
+                  ? restantes > 0 ? `${t('clients.remaining')}: ${restantes}` : t('clients.inProgress')
+                  : ''}
+            </p>
+          </Section>
+
+          {/* SECCIÓN 3 — Resumen de citas */}
+          <Section title={t('clients.apptSummary')}>
+            <div className="mb-3 flex flex-wrap gap-2">
+              <Chip color="bg-emerald-50 text-emerald-700" text={`${cliente.totalCitasCompletadas} ${t('clients.completed')}`} />
+              <Chip color="bg-red-50 text-red-600" text={`${cliente.totalCitasAnuladas} ${t('clients.cancelled')}`} />
+              <Chip color="bg-blue-50 text-blue-600" text={`${t('clients.upcoming')}: ${cliente.proximaCita ? `${formatFechaCorta(cliente.proximaCita.fecha)} · ${cliente.proximaCita.horaInicio}` : '—'}`} />
+            </div>
+            {historial.length === 0 ? (
+              <p className="text-sm text-navy-400">{t('clients.noAppts')}</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {historial.map((c) => (
+                  <li key={c.id} className="flex items-center gap-2 text-sm">
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotEstado(c.estado)}`} />
+                    <span className="font-medium text-navy-700">{formatFechaCorta(c.fecha)}</span>
+                    <span className="text-navy-400">{c.horaInicio} – {c.horaFin}</span>
+                    <span className="ml-auto text-xs text-navy-400">{t('estado.' + c.estado)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+
+          {/* SECCIÓN 4 — Notas (inline) */}
+          <NotasInline cliente={cliente} historial={historial} />
+        </div>
+      )}
     </li>
   )
 }
 
-// ── Modal expandido: ficha completa + historial ──────────────────────────────
-function ClienteModal({ cliente, onClose }) {
-  const { t } = useLanguage()
-  const [citaNotas, setCitaNotas] = useState(null) // cita cuyo modal de notas está abierto
-
-  const edad = cliente.edad != null ? cliente.edad : t('clients.ageUnknown')
-  const desde = cliente.primeraCita ? formatFechaCorta(cliente.primeraCita) : t('clients.noAppts')
-  const historial = cliente.historial || []
-
+function Section({ title, children }) {
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-navy-900/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
-      <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
-        {/* Cabecera */}
-        <div className="relative shrink-0">
-          <button onClick={onClose} className="absolute right-3 top-3 z-10 rounded-lg bg-white/80 p-1 text-navy-500 hover:bg-white" aria-label={t('agenda.close')}>✕</button>
-          <div className="flex items-center gap-4 border-b border-navy-100 p-5">
-            <Foto cliente={cliente} className="h-24 w-20 shrink-0 rounded-xl ring-1 ring-navy-100" />
-            <div className="min-w-0">
-              <h3 className="truncate text-lg font-bold text-navy-800">{cliente.nombre} {cliente.apellido}</h3>
-              <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${cliente.estado === 'NUEVO' ? 'bg-gold-100 text-gold-600' : 'bg-navy-100 text-navy-700'}`}>
-                {cliente.estado === 'NUEVO' ? t('citaCard.newClient') : t('citaCard.returning')}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Cuerpo scrollable */}
-        <div className="overflow-y-auto px-5 py-4">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <Dato label={t('clients.document')} valor={cliente.documentoIdentidad} />
-            <Dato label={t('clients.age')} valor={edad} />
-            <Dato label={t('common.email')} valor={cliente.correo} className="col-span-2" />
-            {cliente.telefono && <Dato label={t('clients.phone')} valor={cliente.telefono} />}
-          </dl>
-
-          {/* Estadísticas */}
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-navy-50 p-3">
-              <p className="text-xs text-navy-400">{t('clients.firstAppt')}</p>
-              <p className="mt-0.5 font-semibold text-navy-800">{t('clients.since')}: {desde}</p>
-            </div>
-            <div className="rounded-xl bg-navy-50 p-3">
-              <p className="text-xs text-navy-400">{t('clients.totalAppts')}</p>
-              <p className="mt-0.5 font-semibold text-navy-800">{cliente.totalCitas ?? 0}</p>
-            </div>
-          </div>
-
-          {/* Historial de citas */}
-          <h4 className="mt-5 mb-2 text-sm font-semibold text-navy-700">{t('clients.apptHistory')}</h4>
-          {historial.length === 0 ? (
-            <p className="py-3 text-center text-sm text-navy-400">{t('clients.noAppts')}</p>
-          ) : (
-            <ul className="space-y-2">
-              {historial.map((c) => (
-                <li key={c.id} className="rounded-xl border border-navy-100 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-navy-800">{formatFechaCorta(c.fecha)}</p>
-                      <p className="text-xs text-navy-500">{c.horaInicio} – {c.horaFin}</p>
-                    </div>
-                    <EstadoBadge estado={c.estado} />
-                  </div>
-                  <button
-                    onClick={() => setCitaNotas(c)}
-                    className="mt-2 text-xs font-semibold text-navy-600 hover:text-gold-600"
-                  >
-                    {t('clients.notesForAppt')} →
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-
-      {citaNotas && <CitaNotasModal cita={citaNotas} onClose={() => setCitaNotas(null)} />}
-    </div>
+    <section className="mb-4 rounded-xl bg-white p-4 ring-1 ring-navy-100">
+      <h4 className="mb-3 text-sm font-bold text-navy-700">{title}</h4>
+      {children}
+    </section>
   )
 }
 
-function Dato({ label, valor, className = '' }) {
-  return (
-    <div className={`min-w-0 ${className}`}>
-      <dt className="text-xs text-navy-400">{label}</dt>
-      <dd className="truncate font-medium text-navy-700">{valor}</dd>
-    </div>
-  )
+function Chip({ color, text }) {
+  return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${color}`}>{text}</span>
 }
 
-// ── Modal de notas específicas de una cita ───────────────────────────────────
-function CitaNotasModal({ cita, onClose }) {
+// ── Sección 4: notas inline (ver + agregar sin salir de la ficha) ────────────
+function NotasInline({ cliente, historial }) {
   const { t } = useLanguage()
   const [notas, setNotas] = useState(null)
   const [cargando, setCargando] = useState(true)
@@ -196,11 +248,15 @@ function CitaNotasModal({ cita, onClose }) {
   const [texto, setTexto] = useState('')
   const [guardando, setGuardando] = useState(false)
 
+  // Mapa citaId -> fecha de la cita, para etiquetar las notas de cita.
+  const fechaDeCita = {}
+  for (const c of historial) fechaDeCita[c.id] = c.fecha
+
   async function cargar() {
     setCargando(true)
     setError(null)
     try {
-      setNotas(await citasApi.notasDeCita(cita.id))
+      setNotas(await pacientesApi.notas(cliente.id))
     } catch (err) {
       setError(err)
     } finally {
@@ -219,7 +275,7 @@ function CitaNotasModal({ cita, onClose }) {
     setGuardando(true)
     setError(null)
     try {
-      const nueva = await pacientesApi.agregarNotaCita(cita.id, texto.trim())
+      const nueva = await pacientesApi.agregarNota(cliente.id, texto.trim())
       setNotas((prev) => [nueva, ...(prev || [])])
       setTexto('')
     } catch (err) {
@@ -230,54 +286,49 @@ function CitaNotasModal({ cita, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/50 p-0 sm:items-center sm:p-4" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-t-2xl bg-white sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-navy-100 px-5 py-4">
-          <div className="min-w-0">
-            <h3 className="truncate font-bold text-navy-800">{t('clients.notesForAppt')}</h3>
-            <p className="text-xs text-navy-400">{formatFechaCorta(cita.fecha)} · {cita.horaInicio}</p>
-          </div>
-          <button onClick={onClose} className="rounded-lg p-1 text-navy-400 hover:bg-navy-50" aria-label={t('agenda.close')}>✕</button>
-        </div>
+    <section className="rounded-xl bg-white p-4 ring-1 ring-navy-100">
+      <h4 className="mb-3 text-sm font-bold text-navy-700">{t('clients.notesHistory')}</h4>
 
-        <div className="overflow-y-auto px-5 py-4">
-          <form onSubmit={agregar} className="mb-4">
-            <textarea
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              rows={2}
-              placeholder={t('clients.notePlaceholder')}
-              className="w-full rounded-xl border border-navy-200 px-3 py-2 text-sm focus:border-navy-500 focus:ring-4 focus:ring-navy-100 focus:outline-none"
-            />
-            <button
-              type="submit"
-              disabled={guardando || !texto.trim()}
-              className="mt-2 rounded-lg bg-navy-700 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-navy-800 disabled:bg-navy-300"
-            >
-              {guardando ? t('clients.savingNote') : t('clients.saveNote')}
-            </button>
-          </form>
+      {error && <ErrorMessage error={error} className="mb-3" />}
 
-          {error && <ErrorMessage error={error} className="mb-3" />}
+      {cargando ? (
+        <Spinner label={t('clients.loading')} />
+      ) : notas && notas.length > 0 ? (
+        <ul className="space-y-2">
+          {notas.map((n) => (
+            <li key={n.id} className="rounded-xl bg-navy-50 p-3 text-sm ring-1 ring-navy-100">
+              <p className="mb-1 text-xs font-medium text-navy-400">
+                {formatFechaCorta(n.fecha)} · {String(n.fecha).slice(11, 16)}
+                {n.citaId && fechaDeCita[n.citaId]
+                  ? ` · ${t('clients.noteOfApptFrom')} ${formatFechaCorta(fechaDeCita[n.citaId])}`
+                  : ''}
+              </p>
+              <p className="text-navy-700">{n.texto}</p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="py-2 text-center text-sm text-navy-400">{t('clients.noNotes')}</p>
+      )}
 
-          {cargando ? (
-            <Spinner label={t('clients.loading')} />
-          ) : notas && notas.length > 0 ? (
-            <ul className="space-y-2">
-              {notas.map((n) => (
-                <li key={n.id} className="rounded-xl bg-navy-50 p-3 text-sm ring-1 ring-navy-100">
-                  <p className="text-navy-700">{n.texto}</p>
-                  <p className="mt-1 text-xs text-navy-400">
-                    {formatFechaCorta(n.fecha)}{n.medico ? ` · ${n.medico.nombre}` : ''}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="py-2 text-center text-sm text-navy-400">{t('clients.noNotes')}</p>
-          )}
-        </div>
-      </div>
-    </div>
+      {/* Agregar nota */}
+      <form onSubmit={agregar} className="mt-4 border-t border-navy-100 pt-4">
+        <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('clients.addNote')}</label>
+        <textarea
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          rows={2}
+          placeholder={t('clients.notePlaceholder')}
+          className="w-full rounded-xl border border-navy-200 px-3 py-2 text-sm focus:border-navy-500 focus:ring-4 focus:ring-navy-100 focus:outline-none"
+        />
+        <button
+          type="submit"
+          disabled={guardando || !texto.trim()}
+          className="mt-2 rounded-lg bg-navy-700 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-navy-800 disabled:bg-navy-300"
+        >
+          {guardando ? t('clients.savingNote') : t('clients.saveNote')}
+        </button>
+      </form>
+    </section>
   )
 }

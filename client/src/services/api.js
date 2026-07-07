@@ -132,6 +132,7 @@ export const disponibilidadApi = {
 // ── Pacientes / notas ────────────────────────────────────────────────────────
 export const pacientesApi = {
   listar: () => request('/pacientes'),
+  actualizar: (id, data) => request(`/pacientes/${id}`, { method: 'PATCH', body: data }),
   notas: (pacienteId) => request(`/notas/${pacienteId}`),
   agregarNota: (pacienteId, texto) =>
     request('/notas', { method: 'POST', body: { pacienteId, texto } }),

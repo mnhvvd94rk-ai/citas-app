@@ -61,6 +61,11 @@ model Usuario {
   estado             String         @default("NUEVO") // NUEVO | CONTINUIDAD
   fechaRegistro      DateTime       @default(now())
 
+  // Gestión del cliente por el profesional (no proviene del registro):
+  edadManual              Int?      // edad introducida a mano (no hay fecha de nacimiento)
+  estadoTratamiento       String    @default("ACTIVO") // ACTIVO | COMPLETADO | EN_PAUSA
+  tratamientoFinalizadoEn DateTime? // fecha en que se marcó COMPLETADO
+
   citas              Cita[]
   notas              NotaPaciente[]
 }
