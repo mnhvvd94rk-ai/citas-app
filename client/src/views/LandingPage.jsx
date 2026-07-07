@@ -95,7 +95,7 @@ export default function LandingPage() {
       {/* NAVBAR */}
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-          <button onClick={() => navigate('/landing')} aria-label="Meetun"><Logo /></button>
+          <button onClick={() => navigate('/landing')} aria-label="Ikatun"><Logo /></button>
           <div className="hidden items-center gap-6 text-sm font-medium text-navy-600 md:flex">
             <a href="#clientes" className="hover:text-coral-600">{t('landingPublic.navClients')}</a>
             <a href="#profesionales" className="hover:text-coral-600">{t('landingPublic.navPros')}</a>

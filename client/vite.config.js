@@ -15,8 +15,8 @@ export default defineConfig({
         enabled: true,
       },
       manifest: {
-        name: 'Meetun',
-        short_name: 'Meetun',
+        name: 'Ikatun',
+        short_name: 'Ikatun',
         description: 'Smart Appointment Scheduling',
         display: 'standalone',
         theme_color: '#1e3a5f',
@@ -24,7 +24,7 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'meetun-icon.svg',
+            src: 'ikatun-icon.svg',
             sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any',

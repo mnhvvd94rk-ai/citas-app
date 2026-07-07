@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Meetun — sistema de diseño premium.
+   Ikatun — sistema de diseño premium.
    Paleta: azul profundo (#1e3a5f) como color principal + dorado sutil
    (#c9a94e) como acento. Tipografía moderna (Inter).
    ───────────────────────────────────────────────────────────────────────── */
@@ -17,7 +17,7 @@
   --color-navy-800: #172d4a;
   --color-navy-900: #101f33;
 
-  /* Acento coral de Meetun */
+  /* Acento coral de Ikatun */
   --color-coral-50: #fff1f1;
   --color-coral-100: #ffe0e0;
   --color-coral-200: #ffc7c7;

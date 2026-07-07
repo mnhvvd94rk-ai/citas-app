@@ -24,7 +24,7 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-20 bg-navy-800 text-white shadow-sm">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-        <button onClick={() => navigate('/')} className="flex items-center" aria-label="Meetun">
+        <button onClick={() => navigate('/')} className="flex items-center" aria-label="Ikatun">
           <Logo onDark />
         </button>
         <div className="flex items-center gap-3">

@@ -2,7 +2,7 @@ import { createContext, useContext, useCallback, useEffect, useState } from 'rea
 import translations, { DEFAULT_LANG, LANGS } from '../i18n/translations.js'
 
 const LanguageContext = createContext(null)
-const STORAGE_KEY = 'booktime_lang'
+const STORAGE_KEY = 'ikatun_lang'
 
 /** Resuelve una ruta "a.b.c" dentro de un objeto. */
 function resolve(obj, path) {

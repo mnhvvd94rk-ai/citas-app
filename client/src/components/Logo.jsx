@@ -1,4 +1,4 @@
-// Logo de Meetun. Marca minimalista: dos círculos (dos personas que se
+// Logo de Ikatun. Marca minimalista: dos círculos (dos personas que se
 // encuentran) dentro de un anillo, en azul profundo + acento coral.
 // variant: 'horizontal' (marca + wordmark) | 'mark' (solo icono).
 // onDark: true para fondos oscuros (usa blanco en vez de azul).
@@ -24,7 +24,7 @@ export default function Logo({ variant = 'horizontal', onDark = false, className
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <Mark cls="h-7 w-7 shrink-0" onDark={onDark} />
       <span className={`text-xl font-extrabold tracking-tight ${onDark ? 'text-white' : 'text-navy-800'}`}>
-        Meetun
+        Ikatun
       </span>
     </span>
   )
