@@ -135,6 +135,16 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
   // h) Estado inicial según tipo de paciente.
   const estado = paciente.estado === 'NUEVO' ? 'PENDIENTE' : 'CONFIRMADA'
 
+  // h.2) Penalización por cancelación: se copia de la configuración del médico.
+  //      Si la cita es doble (2 slots), la anticipación requerida se dobla.
+  const medico = await prisma.medico.findUnique({
+    where: { id: data.medicoId },
+    select: { costoCancelacion: true, diasAnticipacionRequierida: true },
+  })
+  const esDoble = numeroSlots === 2
+  const costoCancelacion = medico?.costoCancelacion ?? 0
+  const diasAnticipacionRequierida = (medico?.diasAnticipacionRequierida ?? 7) * (esDoble ? 2 : 1)
+
   // i) Crea la cita.
   const cita = await prisma.cita.create({
     data: {
@@ -146,6 +156,9 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
       numeroSlots,
       estado,
       motivoConsulta: paciente.estado === 'NUEVO' ? data.motivoConsulta : null,
+      costoCancelacion,
+      diasAnticipacionRequierida,
+      esDoble,
     },
   })
   res.status(201).json(cita)
@@ -179,11 +192,25 @@ router.patch('/:id/cancelar', requireAuth, requireRole('PACIENTE'), async (req, 
       error: `Solo puedes cancelar citas PENDIENTE o CONFIRMADA (estado actual: ${cita.estado})`,
     })
   }
-  const actualizada = await prisma.cita.update({
+
+  // Penalización: 0 si cancela con la anticipación requerida; si no, el costo.
+  // (diasAnticipacionRequierida ya viene doblado si la cita es doble.)
+  const hoyUTC = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z').getTime()
+  const fechaCitaUTC = new Date(cita.fecha.toISOString().slice(0, 10) + 'T00:00:00.000Z').getTime()
+  const diasHasta = Math.floor((fechaCitaUTC - hoyUTC) / (24 * 60 * 60 * 1000))
+
+  const conTiempo = diasHasta >= cita.diasAnticipacionRequierida
+  const costo = conTiempo ? 0 : cita.costoCancelacion
+  const motivo = conTiempo
+    ? `Cancelada sin penalización (${cita.diasAnticipacionRequierida} o más días antes)`
+    : `Cancelada con penalización de $${cita.costoCancelacion}`
+
+  await prisma.cita.update({
     where: { id: cita.id },
-    data: { estado: 'ANULADA', notaAnulacion: 'Cancelada por el cliente' },
+    data: { estado: 'ANULADA', notaAnulacion: motivo },
   })
-  res.json(actualizada)
+
+  res.json({ cancelada: true, costo, motivo })
 })
 
 // ── POST /citas/:id/recordar ─── el paciente le recuerda la cita al profesional ─

@@ -78,6 +78,10 @@ model Medico {
   correo           String           @unique
   passwordHash     String
 
+  // Configuración de penalización por cancelación tardía (por defecto):
+  costoCancelacion           Float @default(0)
+  diasAnticipacionRequierida Int   @default(7)
+
   disponibilidades Disponibilidad[]
   citas            Cita[]
   notas            NotaPaciente[]
@@ -110,6 +114,12 @@ model Cita {
   estado         String   @default("PENDIENTE") // PENDIENTE | CONFIRMADA | ANULADA | COMPLETADA
   motivoConsulta String?  // solo si el paciente es NUEVO
   notaAnulacion  String?
+
+  // Penalización por cancelación (copiada del médico al reservar). El campo
+  // `diasAnticipacionRequierida` ya viene doblado si la cita es doble.
+  costoCancelacion           Float   @default(0)
+  diasAnticipacionRequierida Int     @default(7)
+  esDoble                    Boolean @default(false)
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

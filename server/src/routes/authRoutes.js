@@ -23,6 +23,8 @@ const registroMedicoSchema = z.object({
   especialidad: z.string().min(1),
   correo: z.string().email(),
   password: z.string().min(6),
+  costoCancelacion: z.number().min(0).optional(),
+  diasAnticipacionRequierida: z.number().int().min(0).optional(),
 })
 
 const loginSchema = z.object({
@@ -99,6 +101,10 @@ router.post('/registro-medico', async (req, res) => {
         especialidad: data.especialidad,
         correo: data.correo,
         passwordHash,
+        ...(data.costoCancelacion !== undefined && { costoCancelacion: data.costoCancelacion }),
+        ...(data.diasAnticipacionRequierida !== undefined && {
+          diasAnticipacionRequierida: data.diasAnticipacionRequierida,
+        }),
       },
     })
     const token = signToken({ id: medico.id, tipo: 'MEDICO' })

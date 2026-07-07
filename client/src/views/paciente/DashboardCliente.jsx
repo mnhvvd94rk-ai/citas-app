@@ -22,6 +22,8 @@ export default function DashboardCliente() {
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [aviso, setAviso] = useState(null)
+  const [confirmando, setConfirmando] = useState(false) // modal de cancelación
+  const [resultado, setResultado] = useState(null) // { costo } tras cancelar
 
   async function cargar() {
     setCargando(true)
@@ -52,15 +54,35 @@ export default function DashboardCliente() {
       .sort((a, b) => (soloFecha(a.fecha) === soloFecha(b.fecha) ? a.horaInicio.localeCompare(b.horaInicio) : soloFecha(a.fecha) < soloFecha(b.fecha) ? -1 : 1))[0]
   }, [citas, hoy])
 
-  async function cancelar(id) {
-    if (!window.confirm(t('clientDash.cancelConfirm'))) return
+  // Info de penalización de una cita: fecha límite y coste si cancela ahora.
+  function penalizacion(cita) {
+    const dias = cita?.diasAnticipacionRequierida ?? 0
+    const [y, m, d] = soloFecha(cita.fecha).split('-').map(Number)
+    const citaMs = Date.UTC(y, m - 1, d)
+    const [hy, hm, hd] = hoy.split('-').map(Number)
+    const hoyMs = Date.UTC(hy, hm - 1, hd)
+    const diffDias = Math.floor((citaMs - hoyMs) / 86400000)
+    const conTiempo = diffDias >= dias
+    const fechaLimite = formatFechaCorta(new Date(citaMs - dias * 86400000).toISOString())
+    return {
+      dias,
+      conTiempo,
+      fechaLimite,
+      costoAhora: conTiempo ? 0 : cita.costoCancelacion || 0,
+    }
+  }
+
+  async function doCancelar(id) {
     setBusy(true)
     setError(null)
     try {
-      await citasApi.cancelarCliente(id)
+      const res = await citasApi.cancelarCliente(id)
+      setConfirmando(false)
+      setResultado({ costo: res.costo ?? 0 })
       await cargar()
     } catch (err) {
       setError(err)
+      setConfirmando(false)
     } finally {
       setBusy(false)
     }
@@ -100,6 +122,12 @@ export default function DashboardCliente() {
             {aviso}
           </div>
         )}
+        {resultado && (
+          <div className={`mt-4 rounded-xl border px-4 py-3 text-sm ${resultado.costo > 0 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+            {t('clientDash.cancelledOk')}
+            {resultado.costo > 0 && <> — {t('clientDash.penaltyWillApply', { cost: resultado.costo })}</>}
+          </div>
+        )}
         {error && <ErrorMessage error={error} className="mt-4" />}
 
         {cargando ? (
@@ -110,22 +138,39 @@ export default function DashboardCliente() {
             <section className="mt-5 overflow-hidden rounded-2xl bg-gradient-to-br from-navy-700 to-navy-800 p-6 text-white shadow-lg shadow-navy-900/20">
               <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gold-400">{t('clientDash.yourNextAppt')}</p>
               {proxima ? (
-                <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="text-2xl font-bold">{formatFechaLarga(proxima.fecha)}</p>
-                    <p className="mt-1 text-lg text-white/90">{proxima.horaInicio} – {proxima.horaFin}</p>
-                    {proxima.medico && <p className="mt-1 text-sm text-white/70">{proxima.medico.nombre}{proxima.medico.especialidad ? ` · ${proxima.medico.especialidad}` : ''}</p>}
-                    <span className="mt-2 inline-block"><EstadoBadge estado={proxima.estado} /></span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => recordar(proxima.id)} disabled={busy} className="rounded-xl bg-white/15 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/25 disabled:opacity-50">
-                      {t('clientDash.notify')}
-                    </button>
-                    <button onClick={() => cancelar(proxima.id)} disabled={busy} className="rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600 disabled:opacity-50">
-                      {t('clientDash.cancel')}
-                    </button>
-                  </div>
-                </div>
+                (() => {
+                  const pen = penalizacion(proxima)
+                  return (
+                    <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <p className="text-2xl font-bold">{formatFechaLarga(proxima.fecha)}</p>
+                        <p className="mt-1 text-lg text-white/90">{proxima.horaInicio} – {proxima.horaFin}</p>
+                        {proxima.medico && <p className="mt-1 text-sm text-white/70">{proxima.medico.nombre}{proxima.medico.especialidad ? ` · ${proxima.medico.especialidad}` : ''}</p>}
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <EstadoBadge estado={proxima.estado} />
+                          {proxima.esDoble && <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-semibold">{t('clientDash.doubleSlot')}</span>}
+                        </div>
+                        {/* Aviso de cancelación */}
+                        <p className="mt-3 text-sm text-white/70">
+                          {t('clientDash.cancelBefore', { date: pen.fechaLimite })}
+                        </p>
+                        {!pen.conTiempo && pen.costoAhora > 0 && (
+                          <p className="mt-1 text-sm font-semibold text-red-300">
+                            ⚠️ {t('clientDash.cancellationCost', { cost: pen.costoAhora })}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => recordar(proxima.id)} disabled={busy} className="rounded-xl bg-white/15 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/25 disabled:opacity-50">
+                          {t('clientDash.notify')}
+                        </button>
+                        <button onClick={() => setConfirmando(true)} disabled={busy} className="rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600 disabled:opacity-50">
+                          {t('clientDash.cancel')}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })()
               ) : (
                 <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-lg text-white/80">{t('clientDash.noUpcoming')}</p>
@@ -197,6 +242,31 @@ export default function DashboardCliente() {
           </>
         )}
       </main>
+
+      {/* Modal de confirmación de cancelación */}
+      {confirmando && proxima && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/50 p-0 sm:items-center sm:p-4" onClick={() => setConfirmando(false)}>
+          <div className="w-full max-w-sm rounded-t-2xl bg-white p-6 text-center sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-navy-800">{t('clientDash.areYouSure')}</h3>
+            {(() => {
+              const costo = penalizacion(proxima).costoAhora
+              return (
+                <p className={`mt-2 text-sm ${costo > 0 ? 'font-semibold text-red-600' : 'text-navy-500'}`}>
+                  {costo > 0 ? t('clientDash.cancellationCost', { cost: costo }) : t('clientDash.freeCancellation')}
+                </p>
+              )
+            })()}
+            <div className="mt-5 flex flex-col gap-2">
+              <button onClick={() => doCancelar(proxima.id)} disabled={busy} className="rounded-xl bg-red-500 py-3 font-semibold text-white transition hover:bg-red-600 disabled:opacity-50">
+                {t('clientDash.confirmCancel')}
+              </button>
+              <button onClick={() => setConfirmando(false)} disabled={busy} className="rounded-xl border border-navy-200 py-3 font-medium text-navy-700 transition hover:bg-navy-50">
+                {t('clientDash.noBack')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
