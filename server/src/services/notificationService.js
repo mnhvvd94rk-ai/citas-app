@@ -116,6 +116,14 @@ function enviarSMS({ destinatario, texto }) {
   return { ok: true }
 }
 
+function enviarWhatsApp({ destinatario, texto }) {
+  if (!destinatario?.telefono) return { ok: false, error: 'Destinatario sin teléfono' }
+  // Mock: loguea el envío. Listo para conectar la API de WhatsApp de Twilio
+  // (TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_WHATSAPP_NUMBER) después.
+  console.log(`[notificationService][WhatsApp mock] WhatsApp enviado a ${destinatario.telefono}: ${texto}`)
+  return { ok: true }
+}
+
 let pushConfigurado = null
 
 function configurarPush() {
@@ -160,8 +168,8 @@ async function enviarPush({ destinatario, asunto, texto }) {
  * Envía una notificación por el canal indicado, registrándola en la tabla
  * Notificacion. Best-effort: nunca lanza.
  * @param {{
- *   tipo: "ANULACION"|"RESUMEN_DIARIO",
- *   canal: "EMAIL"|"SMS"|"PUSH",
+ *   tipo: "ANULACION"|"RESUMEN_DIARIO"|"RECORDATORIO_CITA",
+ *   canal: "EMAIL"|"SMS"|"WHATSAPP"|"PUSH",
  *   destinatario: { id:number, tipoDestinatario:"PACIENTE"|"MEDICO", correo?:string, telefono?:string, pushSubscription?:object },
  *   payload: object
  * }} args
@@ -189,6 +197,8 @@ async function send({ tipo, canal, destinatario, payload }) {
       resultado = await enviarEmail({ destinatario, asunto, texto, html })
     } else if (canal === 'SMS') {
       resultado = enviarSMS({ destinatario, texto })
+    } else if (canal === 'WHATSAPP') {
+      resultado = enviarWhatsApp({ destinatario, texto })
     } else if (canal === 'PUSH') {
       resultado = await enviarPush({ destinatario, asunto, texto })
     } else {
