@@ -228,6 +228,7 @@ export default function LandingPage() {
             <Link to="/terminos" className="hover:text-green-300">{t('landingPublic.footerTerms')}</Link>
             <Link to="/privacidad" className="hover:text-green-300">{t('landingPublic.footerPrivacy')}</Link>
             <Link to="/contacto" className="hover:text-green-300">{t('landingPublic.footerContact')}</Link>
+            <Link to="/faq" className="hover:text-green-300">{t('landingPublic.footerFaq')}</Link>
             <a href="#" className="hover:text-green-300">{t('landingPublic.footerBlog')}</a>
           </div>
           <div className="flex items-center gap-3 text-white/60">

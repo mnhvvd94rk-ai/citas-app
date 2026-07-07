@@ -71,7 +71,7 @@ const translations = {
       faq1Q: '¿Ikatun es gratis?', faq1A: 'Para clientes es gratis siempre. Los profesionales tienen 30 días de prueba.',
       faq2Q: '¿Necesito instalar algo?', faq2A: 'No. Ikatun funciona en el navegador y se puede instalar como app (PWA).',
       faq3Q: '¿Cómo llegan los recordatorios?', faq3A: 'Por email y WhatsApp, en tu idioma, automáticamente antes de cada cita.',
-      footerTerms: 'Términos', footerPrivacy: 'Privacidad', footerContact: 'Contacto', footerBlog: 'Blog',
+      footerTerms: 'Términos', footerPrivacy: 'Privacidad', footerContact: 'Contacto', footerBlog: 'Blog', footerFaq: 'Ayuda',
       copyright: '© 2026 Ikatun. Todos los derechos reservados.',
     },
     contact: {
@@ -86,6 +86,19 @@ const translations = {
       success: 'Tu mensaje fue enviado, te responderemos pronto.',
       error: 'No se pudo enviar el mensaje. Inténtalo de nuevo.',
       required: 'Completa todos los campos con datos válidos.',
+    },
+    faqPage: {
+      title: 'Preguntas frecuentes',
+      items: [
+        { q: '¿Cómo reservo una cita?', a: "Ve a 'Nueva cita', elige una fecha disponible en el calendario del profesional, selecciona un horario y confirma tu reserva." },
+        { q: '¿Cómo cancelo una cita?', a: "Entra a 'Mis citas', selecciona la cita que quieres cancelar y pulsa 'Cancelar'. Confirma en el modal que aparece." },
+        { q: '¿Qué pasa si cancelo tarde?', a: 'Cada profesional define su política de anticipación. Si cancelas dentro del plazo, no hay costo. Si cancelas después, puede aplicarse una penalización que verás antes de confirmar.' },
+        { q: '¿Cómo recibo recordatorios?', a: 'Recibirás notificaciones automáticas por email y WhatsApp 48 horas, 24 horas y 3 horas antes de tu cita, en el idioma que elijas.' },
+        { q: "¿Qué hago si voy a llegar tarde?", a: "Usa el botón 'Recordar al profesional' en tu próxima cita para avisarle que vas con retraso." },
+        { q: '¿Puedo cambiar el idioma de la app?', a: 'Sí, usa el selector ES/EN/FR en la barra superior. Tus notificaciones futuras llegarán en el idioma que elijas.' },
+        { q: '¿Cómo contacto al profesional?', a: 'Puedes ver su email de contacto en tu panel, o usar nuestro formulario de Contacto para cualquier consulta sobre la plataforma.' },
+        { q: '¿Mis datos están seguros?', a: 'Sí. Usamos conexión cifrada (HTTPS) y acceso restringido. El profesional es responsable de tus datos como Responsable del Tratamiento; consulta nuestra Política de Privacidad para más detalles.' },
+      ],
     },
     legal: {
       updated: 'Última actualización: 7 de julio de 2026',
@@ -412,7 +425,7 @@ const translations = {
       faq1Q: 'Is Ikatun free?', faq1A: 'It is always free for clients. Professionals get a 30-day trial.',
       faq2Q: 'Do I need to install anything?', faq2A: 'No. Ikatun works in the browser and can be installed as an app (PWA).',
       faq3Q: 'How do reminders arrive?', faq3A: 'By email and WhatsApp, in your language, automatically before each appointment.',
-      footerTerms: 'Terms', footerPrivacy: 'Privacy', footerContact: 'Contact', footerBlog: 'Blog',
+      footerTerms: 'Terms', footerPrivacy: 'Privacy', footerContact: 'Contact', footerBlog: 'Blog', footerFaq: 'Help',
       copyright: '© 2026 Ikatun. All rights reserved.',
     },
     contact: {
@@ -427,6 +440,19 @@ const translations = {
       success: 'Your message has been sent, we will reply soon.',
       error: 'The message could not be sent. Please try again.',
       required: 'Please fill in all fields with valid data.',
+    },
+    faqPage: {
+      title: 'Frequently asked questions',
+      items: [
+        { q: 'How do I book an appointment?', a: "Go to 'New appointment', pick an available date on the professional's calendar, choose a time and confirm your booking." },
+        { q: 'How do I cancel an appointment?', a: "Open 'My appointments', select the appointment you want to cancel and press 'Cancel'. Confirm in the modal that appears." },
+        { q: 'What happens if I cancel late?', a: "Each professional sets their own notice policy. If you cancel within the allowed period, there is no cost. If you cancel later, a penalty may apply, which you'll see before confirming." },
+        { q: 'How do I receive reminders?', a: "You'll receive automatic email and WhatsApp notifications 48 hours, 24 hours and 3 hours before your appointment, in the language you choose." },
+        { q: "What should I do if I'm running late?", a: "Use the 'Notify professional' button on your next appointment to let them know you're running late." },
+        { q: 'Can I change the app language?', a: 'Yes, use the ES/EN/FR selector in the top bar. Your future notifications will arrive in the language you choose.' },
+        { q: 'How do I contact the professional?', a: 'You can see their contact email in your dashboard, or use our Contact form for any question about the platform.' },
+        { q: 'Is my data safe?', a: 'Yes. We use encrypted connections (HTTPS) and restricted access. The professional is the Data Controller for your data; see our Privacy Policy for details.' },
+      ],
     },
     legal: {
       updated: 'Last updated: July 7, 2026',
@@ -751,7 +777,7 @@ const translations = {
       faq1Q: 'Ikatun est-il gratuit ?', faq1A: 'C\'est toujours gratuit pour les clients. Les professionnels bénéficient de 30 jours d\'essai.',
       faq2Q: 'Dois-je installer quelque chose ?', faq2A: 'Non. Ikatun fonctionne dans le navigateur et peut s\'installer comme une app (PWA).',
       faq3Q: 'Comment arrivent les rappels ?', faq3A: 'Par e-mail et WhatsApp, dans votre langue, automatiquement avant chaque rendez-vous.',
-      footerTerms: 'Conditions', footerPrivacy: 'Confidentialité', footerContact: 'Contact', footerBlog: 'Blog',
+      footerTerms: 'Conditions', footerPrivacy: 'Confidentialité', footerContact: 'Contact', footerBlog: 'Blog', footerFaq: 'Aide',
       copyright: '© 2026 Ikatun. Tous droits réservés.',
     },
     contact: {
@@ -766,6 +792,19 @@ const translations = {
       success: 'Votre message a été envoyé, nous vous répondrons bientôt.',
       error: 'Le message n\'a pas pu être envoyé. Veuillez réessayer.',
       required: 'Veuillez remplir tous les champs avec des données valides.',
+    },
+    faqPage: {
+      title: 'Questions fréquentes',
+      items: [
+        { q: 'Comment réserver un rendez-vous ?', a: "Allez dans « Nouveau rendez-vous », choisissez une date disponible dans le calendrier du professionnel, sélectionnez un horaire et confirmez votre réservation." },
+        { q: 'Comment annuler un rendez-vous ?', a: "Ouvrez « Mes rendez-vous », sélectionnez le rendez-vous à annuler et appuyez sur « Annuler ». Confirmez dans la fenêtre qui apparaît." },
+        { q: "Que se passe-t-il si j'annule tardivement ?", a: "Chaque professionnel définit sa politique de préavis. Si vous annulez dans le délai imparti, c'est sans frais. Si vous annulez après, une pénalité peut s'appliquer, que vous verrez avant de confirmer." },
+        { q: 'Comment recevoir des rappels ?', a: 'Vous recevrez des notifications automatiques par e-mail et WhatsApp 48 heures, 24 heures et 3 heures avant votre rendez-vous, dans la langue de votre choix.' },
+        { q: 'Que faire si je suis en retard ?', a: "Utilisez le bouton « Rappeler au professionnel » sur votre prochain rendez-vous pour l'informer de votre retard." },
+        { q: "Puis-je changer la langue de l'application ?", a: 'Oui, utilisez le sélecteur ES/EN/FR dans la barre supérieure. Vos futures notifications arriveront dans la langue choisie.' },
+        { q: 'Comment contacter le professionnel ?', a: 'Vous pouvez voir son e-mail de contact dans votre tableau de bord, ou utiliser notre formulaire de Contact pour toute question sur la plateforme.' },
+        { q: 'Mes données sont-elles en sécurité ?', a: 'Oui. Nous utilisons une connexion chiffrée (HTTPS) et un accès restreint. Le professionnel est le Responsable du traitement de vos données ; consultez notre Politique de confidentialité pour plus de détails.' },
+      ],
     },
     legal: {
       updated: 'Dernière mise à jour : 7 juillet 2026',
