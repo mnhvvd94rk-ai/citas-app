@@ -28,7 +28,7 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'ikatun-icon.svg',
+            src: '/ikatun-icon.svg',
             sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any',
