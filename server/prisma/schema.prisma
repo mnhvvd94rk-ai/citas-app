@@ -149,3 +149,14 @@ model Notificacion {
 
   @@index([destinatarioId, tipoDestinatario])
 }
+
+/// Auditoría de recordatorios automáticos ya enviados, para no reenviar.
+/// `tipo`: 48h | 24h | 3h. Único por (cita, tipo).
+model NotificacionEnviada {
+  id           Int      @id @default(autoincrement())
+  citaId       Int
+  tipo         String   // 48h | 24h | 3h
+  fechaEnviada DateTime @default(now())
+
+  @@unique([citaId, tipo])
+}

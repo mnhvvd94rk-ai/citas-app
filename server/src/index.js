@@ -11,6 +11,7 @@ import notaRouter from './routes/notaRoutes.js'
 import notaCitaRouter from './routes/notaCitaRoutes.js'
 import medicoRouter from './routes/medicoRoutes.js'
 import { runDailySummary } from './jobs/dailySummary.js'
+import notificacionesJob from './jobs/notificacionesAutomaticas.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -48,6 +49,9 @@ cron.schedule('0 6 * * *', async () => {
     console.error('[cron] runDailySummary falló:', err)
   }
 })
+
+// Recordatorios automáticos de cita (48h / 24h / 3h). Se auto-programa (cada hora).
+notificacionesJob.iniciar()
 
 // Escucha en 0.0.0.0 (todas las interfaces) — requerido por Railway.
 app.listen(PORT, '0.0.0.0', () => {

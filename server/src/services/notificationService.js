@@ -39,6 +39,14 @@ function construirMensaje(tipo, payload = {}) {
     }
   }
 
+  // Recordatorio automático de cita: el asunto/texto ya vienen construidos
+  // (localizados) desde el job de notificaciones automáticas.
+  if (tipo === 'RECORDATORIO_CITA') {
+    const asunto = payload.asunto || 'Recordatorio de cita'
+    const texto = payload.texto || ''
+    return { asunto, texto, html: `<p>${texto.replace(/\n/g, '<br>')}</p>` }
+  }
+
   // Genérico (fallback).
   const texto = JSON.stringify(payload)
   return { asunto: `Notificación: ${tipo}`, texto, html: `<pre>${texto}</pre>` }
