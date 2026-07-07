@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import GestorLayout from './components/GestorLayout.jsx'
 
-import Landing from './views/Landing.jsx'
+import LandingPage from './views/LandingPage.jsx'
 import RegistroPaciente from './views/RegistroPaciente.jsx'
 import LoginPaciente from './views/LoginPaciente.jsx'
 import LoginMedico from './views/LoginMedico.jsx'
@@ -18,7 +18,8 @@ export default function App() {
   return (
     <Routes>
       {/* Públicas */}
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/registro-paciente" element={<RegistroPaciente />} />
       <Route path="/login-paciente" element={<LoginPaciente />} />
       <Route path="/login-medico" element={<LoginMedico />} />
