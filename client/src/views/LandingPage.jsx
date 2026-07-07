@@ -225,8 +225,8 @@ export default function LandingPage() {
             <Logo onDark />
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/70">
-            <a href="#" className="hover:text-coral-300">{t('landingPublic.footerTerms')}</a>
-            <a href="#" className="hover:text-coral-300">{t('landingPublic.footerPrivacy')}</a>
+            <Link to="/terminos" className="hover:text-coral-300">{t('landingPublic.footerTerms')}</Link>
+            <Link to="/privacidad" className="hover:text-coral-300">{t('landingPublic.footerPrivacy')}</Link>
             <a href="#" className="hover:text-coral-300">{t('landingPublic.footerContact')}</a>
             <a href="#" className="hover:text-coral-300">{t('landingPublic.footerBlog')}</a>
           </div>

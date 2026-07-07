@@ -175,8 +175,13 @@ export default function RegistroPaciente() {
               </div>
               <label className="flex items-start gap-3">
                 <input type="checkbox" checked={acepta} onChange={(e) => setAcepta(e.target.checked)} className="mt-1 h-5 w-5 rounded border-navy-300 text-navy-700 focus:ring-navy-500" />
-                <span className="text-sm text-navy-700">{t('register.termsAccept')}</span>
+                <span className="text-sm text-navy-700">{t('legal.acceptTerms')}</span>
               </label>
+              <p className="text-xs text-navy-500">
+                <Link to="/terminos" target="_blank" className="font-semibold text-coral-600 hover:underline">{t('legal.seeTerms')}</Link>
+                {' · '}
+                <Link to="/privacidad" target="_blank" className="font-semibold text-coral-600 hover:underline">{t('legal.seePrivacy')}</Link>
+              </p>
             </div>
           )}
 
