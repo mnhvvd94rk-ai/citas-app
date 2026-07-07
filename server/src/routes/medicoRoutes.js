@@ -10,7 +10,7 @@ const router = Router()
 router.get('/primero', requireAuth, async (req, res) => {
   const medico = await prisma.medico.findFirst({
     orderBy: { id: 'asc' },
-    select: { id: true, nombre: true, especialidad: true },
+    select: { id: true, nombre: true, especialidad: true, correo: true },
   })
   if (!medico) {
     return res.status(404).json({ error: 'No hay ningún profesional registrado todavía' })

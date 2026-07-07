@@ -95,6 +95,8 @@ export const citasApi = {
     request(`/citas/slots-disponibles?medicoId=${medicoId}&fecha=${fecha}`),
   reservar: (payload) => request('/citas/reservar', { method: 'POST', body: payload }),
   misCitas: () => request('/citas/mis-citas'),
+  cancelarCliente: (id) => request(`/citas/${id}/cancelar`, { method: 'PATCH' }),
+  recordar: (id) => request(`/citas/${id}/recordar`, { method: 'POST' }),
   agenda: ({ fecha, desde, hasta, estado } = {}) => {
     const qs = new URLSearchParams()
     if (fecha) qs.set('fecha', fecha)

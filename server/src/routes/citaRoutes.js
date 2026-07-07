@@ -151,6 +151,58 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
   res.status(201).json(cita)
 })
 
+// ── Helper: carga una cita y verifica que sea del paciente autenticado ───────
+async function cargarCitaDelPaciente(req, res) {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: 'id inválido' })
+    return null
+  }
+  const cita = await prisma.cita.findUnique({ where: { id } })
+  if (!cita) {
+    res.status(404).json({ error: 'Cita no encontrada' })
+    return null
+  }
+  if (cita.pacienteId !== req.user.id) {
+    res.status(403).json({ error: 'Esta cita no te pertenece' })
+    return null
+  }
+  return cita
+}
+
+// ── PATCH /citas/:id/cancelar ─── el paciente cancela su propia cita ──────────
+router.patch('/:id/cancelar', requireAuth, requireRole('PACIENTE'), async (req, res) => {
+  const cita = await cargarCitaDelPaciente(req, res)
+  if (!cita) return
+  if (!['PENDIENTE', 'CONFIRMADA'].includes(cita.estado)) {
+    return res.status(409).json({
+      error: `Solo puedes cancelar citas PENDIENTE o CONFIRMADA (estado actual: ${cita.estado})`,
+    })
+  }
+  const actualizada = await prisma.cita.update({
+    where: { id: cita.id },
+    data: { estado: 'ANULADA', notaAnulacion: 'Cancelada por el cliente' },
+  })
+  res.json(actualizada)
+})
+
+// ── POST /citas/:id/recordar ─── el paciente le recuerda la cita al profesional ─
+router.post('/:id/recordar', requireAuth, requireRole('PACIENTE'), async (req, res) => {
+  const cita = await cargarCitaDelPaciente(req, res)
+  if (!cita) return
+  // Encola una notificación para el profesional (entrega pendiente de integrar).
+  await prisma.notificacion.create({
+    data: {
+      destinatarioId: cita.medicoId,
+      tipoDestinatario: 'MEDICO',
+      tipo: 'RECORDATORIO',
+      canal: 'PUSH',
+      estadoEnvio: 'PENDIENTE',
+    },
+  })
+  res.json({ ok: true })
+})
+
 // ── GET /citas/mis-citas ─────────────────────────────────────────────────────
 router.get('/mis-citas', requireAuth, requireRole('PACIENTE'), async (req, res) => {
   const citas = await prisma.cita.findMany({

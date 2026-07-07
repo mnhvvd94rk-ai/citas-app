@@ -7,7 +7,7 @@ import RegistroPaciente from './views/RegistroPaciente.jsx'
 import LoginPaciente from './views/LoginPaciente.jsx'
 import LoginMedico from './views/LoginMedico.jsx'
 
-import MisCitas from './views/paciente/MisCitas.jsx'
+import DashboardCliente from './views/paciente/DashboardCliente.jsx'
 import NuevaCita from './views/paciente/NuevaCita.jsx'
 
 import Agenda from './views/gestor/Agenda.jsx'
@@ -28,7 +28,7 @@ export default function App() {
         path="/paciente/citas"
         element={
           <ProtectedRoute rol="PACIENTE">
-            <MisCitas />
+            <DashboardCliente />
           </ProtectedRoute>
         }
       />
