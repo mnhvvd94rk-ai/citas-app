@@ -15,14 +15,20 @@ export default defineConfig({
         enabled: true,
       },
       manifest: {
-        name: 'BookTime',
-        short_name: 'BookTime',
+        name: 'Meetun',
+        short_name: 'Meetun',
         description: 'Smart Appointment Scheduling',
         display: 'standalone',
         theme_color: '#1e3a5f',
-        background_color: '#101f33',
+        background_color: '#ffffff',
         start_url: '/',
         icons: [
+          {
+            src: 'meetun-icon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'any',
+          },
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',

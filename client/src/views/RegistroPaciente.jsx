@@ -106,7 +106,7 @@ export default function RegistroPaciente() {
       <div className="mx-auto max-w-lg px-4">
         <div className="my-5">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-navy-100">
-            <div className="h-full rounded-full bg-gold-500 transition-all" style={{ width: `${((paso + 1) / N_STEPS) * 100}%` }} />
+            <div className="h-full rounded-full bg-coral-500 transition-all" style={{ width: `${((paso + 1) / N_STEPS) * 100}%` }} />
           </div>
           <p className="mt-2 text-center text-sm font-medium text-navy-500">
             {t('register.step')} {paso + 1}: {steps[paso]}

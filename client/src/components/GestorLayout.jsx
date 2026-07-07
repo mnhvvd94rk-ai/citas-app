@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
 import LanguageSelector from './LanguageSelector.jsx'
+import Logo from './Logo.jsx'
 
 // Dashboard profesional estilo Calendly: header + sidebar estrecho de 3 opciones
 // (colapsable en móvil) + contenido principal.
@@ -26,7 +27,7 @@ export default function GestorLayout() {
   const linkCls = ({ isActive }) =>
     `flex items-center gap-3 rounded-xl border-l-4 px-3 py-3 text-sm font-semibold transition-colors ${
       isActive
-        ? 'border-gold-500 bg-navy-50 text-navy-800'
+        ? 'border-coral-500 bg-navy-50 text-navy-800'
         : 'border-transparent text-navy-400 hover:bg-navy-50 hover:text-navy-700'
     }`
 
@@ -51,8 +52,9 @@ export default function GestorLayout() {
             >
               <span className="text-lg">☰</span>
             </button>
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-navy-700 text-sm font-bold text-gold-400">B</span>
-            <span className="font-bold tracking-tight text-navy-800">{t('common.appName')}</span>
+            <button onClick={() => navigate('/')} className="flex items-center" aria-label="Meetun">
+              <Logo />
+            </button>
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden max-w-[10rem] truncate text-sm font-medium text-navy-600 sm:inline">

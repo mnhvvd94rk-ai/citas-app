@@ -1,4 +1,4 @@
-// Traducciones de toda la UI de BookTime en español, inglés y francés.
+// Traducciones de toda la UI de Meetun en español, inglés y francés.
 // Estructura por espacios de nombre. Acceso vía t('namespace.key') desde
 // LanguageContext, con interpolación {var} y soporte de arrays (steps).
 
@@ -13,8 +13,8 @@ export const DEFAULT_LANG = 'es'
 const translations = {
   es: {
     common: {
-      appName: 'BookTime',
-      tagline: 'Agenda de citas inteligente',
+      appName: 'Meetun',
+      tagline: 'La forma inteligente de agendar citas',
       loading: 'Cargando…',
       retry: 'Reintentar',
       back: 'Volver',
@@ -31,6 +31,13 @@ const translations = {
       proAccess: 'Acceso profesional',
       firstTime: '¿Primera vez?',
       registerCta: 'Crea tu cuenta de cliente',
+      heroSubtitle: 'Conecta profesionales con clientes de manera fácil',
+      benefit1Title: 'Reserva en segundos',
+      benefit1Desc: 'Los clientes ven la disponibilidad real y reservan al instante.',
+      benefit2Title: 'Gestión sin esfuerzo',
+      benefit2Desc: 'Los profesionales organizan su agenda y sus citas en un solo lugar.',
+      benefit3Title: 'Recordatorios automáticos',
+      benefit3Desc: 'Avisos por email y WhatsApp para no faltar a ninguna cita.',
     },
     loginClient: {
       title: 'Acceso de Cliente',
@@ -267,8 +274,8 @@ const translations = {
 
   en: {
     common: {
-      appName: 'BookTime',
-      tagline: 'Smart Appointment Scheduling',
+      appName: 'Meetun',
+      tagline: 'The smart way to book appointments',
       loading: 'Loading…',
       retry: 'Retry',
       back: 'Back',
@@ -285,6 +292,13 @@ const translations = {
       proAccess: 'Professional Access',
       firstTime: 'First time?',
       registerCta: 'Create your client account',
+      heroSubtitle: 'Connect professionals with clients, effortlessly',
+      benefit1Title: 'Book in seconds',
+      benefit1Desc: 'Clients see real availability and book instantly.',
+      benefit2Title: 'Effortless management',
+      benefit2Desc: 'Professionals organize their schedule and appointments in one place.',
+      benefit3Title: 'Automatic reminders',
+      benefit3Desc: 'Email and WhatsApp alerts so no one misses an appointment.',
     },
     loginClient: {
       title: 'Client Login',
@@ -519,8 +533,8 @@ const translations = {
 
   fr: {
     common: {
-      appName: 'BookTime',
-      tagline: 'Planification intelligente de rendez-vous',
+      appName: 'Meetun',
+      tagline: 'La façon intelligente de prendre rendez-vous',
       loading: 'Chargement…',
       retry: 'Réessayer',
       back: 'Retour',
@@ -537,6 +551,13 @@ const translations = {
       proAccess: 'Accès professionnel',
       firstTime: 'Première fois ?',
       registerCta: 'Créez votre compte client',
+      heroSubtitle: 'Connectez les professionnels et les clients, facilement',
+      benefit1Title: 'Réservez en quelques secondes',
+      benefit1Desc: 'Les clients voient les disponibilités réelles et réservent instantanément.',
+      benefit2Title: 'Gestion sans effort',
+      benefit2Desc: 'Les professionnels organisent leur agenda et leurs rendez-vous au même endroit.',
+      benefit3Title: 'Rappels automatiques',
+      benefit3Desc: 'Alertes par e-mail et WhatsApp pour ne manquer aucun rendez-vous.',
     },
     loginClient: {
       title: 'Connexion Client',

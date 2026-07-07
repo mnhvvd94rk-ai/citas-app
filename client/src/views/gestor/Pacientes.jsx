@@ -31,7 +31,7 @@ function dotEstado(estado) {
 function Foto({ cliente, className }) {
   const ini = `${cliente.nombre?.[0] || ''}${cliente.apellido?.[0] || ''}`.toUpperCase()
   if (cliente.fotoIdentidadUrl) return <img src={cliente.fotoIdentidadUrl} alt="" className={`object-cover ${className}`} />
-  return <div className={`flex items-center justify-center bg-navy-700 font-bold text-gold-400 ${className}`}>{ini || '·'}</div>
+  return <div className={`flex items-center justify-center bg-navy-700 font-bold text-coral-400 ${className}`}>{ini || '·'}</div>
 }
 
 export default function Pacientes() {
@@ -132,7 +132,7 @@ function ClienteCard({ cliente }) {
         <div className="flex min-w-0 flex-1 flex-col justify-center py-3">
           <p className="truncate text-lg font-bold text-navy-800">{cliente.nombre} {cliente.apellido}</p>
           <p className="truncate text-sm text-navy-500">{cliente.correo}{cliente.telefono ? ` · ${cliente.telefono}` : ''}</p>
-          <span className={`mt-2 inline-block w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${cliente.estado === 'NUEVO' ? 'bg-gold-100 text-gold-600' : 'bg-navy-100 text-navy-700'}`}>
+          <span className={`mt-2 inline-block w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${cliente.estado === 'NUEVO' ? 'bg-coral-100 text-coral-600' : 'bg-navy-100 text-navy-700'}`}>
             {cliente.estado === 'NUEVO' ? t('citaCard.newClient') : t('citaCard.returning')}
           </span>
         </div>
@@ -161,7 +161,7 @@ function ClienteCard({ cliente }) {
                 ) : (
                   <span className="flex items-center gap-2">
                     <dd className="font-medium text-navy-700">{edad ?? t('clients.ageUnknown')}</dd>
-                    <button onClick={() => { setInputEdad(edad ?? ''); setEditandoEdad(true) }} className="text-xs font-semibold text-navy-500 hover:text-gold-600">{t('clients.edit')}</button>
+                    <button onClick={() => { setInputEdad(edad ?? ''); setEditandoEdad(true) }} className="text-xs font-semibold text-navy-500 hover:text-coral-600">{t('clients.edit')}</button>
                   </span>
                 )}
               </div>
