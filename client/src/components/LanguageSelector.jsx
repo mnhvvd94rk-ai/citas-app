@@ -21,7 +21,7 @@ export default function LanguageSelector({ variant = 'light' }) {
             aria-pressed={active}
             className={`px-3 py-1.5 transition-colors ${
               active
-                ? 'bg-coral-500 text-navy-900'
+                ? 'bg-green-500 text-navy-900'
                 : dark
                   ? 'text-white/80 hover:text-white'
                   : 'text-slate-500 hover:text-navy-700'

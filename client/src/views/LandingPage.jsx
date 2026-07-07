@@ -37,8 +37,8 @@ function Reveal({ children, className = '' }) {
 function Feature({ icon, title, desc }) {
   return (
     <div className="group rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-1 hover:shadow-md">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-coral-50 text-2xl transition group-hover:bg-coral-100">{icon}</div>
-      <h3 className="mt-4 font-bold text-navy-800 transition group-hover:text-coral-600">{title}</h3>
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 text-2xl transition group-hover:bg-green-100">{icon}</div>
+      <h3 className="mt-4 font-bold text-navy-800 transition group-hover:text-green-600">{title}</h3>
       <p className="mt-1.5 text-sm text-slate-500">{desc}</p>
     </div>
   )
@@ -50,7 +50,7 @@ function Faq({ q, a }) {
     <div className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
         <span className="font-semibold text-navy-800">{q}</span>
-        <span className="text-coral-500">{open ? '−' : '+'}</span>
+        <span className="text-green-500">{open ? '−' : '+'}</span>
       </button>
       {open && <p className="px-5 pb-4 text-sm text-slate-500">{a}</p>}
     </div>
@@ -97,16 +97,16 @@ export default function LandingPage() {
         <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
           <button onClick={() => navigate('/landing')} aria-label="Ikatun"><Logo /></button>
           <div className="hidden items-center gap-6 text-sm font-medium text-navy-600 md:flex">
-            <a href="#clientes" className="hover:text-coral-600">{t('landingPublic.navClients')}</a>
-            <a href="#profesionales" className="hover:text-coral-600">{t('landingPublic.navPros')}</a>
-            <a href="#como-funciona" className="hover:text-coral-600">{t('landingPublic.navHow')}</a>
+            <a href="#clientes" className="hover:text-green-600">{t('landingPublic.navClients')}</a>
+            <a href="#profesionales" className="hover:text-green-600">{t('landingPublic.navPros')}</a>
+            <a href="#como-funciona" className="hover:text-green-600">{t('landingPublic.navHow')}</a>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <LanguageSelector />
-            <button onClick={() => navigate('/login-paciente')} className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-navy-700 hover:text-coral-600 sm:block">
+            <button onClick={() => navigate('/login-paciente')} className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-navy-700 hover:text-green-600 sm:block">
               {t('landingPublic.login')}
             </button>
-            <button onClick={() => navigate('/registro-paciente')} className="rounded-lg bg-coral-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-coral-600">
+            <button onClick={() => navigate('/registro-paciente')} className="rounded-lg bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-green-600">
               {t('landingPublic.startFree')}
             </button>
           </div>
@@ -115,13 +115,13 @@ export default function LandingPage() {
 
       {/* HERO */}
       <section className="relative overflow-hidden bg-gradient-to-b from-navy-800 via-navy-800 to-navy-900 text-white">
-        <div className="pointer-events-none absolute -right-20 -top-16 h-72 w-72 rounded-full bg-coral-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-coral-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 -top-16 h-72 w-72 rounded-full bg-green-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-green-400/10 blur-3xl" />
         <div className="relative mx-auto max-w-3xl px-6 py-24 text-center sm:py-28">
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">{t('landingPublic.heroHeadline')}</h1>
           <p className="mx-auto mt-5 max-w-xl text-lg text-white/80">{t('landingPublic.heroSub')}</p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <button onClick={() => navigate('/registro-paciente')} className="w-full max-w-xs rounded-xl bg-coral-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-coral-500/25 transition hover:-translate-y-0.5 hover:bg-coral-600 sm:w-auto">
+            <button onClick={() => navigate('/registro-paciente')} className="w-full max-w-xs rounded-xl bg-green-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-green-500/25 transition hover:-translate-y-0.5 hover:bg-green-600 sm:w-auto">
               {t('landingPublic.startFree')}
             </button>
             <button onClick={() => navigate('/login-medico')} className="w-full max-w-xs rounded-xl border border-white/25 px-8 py-4 text-lg font-semibold text-white transition hover:bg-white/10 sm:w-auto">
@@ -160,10 +160,10 @@ export default function LandingPage() {
           <ol className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {pasos.map((s, i) => (
               <li key={s.n} className="relative rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-navy-700 font-bold text-coral-300">{s.n}</div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-navy-700 font-bold text-green-300">{s.n}</div>
                 <h3 className="mt-3 font-bold text-navy-800">{s.title}</h3>
                 <p className="mt-1 text-sm text-slate-500">{s.desc}</p>
-                {i < pasos.length - 1 && <span className="absolute -right-3 top-1/2 hidden -translate-y-1/2 text-2xl text-coral-400 lg:block">→</span>}
+                {i < pasos.length - 1 && <span className="absolute -right-3 top-1/2 hidden -translate-y-1/2 text-2xl text-green-400 lg:block">→</span>}
               </li>
             ))}
           </ol>
@@ -186,7 +186,7 @@ export default function LandingPage() {
               <div className="rounded-2xl bg-navy-800 p-8 text-center text-white shadow-lg ring-1 ring-navy-900">
                 <h3 className="text-xl font-bold">{t('landingPublic.priceProTitle')}</h3>
                 <p className="mt-2 text-white/80">{t('landingPublic.priceProDesc')}</p>
-                <button onClick={() => navigate('/login-medico')} className="mt-5 w-full rounded-xl bg-coral-500 py-3 font-semibold text-white transition hover:bg-coral-600">
+                <button onClick={() => navigate('/login-medico')} className="mt-5 w-full rounded-xl bg-green-500 py-3 font-semibold text-white transition hover:bg-green-600">
                   {t('landing.proAccess')}
                 </button>
               </div>
@@ -202,7 +202,7 @@ export default function LandingPage() {
           <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-3">
             {testimonios.map((tm) => (
               <figure key={tm.author} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                <div className="text-coral-400">★★★★★</div>
+                <div className="text-green-400">★★★★★</div>
                 <blockquote className="mt-3 text-navy-700">“{tm.text}”</blockquote>
                 <figcaption className="mt-3 text-sm font-semibold text-slate-500">{tm.author}</figcaption>
               </figure>
@@ -225,10 +225,10 @@ export default function LandingPage() {
             <Logo onDark />
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/70">
-            <Link to="/terminos" className="hover:text-coral-300">{t('landingPublic.footerTerms')}</Link>
-            <Link to="/privacidad" className="hover:text-coral-300">{t('landingPublic.footerPrivacy')}</Link>
-            <a href="#" className="hover:text-coral-300">{t('landingPublic.footerContact')}</a>
-            <a href="#" className="hover:text-coral-300">{t('landingPublic.footerBlog')}</a>
+            <Link to="/terminos" className="hover:text-green-300">{t('landingPublic.footerTerms')}</Link>
+            <Link to="/privacidad" className="hover:text-green-300">{t('landingPublic.footerPrivacy')}</Link>
+            <a href="#" className="hover:text-green-300">{t('landingPublic.footerContact')}</a>
+            <a href="#" className="hover:text-green-300">{t('landingPublic.footerBlog')}</a>
           </div>
           <div className="flex items-center gap-3 text-white/60">
             <a href="#" aria-label="X" className="hover:text-white">𝕏</a>

@@ -2,8 +2,8 @@
 
 /* ─────────────────────────────────────────────────────────────────────────
    Ikatun — sistema de diseño premium.
-   Paleta: azul profundo (#1e3a5f) como color principal + dorado sutil
-   (#c9a94e) como acento. Tipografía moderna (Inter).
+   Paleta: azul profundo (#1e3a5f) como color principal + verde esmeralda
+   (#10b981) como acento. Tipografía moderna (Inter).
    ───────────────────────────────────────────────────────────────────────── */
 @theme {
   --color-navy-50: #f2f5f9;
@@ -17,14 +17,15 @@
   --color-navy-800: #172d4a;
   --color-navy-900: #101f33;
 
-  /* Acento coral de Ikatun */
-  --color-coral-50: #fff1f1;
-  --color-coral-100: #ffe0e0;
-  --color-coral-200: #ffc7c7;
-  --color-coral-300: #ffa3a3;
-  --color-coral-400: #ff8585;
-  --color-coral-500: #ff6b6b;
-  --color-coral-600: #e85555;
+  /* Acento verde esmeralda de Ikatun (#10b981) */
+  --color-green-50: #ecfdf5;
+  --color-green-100: #d1fae5;
+  --color-green-200: #a7f3d0;
+  --color-green-300: #6ee7b7;
+  --color-green-400: #34d399;
+  --color-green-500: #10b981;
+  --color-green-600: #059669;
+  --color-green-700: #047857;
 
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }

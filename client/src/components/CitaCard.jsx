@@ -27,7 +27,7 @@ export default function CitaCard({ cita, onAprobar, onAnular, onCompletar, busy,
           {p && <p className="mt-0.5 truncate text-sm text-navy-700">{p.nombre} {p.apellido}</p>}
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             {p?.estado && (
-              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${p.estado === 'NUEVO' ? 'bg-coral-100 text-coral-600' : 'bg-navy-100 text-navy-700'}`}>
+              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${p.estado === 'NUEVO' ? 'bg-green-100 text-green-600' : 'bg-navy-100 text-navy-700'}`}>
                 {p.estado === 'NUEVO' ? t('citaCard.newClient') : t('citaCard.returning')}
               </span>
             )}

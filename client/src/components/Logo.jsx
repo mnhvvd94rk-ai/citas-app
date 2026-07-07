@@ -1,12 +1,12 @@
 // Logo de Ikatun. Marca minimalista: dos círculos (dos personas que se
-// encuentran) dentro de un anillo, en azul profundo + acento coral.
+// encuentran) dentro de un anillo, en azul profundo + acento verde.
 // variant: 'horizontal' (marca + wordmark) | 'mark' (solo icono).
 // onDark: true para fondos oscuros (usa blanco en vez de azul).
 
 function Mark({ cls, onDark }) {
   const ring = onDark ? '#ffffff' : '#1e3a5f'
   const dot1 = onDark ? '#ffffff' : '#1e3a5f'
-  const dot2 = '#ff6b6b'
+  const dot2 = '#10b981'
   return (
     <svg viewBox="0 0 40 40" className={cls} xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <circle cx="20" cy="20" r="18" fill="none" stroke={ring} strokeWidth="2.4" />

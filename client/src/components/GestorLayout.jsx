@@ -27,7 +27,7 @@ export default function GestorLayout() {
   const linkCls = ({ isActive }) =>
     `flex items-center gap-3 rounded-xl border-l-4 px-3 py-3 text-sm font-semibold transition-colors ${
       isActive
-        ? 'border-coral-500 bg-navy-50 text-navy-800'
+        ? 'border-green-500 bg-navy-50 text-navy-800'
         : 'border-transparent text-navy-400 hover:bg-navy-50 hover:text-navy-700'
     }`
 

@@ -36,7 +36,7 @@ export default function LegalDoc({ title, sections }) {
         </div>
 
         <div className="mt-12 border-t border-slate-200 pt-6">
-          <Link to="/landing" className="text-sm font-semibold text-coral-600 hover:text-coral-500">
+          <Link to="/landing" className="text-sm font-semibold text-green-600 hover:text-green-500">
             {t('legal.backHome')}
           </Link>
         </div>

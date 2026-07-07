@@ -216,7 +216,7 @@ export default function NuevaCita() {
                           activa
                             ? 'border-navy-700 bg-navy-700 text-white'
                             : candidato
-                              ? 'border-coral-400 bg-coral-50 text-coral-600 ring-2 ring-coral-200'
+                              ? 'border-green-400 bg-green-50 text-green-600 ring-2 ring-green-200'
                               : 'border-navy-200 bg-white text-navy-700 hover:border-navy-400'
                         }`}
                       >
@@ -227,7 +227,7 @@ export default function NuevaCita() {
                 </div>
               )}
               {!esNuevo && seleccion.length === 1 && candidatos.size > 0 && (
-                <p className="mt-2 text-xs text-coral-600">{t('newAppt.consecutiveHint')}</p>
+                <p className="mt-2 text-xs text-green-600">{t('newAppt.consecutiveHint')}</p>
               )}
             </div>
 
