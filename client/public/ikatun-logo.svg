@@ -17,5 +17,6 @@
              C 272 370, 210 400, 235 460"
           fill="none" stroke="#2C7C79" stroke-width="20" stroke-linecap="round"/>
     <circle cx="145" cy="313" r="46" fill="#2C7C79"/>
+    <circle cx="160" cy="410" r="38" fill="#2C7C79"/>
   </g>
 </svg>
