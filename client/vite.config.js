@@ -28,22 +28,14 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/ikatun-logo.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any',
-          },
-          {
-            src: '/ikatun-logo.svg',
+            src: '/ikatun-192x192.png',
             sizes: '192x192',
-            type: 'image/svg+xml',
-            purpose: 'maskable',
+            type: 'image/png',
           },
           {
-            src: '/ikatun-logo.svg',
+            src: '/ikatun-512x512.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'maskable',
+            type: 'image/png',
           },
         ],
       },
