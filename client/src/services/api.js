@@ -77,6 +77,8 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
 export const authApi = {
   registroPaciente: (payload) =>
     request('/auth/registro-paciente', { method: 'POST', body: payload, auth: false }),
+  registroMedico: (payload) =>
+    request('/auth/registro-medico', { method: 'POST', body: payload, auth: false }),
   loginPaciente: (correo, password) =>
     request('/auth/login-paciente', { method: 'POST', body: { correo, password }, auth: false }),
   loginMedico: (correo, password) =>

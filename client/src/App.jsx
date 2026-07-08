@@ -12,6 +12,7 @@ const FAQPage = lazy(() => import('./views/FAQPage.jsx'))
 const TerminosPage = lazy(() => import('./views/legal/TerminosPage.jsx'))
 const PrivacyPage = lazy(() => import('./views/legal/PrivacyPage.jsx'))
 const RegistroPaciente = lazy(() => import('./views/RegistroPaciente.jsx'))
+const RegistroProfesional = lazy(() => import('./views/RegistroProfesional.jsx'))
 const LoginPaciente = lazy(() => import('./views/LoginPaciente.jsx'))
 const LoginMedico = lazy(() => import('./views/LoginMedico.jsx'))
 const DashboardCliente = lazy(() => import('./views/paciente/DashboardCliente.jsx'))
@@ -48,6 +49,8 @@ export default function App() {
         <Route path="/faq" element={<FAQPage />} />
         <Route path="/ayuda" element={<FAQPage />} />
         <Route path="/registro-paciente" element={<RegistroPaciente />} />
+        <Route path="/registro-profesional" element={<RegistroProfesional />} />
+        <Route path="/registro-medico" element={<RegistroProfesional />} />
         <Route path="/login-paciente" element={<LoginPaciente />} />
         <Route path="/login-medico" element={<LoginMedico />} />
 

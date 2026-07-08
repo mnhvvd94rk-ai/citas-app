@@ -69,6 +69,12 @@ export default function LoginMedico() {
                 {cargando ? t('common.entering') : t('common.enter')}
               </button>
             </form>
+
+            <p className="mt-5 text-center text-sm text-navy-500">
+              <Link to="/registro-profesional" className="font-semibold text-brand-600 hover:underline">
+                {t('registerPro.dontHaveAccount')}
+              </Link>
+            </p>
           </div>
         </div>
       </div>
