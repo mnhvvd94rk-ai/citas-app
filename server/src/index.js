@@ -37,6 +37,20 @@ app.use('/notas-por-cita', notaCitaRouter)
 app.use('/medicos', medicoRouter)
 app.use('/contacto', contactoRouter)
 
+// ⚠️⚠️ TEMPORAL — endpoint de prueba de WhatsApp real (Meta Cloud API).
+// ELIMINAR tras verificar; NO debe quedar en producción.
+app.post('/test-whatsapp-temp', async (req, res) => {
+  const { default: notificationService } = await import('./services/notificationService.js')
+  const resultado = await notificationService.send({
+    tipo: 'RECORDATORIO_CITA',
+    canal: 'WHATSAPP',
+    idioma: 'ES',
+    destinatario: { id: 0, tipoDestinatario: 'PACIENTE', telefono: '33749479280' },
+    payload: { texto: 'Prueba desde Ikatun: WhatsApp real funcionando correctamente ✅' },
+  })
+  res.json(resultado)
+})
+
 app.get('/', (req, res) => {
   res.json({ message: 'Citas App API — hola mundo' })
 })
