@@ -148,12 +148,65 @@ function enviarSMS({ destinatario, texto }) {
   return { ok: true }
 }
 
-function enviarWhatsApp({ destinatario, texto }) {
+// ── WhatsApp vía Meta Cloud API ──────────────────────────────────────────────
+// Envío real por la WhatsApp Cloud API de Meta. Variables de entorno:
+//   WHATSAPP_PHONE_NUMBER_ID   (id del número emisor)
+//   WHATSAPP_ACCESS_TOKEN      (Bearer token de la app de Meta)
+//   WHATSAPP_BUSINESS_ACCOUNT_ID (WABA id; para administración, no lo usa el envío)
+//
+// ⚠️ MODO PRUEBA (número de prueba de Meta): la Cloud API SOLO entrega mensajes a
+// números añadidos previamente como "destinatarios de prueba" (recipients) en el
+// panel de Meta (WhatsApp → API Setup). A cualquier otro número la API responde
+// con error. Al migrar a un número propio verificado esta restricción desaparece.
+//
+// Best-effort: nunca lanza; devuelve { ok:false, error } si algo falla, de modo
+// que un fallo de WhatsApp NO impide el envío del email (son send() separados).
+async function enviarWhatsApp({ destinatario, texto }) {
   if (!destinatario?.telefono) return { ok: false, error: 'Destinatario sin teléfono' }
-  // Mock: loguea el envío. Listo para conectar la API de WhatsApp de Twilio
-  // (TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_WHATSAPP_NUMBER) después.
-  console.log(`[notificationService][WhatsApp mock] WhatsApp enviado a ${destinatario.telefono}: ${texto}`)
-  return { ok: true }
+
+  const { WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN } = process.env
+  if (!WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN) {
+    console.warn('[notificationService][WhatsApp] Sin credenciales configuradas; se omite el envío.')
+    return { ok: false, error: 'WhatsApp no configurado (faltan credenciales)' }
+  }
+
+  // Meta exige el número en formato internacional SIN "+", espacios ni guiones.
+  const to = String(destinatario.telefono).replace(/\D/g, '')
+  const url = `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`
+  const body = {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'text',
+    text: { body: texto },
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+    const data = await res.json().catch(() => ({}))
+
+    if (!res.ok) {
+      // Error de la API de Meta (ej. número no está en la lista de prueba, token
+      // expirado, etc.). Se loguea y se devuelve fallo SIN lanzar.
+      const apiError = data?.error?.message || `HTTP ${res.status}`
+      console.error(`[notificationService][WhatsApp] ❌ Fallo a ${to}: ${apiError}`)
+      return { ok: false, error: `WhatsApp API: ${apiError}` }
+    }
+
+    const msgId = data?.messages?.[0]?.id || '(sin id)'
+    console.log(`[notificationService][WhatsApp] ✅ Enviado a ${to} (message id: ${msgId})`)
+    return { ok: true }
+  } catch (err) {
+    // Fallo de red / DNS / timeout: nunca interrumpe el resto de notificaciones.
+    console.error(`[notificationService][WhatsApp] ❌ Error de red a ${to}: ${err.message}`)
+    return { ok: false, error: `WhatsApp red: ${err.message}` }
+  }
 }
 
 let pushConfigurado = null
@@ -230,7 +283,7 @@ async function send({ tipo, canal, idioma = 'ES', destinatario, payload }) {
     } else if (canal === 'SMS') {
       resultado = enviarSMS({ destinatario, texto })
     } else if (canal === 'WHATSAPP') {
-      resultado = enviarWhatsApp({ destinatario, texto })
+      resultado = await enviarWhatsApp({ destinatario, texto })
     } else if (canal === 'PUSH') {
       resultado = await enviarPush({ destinatario, asunto, texto })
     } else {
