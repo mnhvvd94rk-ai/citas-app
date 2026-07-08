@@ -149,6 +149,7 @@ router.post('/rango', async (req, res) => {
         fecha: parseFecha(iso),
         horaInicio: bloque.horaInicio,
         horaFin: bloque.horaFin,
+        duracionMinutos: dur,
       })
       creadosEnDia++
     }

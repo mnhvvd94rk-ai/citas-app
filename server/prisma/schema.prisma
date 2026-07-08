@@ -97,6 +97,9 @@ model Disponibilidad {
   fecha      DateTime // se usa solo la parte de fecha (ver decisión §1.b)
   horaInicio String   // "HH:mm"
   horaFin    String   // "HH:mm"
+  // Duración del bloque en minutos con que el slotEngine trocea esta franja.
+  // Default 45 para compatibilidad con las franjas creadas antes de este campo.
+  duracionMinutos Int  @default(45)
 
   @@index([medicoId, fecha])
 }

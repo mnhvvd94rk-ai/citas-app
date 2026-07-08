@@ -38,14 +38,17 @@ function solapan(aIni, aFin, bIni, bFin) {
 /**
  * Trocea un rango de disponibilidad en slots consecutivos sin huecos.
  * Descarta el sobrante si el rango no es múltiplo exacto de la duración.
- * @param {{ fecha?: any, horaInicio: string, horaFin: string }} disponibilidad
- * @param {number} [duracionMin=45] duración del bloque en minutos
+ * La duración se toma, en este orden: el parámetro explícito `duracionMin`,
+ * el campo `disponibilidad.duracionMinutos` de la franja, o 45 por defecto.
+ * @param {{ fecha?: any, horaInicio: string, horaFin: string, duracionMinutos?: number }} disponibilidad
+ * @param {number} [duracionMin] duración del bloque en minutos (opcional)
  * @returns {Array<{ horaInicio: string, horaFin: string }>}
  */
-export function generarSlots(disponibilidad, duracionMin = DURACION_SLOT_MIN) {
+export function generarSlots(disponibilidad, duracionMin) {
   const inicio = aMinutos(disponibilidad.horaInicio)
   const fin = aMinutos(disponibilidad.horaFin)
-  const paso = duracionMin > 0 ? duracionMin : DURACION_SLOT_MIN
+  const elegida = duracionMin ?? disponibilidad.duracionMinutos ?? DURACION_SLOT_MIN
+  const paso = elegida > 0 ? elegida : DURACION_SLOT_MIN
 
   const slots = []
   for (let cur = inicio; cur + paso <= fin; cur += paso) {

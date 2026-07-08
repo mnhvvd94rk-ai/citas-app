@@ -20,6 +20,65 @@ describe('generarSlots', () => {
       { horaInicio: '09:45', horaFin: '10:30' },
     ])
   })
+
+  it('respeta la duración de la franja (duracionMinutos: 60 → bloques de 60 min)', () => {
+    // 10:00 -> 12:00 con franja de 60 min: 2 bloques completos, NO 45+resto.
+    const slots = generarSlots({
+      fecha: FECHA,
+      horaInicio: '10:00',
+      horaFin: '12:00',
+      duracionMinutos: 60,
+    })
+    expect(slots).toEqual([
+      { horaInicio: '10:00', horaFin: '11:00' },
+      { horaInicio: '11:00', horaFin: '12:00' },
+    ])
+  })
+
+  it('un bloque de exactamente 60 min NO se fragmenta en 45 + 15', () => {
+    const slots = generarSlots({
+      fecha: FECHA,
+      horaInicio: '10:00',
+      horaFin: '11:00',
+      duracionMinutos: 60,
+    })
+    expect(slots).toEqual([{ horaInicio: '10:00', horaFin: '11:00' }])
+  })
+})
+
+describe('duración personalizada al reservar', () => {
+  it('slotsDisponibles usa la duración real de cada franja (60 min)', () => {
+    const disponibilidades = [
+      { fecha: FECHA, horaInicio: '10:00', horaFin: '11:00', duracionMinutos: 60 },
+    ]
+    const libres = slotsDisponibles(disponibilidades, [], FECHA)
+    expect(libres).toEqual([{ horaInicio: '10:00', horaFin: '11:00' }])
+  })
+
+  it('reservar un bloque de 60 min se valida como un único slot completo', () => {
+    const disponibilidades = [
+      { fecha: FECHA, horaInicio: '10:00', horaFin: '12:00', duracionMinutos: 60 },
+    ]
+    const libres = slotsDisponibles(disponibilidades, [], FECHA)
+    // El paciente elige el bloque completo de 60 min tal como lo ve.
+    const res = validarReserva({
+      tipoPaciente: 'NUEVO',
+      slotsElegidos: [{ horaInicio: '10:00', horaFin: '11:00' }],
+      slotsDisponibles: libres,
+    })
+    expect(res).toEqual({ valido: true })
+  })
+
+  it('una cita de 60 min bloquea exactamente su bloque, no un slot de 45', () => {
+    const disponibilidades = [
+      { fecha: FECHA, horaInicio: '10:00', horaFin: '12:00', duracionMinutos: 60 },
+    ]
+    const citas = [
+      { fecha: FECHA, horaInicio: '10:00', horaFin: '11:00', estado: 'CONFIRMADA' },
+    ]
+    const libres = slotsDisponibles(disponibilidades, citas, FECHA)
+    expect(libres).toEqual([{ horaInicio: '11:00', horaFin: '12:00' }])
+  })
 })
 
 describe('slotsDisponibles', () => {
