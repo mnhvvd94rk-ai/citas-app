@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
+import { Zap, Bell, CalendarCheck } from 'lucide-react'
 import LanguageSelector from '../components/LanguageSelector.jsx'
 import Logo from '../components/Logo.jsx'
 
@@ -68,10 +69,11 @@ export default function LandingPage() {
     }
   }, [isAuthenticated, tipo, navigate])
 
+  const iconCls = 'h-7 w-7 text-green-600'
   const clientes = [
-    { icon: '⚡', title: t('landingPublic.c1Title'), desc: t('landingPublic.c1Desc') },
-    { icon: '🔔', title: t('landingPublic.c2Title'), desc: t('landingPublic.c2Desc') },
-    { icon: '🎛️', title: t('landingPublic.c3Title'), desc: t('landingPublic.c3Desc') },
+    { icon: <Zap className={iconCls} strokeWidth={2} />, title: t('landingPublic.c1Title'), desc: t('landingPublic.c1Desc') },
+    { icon: <Bell className={iconCls} strokeWidth={2} />, title: t('landingPublic.c2Title'), desc: t('landingPublic.c2Desc') },
+    { icon: <CalendarCheck className={iconCls} strokeWidth={2} />, title: t('landingPublic.c3Title'), desc: t('landingPublic.c3Desc') },
   ]
   const pros = [
     { icon: '📅', title: t('landingPublic.p1Title'), desc: t('landingPublic.p1Desc') },
@@ -115,8 +117,19 @@ export default function LandingPage() {
 
       {/* HERO */}
       <section className="relative overflow-hidden bg-gradient-to-b from-navy-800 via-navy-800 to-navy-900 text-white">
+        {/* Glows esmeralda en las esquinas (dan profundidad al navy plano) */}
         <div className="pointer-events-none absolute -right-20 -top-16 h-72 w-72 rounded-full bg-green-500/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-green-400/10 blur-3xl" />
+        {/* Vignette radial esmeralda muy sutil */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ backgroundImage: 'radial-gradient(60% 60% at 50% 0%, rgba(16,185,129,0.10), transparent 70%)' }}
+        />
+        {/* Patrón de puntos tenue para que el fondo no se vea plano */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.06]"
+          style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '22px 22px' }}
+        />
         <div className="relative mx-auto max-w-3xl px-6 py-24 text-center sm:py-28">
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">{t('landingPublic.heroHeadline')}</h1>
           <p className="mx-auto mt-5 max-w-xl text-lg text-white/80">{t('landingPublic.heroSub')}</p>
@@ -124,7 +137,7 @@ export default function LandingPage() {
             <button onClick={() => navigate('/registro-paciente')} className="w-full max-w-xs rounded-xl bg-green-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-green-500/25 transition hover:-translate-y-0.5 hover:bg-green-600 sm:w-auto">
               {t('landingPublic.startFree')}
             </button>
-            <button onClick={() => navigate('/login-medico')} className="w-full max-w-xs rounded-xl border border-white/25 px-8 py-4 text-lg font-semibold text-white transition hover:bg-white/10 sm:w-auto">
+            <button onClick={() => navigate('/login-medico')} className="w-full max-w-xs rounded-xl bg-white/95 px-8 py-4 text-lg font-bold text-navy-800 shadow-lg transition hover:-translate-y-0.5 hover:bg-white sm:w-auto">
               {t('landing.proAccess')}
             </button>
           </div>
