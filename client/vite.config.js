@@ -14,6 +14,11 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        // El SW nuevo toma control de inmediato, sin quedar atorado en caché viejo.
+        skipWaiting: true,
+        clientsClaim: true,
+      },
       devOptions: {
         // Permite probar el service worker en `npm run dev`
         enabled: true,
