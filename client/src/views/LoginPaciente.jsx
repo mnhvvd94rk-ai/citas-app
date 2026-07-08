@@ -72,7 +72,7 @@ export default function LoginPaciente() {
 
             <p className="mt-6 text-center text-sm text-navy-500">
               {t('loginClient.noAccount')}{' '}
-              <Link to="/registro-paciente" className="font-semibold text-navy-700 hover:text-green-600">
+              <Link to="/registro-paciente" className="font-semibold text-navy-700 hover:text-brand-600">
                 {t('loginClient.register')}
               </Link>
             </p>

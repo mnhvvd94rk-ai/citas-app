@@ -56,10 +56,10 @@ export default function ContactoPage() {
         <p className="mt-2 text-sm text-slate-500">{t('contact.subtitle')}</p>
 
         {ok ? (
-          <div className="mt-8 rounded-2xl border border-green-200 bg-green-50 p-6 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-2xl font-bold text-white">✓</div>
-            <p className="mt-3 font-semibold text-green-700">{t('contact.success')}</p>
-            <Link to="/landing" className="mt-4 inline-block text-sm font-semibold text-navy-700 hover:text-green-600">
+          <div className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-2xl font-bold text-white">✓</div>
+            <p className="mt-3 font-semibold text-emerald-700">{t('contact.success')}</p>
+            <Link to="/landing" className="mt-4 inline-block text-sm font-semibold text-navy-700 hover:text-brand-600">
               {t('legal.backHome')}
             </Link>
           </div>
@@ -85,7 +85,7 @@ export default function ContactoPage() {
             <button
               type="submit"
               disabled={enviando}
-              className="w-full rounded-xl bg-green-500 py-3.5 font-semibold text-white shadow-lg shadow-green-500/20 transition hover:bg-green-600 disabled:bg-navy-300"
+              className="w-full rounded-xl bg-brand-500 py-3.5 font-semibold text-white shadow-lg shadow-brand-500/20 transition hover:bg-brand-600 disabled:bg-navy-300"
             >
               {enviando ? t('contact.sending') : t('contact.send')}
             </button>

@@ -106,7 +106,7 @@ export default function RegistroPaciente() {
       <div className="mx-auto max-w-lg px-4">
         <div className="my-5">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-navy-100">
-            <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${((paso + 1) / N_STEPS) * 100}%` }} />
+            <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${((paso + 1) / N_STEPS) * 100}%` }} />
           </div>
           <p className="mt-2 text-center text-sm font-medium text-navy-500">
             {t('register.step')} {paso + 1}: {steps[paso]}
@@ -178,9 +178,9 @@ export default function RegistroPaciente() {
                 <span className="text-sm text-navy-700">{t('legal.acceptTerms')}</span>
               </label>
               <p className="text-xs text-navy-500">
-                <Link to="/terminos" target="_blank" className="font-semibold text-green-600 hover:underline">{t('legal.seeTerms')}</Link>
+                <Link to="/terminos" target="_blank" className="font-semibold text-brand-600 hover:underline">{t('legal.seeTerms')}</Link>
                 {' · '}
-                <Link to="/privacidad" target="_blank" className="font-semibold text-green-600 hover:underline">{t('legal.seePrivacy')}</Link>
+                <Link to="/privacidad" target="_blank" className="font-semibold text-brand-600 hover:underline">{t('legal.seePrivacy')}</Link>
               </p>
             </div>
           )}

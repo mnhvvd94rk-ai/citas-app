@@ -158,7 +158,7 @@ export default function DashboardCliente() {
           <>
             {/* Card prominente: próxima cita */}
             <section className="mt-5 overflow-hidden rounded-2xl bg-gradient-to-br from-navy-700 to-navy-800 p-6 text-white shadow-lg shadow-navy-900/20">
-              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-green-400">{t('clientDash.yourNextAppt')}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-brand-400">{t('clientDash.yourNextAppt')}</p>
               {proxima ? (
                 (() => {
                   const pen = penalizacion(proxima)
@@ -237,13 +237,13 @@ export default function DashboardCliente() {
                 <h2 className="mb-3 font-bold text-navy-800">{t('clientDash.professionalInfo')}</h2>
                 {medico ? (
                   <div className="flex flex-col items-center text-center">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-navy-700 text-2xl font-bold text-green-400">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-navy-700 text-2xl font-bold text-brand-400">
                       {(medico.nombre?.[0] || '·').toUpperCase()}
                     </div>
                     <p className="mt-3 font-semibold text-navy-800">{medico.nombre}</p>
                     {medico.especialidad && <p className="text-sm text-navy-500">{medico.especialidad}</p>}
                     {medico.correo && (
-                      <a href={`mailto:${medico.correo}`} className="mt-2 break-all text-sm text-navy-600 hover:text-green-600">
+                      <a href={`mailto:${medico.correo}`} className="mt-2 break-all text-sm text-navy-600 hover:text-brand-600">
                         {medico.correo}
                       </a>
                     )}

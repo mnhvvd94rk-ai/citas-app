@@ -5,18 +5,15 @@
    Paleta: azul profundo (#1e3a5f) como color principal + ROJO-QUEMADO del
    logo (#B5451F) como acento de marca / CTAs positivos. Tipografía Inter.
 
-   IMPORTANTE — REBRAND DE ACENTO (8 jul 2026):
+   REBRAND DE ACENTO (8 jul 2026):
    El acento de marca pasó de verde esmeralda a rojo-quemado (#B5451F, del
-   logo oficial). Las utilidades `green-*` que quedan en el markup se
-   conservan como ALIAS del acento de marca (mismos valores rojo-quemado)
-   para no romper el código existente; `bg-green-500` = #B5451F y
-   `hover:bg-green-600` = #8f3718. El token semántico `brand-*` es idéntico y
-   es el preferido para código nuevo.
+   logo oficial). Se usa mediante las utilidades `brand-*` (p. ej. `bg-brand-500`
+   = #B5451F, `hover:bg-brand-600` = #8f3718).
 
    NO confundir con el ROJO SEMÁNTICO (`red-*`, #ef4444, más brillante) usado
-   para errores, cancelar, estado "Anulada" y acciones destructivas: ese es
-   una paleta distinta y NO debe cambiarse. Los estados positivos de negocio
-   (badge "Confirmada") usan `emerald-*`, también intactos.
+   para errores, cancelar, estado "Anulada" y acciones destructivas: paleta
+   distinta y NO debe cambiarse. Los estados positivos de negocio (badge
+   "Confirmada", banner de éxito) usan `emerald-*`, también intactos.
    ───────────────────────────────────────────────────────────────────────── */
 @theme {
   --color-navy-50: #f2f5f9;
@@ -40,17 +37,6 @@
   --color-brand-600: #8f3718;
   --color-brand-700: #6f2a12;
   --color-brand: #b5451f;
-
-  /* Alias de compatibilidad: `green-*` mapea al acento rojo-quemado de marca
-     (mismos valores que `brand-*`). Ver nota de rebrand arriba. */
-  --color-green-50: #fbf1ec;
-  --color-green-100: #f6ddd0;
-  --color-green-200: #ecbca6;
-  --color-green-300: #dd9068;
-  --color-green-400: #cf6f45;
-  --color-green-500: #b5451f;
-  --color-green-600: #8f3718;
-  --color-green-700: #6f2a12;
 
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }

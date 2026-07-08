@@ -11,7 +11,7 @@ function FaqItem({ q, a }) {
     <div className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
         <span className="font-semibold text-navy-800">{q}</span>
-        <span className="text-green-500">{open ? '−' : '+'}</span>
+        <span className="text-brand-500">{open ? '−' : '+'}</span>
       </button>
       {open && <p className="px-5 pb-4 text-sm leading-relaxed text-slate-500">{a}</p>}
     </div>
@@ -42,7 +42,7 @@ export default function FAQPage() {
         </div>
 
         <div className="mt-12 border-t border-slate-200 pt-6">
-          <Link to="/landing" className="text-sm font-semibold text-green-600 hover:text-green-500">
+          <Link to="/landing" className="text-sm font-semibold text-brand-600 hover:text-brand-500">
             {t('legal.backHome')}
           </Link>
         </div>
