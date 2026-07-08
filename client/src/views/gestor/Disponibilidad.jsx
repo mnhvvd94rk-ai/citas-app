@@ -39,7 +39,6 @@ export default function Disponibilidad() {
   const [form, setForm] = useState({ fecha: hoyISO(), horaInicio: '09:00', horaFin: '13:00' })
   const [creando, setCreando] = useState(false)
   const [errorForm, setErrorForm] = useState(null)
-  const [busy, setBusy] = useState(null)
 
   // ── Modo "rango de fechas" ──────────────────────────────────────────────────
   const [rango, setRango] = useState({
@@ -96,19 +95,6 @@ export default function Disponibilidad() {
       setErrorForm(err)
     } finally {
       setCreando(false)
-    }
-  }
-
-  async function eliminar(id) {
-    setBusy(id)
-    setError(null)
-    try {
-      await disponibilidadApi.eliminar(id)
-      await cargar()
-    } catch (err) {
-      setError(err)
-    } finally {
-      setBusy(null)
     }
   }
 
@@ -457,33 +443,28 @@ export default function Disponibilidad() {
             {lista.map((d) => {
               const marcada = sel.has(d.id)
               return (
-                <li
-                  key={d.id}
-                  className={`flex items-center gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 transition ${
-                    marcada ? 'ring-2 ring-navy-400' : 'ring-navy-100'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={marcada}
-                    onChange={() => toggleSel(d.id)}
-                    aria-label={`${formatFechaCorta(d.fecha)} ${d.horaInicio}-${d.horaFin}`}
-                    className="h-4 w-4 shrink-0 rounded border-navy-300 text-navy-700 focus:ring-navy-500"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-navy-800">{formatFechaCorta(d.fecha)}</p>
-                    <p className="text-sm text-navy-500">
-                      {d.horaInicio} – {d.horaFin}
-                      {d.duracionMinutos ? ` · ${d.duracionMinutos} ${t('availability.minutes')}` : ''}
-                    </p>
-                  </div>
-                  <button
-                    disabled={busy === d.id}
-                    onClick={() => eliminar(d.id)}
-                    className="shrink-0 rounded-lg border border-red-300 px-3.5 py-1.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                <li key={d.id}>
+                  {/* Toda la fila es clickeable (label) → mejor UX táctil en tablet/móvil */}
+                  <label
+                    className={`flex cursor-pointer items-center gap-4 rounded-xl bg-white p-4 shadow-sm ring-1 transition ${
+                      marcada ? 'ring-2 ring-navy-400' : 'ring-navy-100 hover:ring-navy-200'
+                    }`}
                   >
-                    {busy === d.id ? '…' : t('availability.delete')}
-                  </button>
+                    <input
+                      type="checkbox"
+                      checked={marcada}
+                      onChange={() => toggleSel(d.id)}
+                      aria-label={`${formatFechaCorta(d.fecha)} ${d.horaInicio}-${d.horaFin}`}
+                      className="h-5 w-5 shrink-0 rounded border-navy-300 text-navy-700 focus:ring-navy-500"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-navy-800">{formatFechaCorta(d.fecha)}</p>
+                      <p className="text-sm text-navy-500">
+                        {d.horaInicio} – {d.horaFin}
+                        {d.duracionMinutos ? ` · ${d.duracionMinutos} ${t('availability.minutes')}` : ''}
+                      </p>
+                    </div>
+                  </label>
                 </li>
               )
             })}
