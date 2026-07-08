@@ -48,9 +48,13 @@ export default function App() {
         <Route path="/contact" element={<ContactoPage />} />
         <Route path="/faq" element={<FAQPage />} />
         <Route path="/ayuda" element={<FAQPage />} />
+        {/* Rutas de cliente: /*-cliente son las canónicas; /*-paciente se
+            mantienen como alias para no romper enlaces guardados/compartidos. */}
+        <Route path="/registro-cliente" element={<RegistroPaciente />} />
         <Route path="/registro-paciente" element={<RegistroPaciente />} />
         <Route path="/registro-profesional" element={<RegistroProfesional />} />
         <Route path="/registro-medico" element={<RegistroProfesional />} />
+        <Route path="/login-cliente" element={<LoginPaciente />} />
         <Route path="/login-paciente" element={<LoginPaciente />} />
         <Route path="/login-medico" element={<LoginMedico />} />
 

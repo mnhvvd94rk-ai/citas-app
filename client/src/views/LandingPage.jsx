@@ -105,10 +105,10 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <LanguageSelector />
-            <button onClick={() => navigate('/login-paciente')} className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-navy-700 hover:text-brand-600 sm:block">
+            <button onClick={() => navigate('/login-cliente')} className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-navy-700 hover:text-brand-600 sm:block">
               {t('landingPublic.login')}
             </button>
-            <button onClick={() => navigate('/registro-paciente')} className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600">
+            <button onClick={() => navigate('/registro-cliente')} className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600">
               {t('landingPublic.startFree')}
             </button>
           </div>
@@ -134,7 +134,7 @@ export default function LandingPage() {
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">{t('landingPublic.heroHeadline')}</h1>
           <p className="mx-auto mt-5 max-w-xl text-lg text-white/80">{t('landingPublic.heroSub')}</p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <button onClick={() => navigate('/registro-paciente')} className="w-full max-w-xs rounded-xl bg-brand-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:-translate-y-0.5 hover:bg-brand-600 sm:w-auto">
+            <button onClick={() => navigate('/registro-cliente')} className="w-full max-w-xs rounded-xl bg-brand-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:-translate-y-0.5 hover:bg-brand-600 sm:w-auto">
               {t('landingPublic.startFree')}
             </button>
             <button onClick={() => navigate('/login-medico')} className="w-full max-w-xs rounded-xl bg-white/95 px-8 py-4 text-lg font-bold text-navy-800 shadow-lg transition hover:-translate-y-0.5 hover:bg-white sm:w-auto">
@@ -192,7 +192,7 @@ export default function LandingPage() {
               <div className="rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-200">
                 <h3 className="text-xl font-bold text-navy-800">{t('landingPublic.priceClientTitle')}</h3>
                 <p className="mt-2 text-slate-500">{t('landingPublic.priceClientDesc')}</p>
-                <button onClick={() => navigate('/registro-paciente')} className="mt-5 w-full rounded-xl bg-navy-700 py-3 font-semibold text-white transition hover:bg-navy-800">
+                <button onClick={() => navigate('/registro-cliente')} className="mt-5 w-full rounded-xl bg-navy-700 py-3 font-semibold text-white transition hover:bg-navy-800">
                   {t('landingPublic.startFree')}
                 </button>
               </div>
