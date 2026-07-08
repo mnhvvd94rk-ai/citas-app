@@ -226,6 +226,14 @@ const translations = {
       bookFirst: 'Reservar mi primera cita',
       cancelReason: 'Motivo de anulación:',
     },
+    appt: {
+      appointmentType: 'Tipo de cita',
+      inPerson: 'Presencial',
+      videoCall: 'Videoconferencia',
+      joinVideoCall: 'Unirse a la videollamada',
+      availableFifteenMinBefore: 'Podrás unirte 15 min antes de tu cita',
+      videoCallReminder: 'Tu cita es por videoconferencia. Únete aquí:',
+    },
     newAppt: {
       backLink: 'Mis citas',
       title: 'Reservar nueva cita',
@@ -637,6 +645,14 @@ const translations = {
       bookFirst: 'Book my first appointment',
       cancelReason: 'Cancellation reason:',
     },
+    appt: {
+      appointmentType: 'Appointment type',
+      inPerson: 'In person',
+      videoCall: 'Video call',
+      joinVideoCall: 'Join the video call',
+      availableFifteenMinBefore: "You'll be able to join 15 min before your appointment",
+      videoCallReminder: 'Your appointment is by video call. Join here:',
+    },
     newAppt: {
       backLink: 'My appointments',
       title: 'Book a new appointment',
@@ -1045,6 +1061,14 @@ const translations = {
       empty: "Vous n'avez pas encore de rendez-vous.",
       bookFirst: 'Réserver mon premier rendez-vous',
       cancelReason: "Motif d'annulation :",
+    },
+    appt: {
+      appointmentType: 'Type de rendez-vous',
+      inPerson: 'En personne',
+      videoCall: 'Visioconférence',
+      joinVideoCall: 'Rejoindre la visioconférence',
+      availableFifteenMinBefore: 'Vous pourrez rejoindre 15 min avant votre rendez-vous',
+      videoCallReminder: 'Votre rendez-vous est en visioconférence. Rejoignez ici :',
     },
     newAppt: {
       backLink: 'Mes rendez-vous',

@@ -27,6 +27,13 @@ const REMINDER_MESSAGES = {
   },
 }
 
+// Línea de videoconferencia añadida a los recordatorios (por idioma).
+const VIDEO_LINE = {
+  ES: (enlace) => `\n\n💻 Tu cita es por videoconferencia. Únete aquí: ${enlace}`,
+  EN: (enlace) => `\n\n💻 Your appointment is by video call. Join here: ${enlace}`,
+  FR: (enlace) => `\n\n💻 Votre rendez-vous est en visioconférence. Rejoignez ici : ${enlace}`,
+}
+
 // ── Construcción del mensaje según el tipo (y el idioma para recordatorios) ───
 function construirMensaje(tipo, payload = {}, idioma = 'ES') {
   if (tipo === 'ANULACION') {
@@ -62,9 +69,13 @@ function construirMensaje(tipo, payload = {}, idioma = 'ES') {
   if (tipo === 'RECORDATORIO_CITA') {
     const lang = REMINDER_MESSAGES[idioma] ? idioma : 'ES'
     const fn = REMINDER_MESSAGES[lang][payload.marca]
-    const { asunto, texto } = fn
-      ? fn(payload)
-      : { asunto: 'Recordatorio de cita', texto: payload.texto || '' }
+    const base = fn ? fn(payload) : { asunto: 'Recordatorio de cita', texto: payload.texto || '' }
+    const { asunto } = base
+    let texto = base.texto
+    // Si la cita es por videoconferencia, adjunta el enlace para unirse.
+    if (payload.enlaceVideoconferencia) {
+      texto += (VIDEO_LINE[lang] || VIDEO_LINE.ES)(payload.enlaceVideoconferencia)
+    }
     return { asunto, texto, html: `<p>${texto.replace(/\n/g, '<br>')}</p>` }
   }
 

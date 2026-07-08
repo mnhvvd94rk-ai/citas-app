@@ -36,3 +36,23 @@ export function formatFechaCorta(iso) {
   const [y, m, d] = ymd.split('-').map(Number)
   return `${d} ${MESES[m - 1].slice(0, 3)} ${y}`
 }
+
+/**
+ * Instante (Date, hora local) de una cita a partir de su fecha ISO y hora
+ * "HH:MM". La hora se interpreta como hora de pared local (lo que el
+ * profesional/cliente ve), para calcular "faltan X minutos".
+ */
+export function instanteCita(fechaISO, horaHHMM) {
+  const ymd = soloFecha(fechaISO)
+  if (!ymd) return null
+  const [y, m, d] = ymd.split('-').map(Number)
+  const [hh, mm] = String(horaHHMM || '00:00').split(':').map(Number)
+  return new Date(y, m - 1, d, hh || 0, mm || 0, 0)
+}
+
+/** Minutos (número, puede ser negativo) desde ahora hasta el inicio de la cita. */
+export function minutosHastaCita(fechaISO, horaHHMM, ahora = new Date()) {
+  const inst = instanteCita(fechaISO, horaHHMM)
+  if (!inst) return Infinity
+  return (inst.getTime() - ahora.getTime()) / 60000
+}

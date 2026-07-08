@@ -126,6 +126,11 @@ model Cita {
   diasAnticipacionRequierida Int     @default(7)
   esDoble                    Boolean @default(false)
 
+  // Modalidad de la cita. PRESENCIAL | VIDEOCONFERENCIA. Si es videoconferencia
+  // se genera un enlace único de Jitsi Meet (gratis, sin API key).
+  tipoCita                String  @default("PRESENCIAL")
+  enlaceVideoconferencia  String?
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

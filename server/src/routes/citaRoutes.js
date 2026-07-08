@@ -59,7 +59,14 @@ const reservarSchema = z.object({
   fecha: z.string().regex(FECHA_RE, 'Formato esperado YYYY-MM-DD'),
   slotsElegidos: z.array(slotSchema).min(1),
   motivoConsulta: z.string().min(1).optional(),
+  tipoCita: z.enum(['PRESENCIAL', 'VIDEOCONFERENCIA']).optional(),
 })
+
+/** Enlace único de Jitsi Meet para una cita de videoconferencia. */
+function generarEnlaceVideo(citaId) {
+  const random = Math.random().toString(36).slice(2, 8) // 6 caracteres alfanuméricos
+  return `https://meet.jit.si/ikatun-${citaId}-${random}`
+}
 
 const anularSchema = z.object({
   notaAnulacion: z.string().min(1, 'notaAnulacion es obligatoria'),
@@ -146,7 +153,8 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
   const diasAnticipacionRequierida = (medico?.diasAnticipacionRequierida ?? 7) * (esDoble ? 2 : 1)
 
   // i) Crea la cita.
-  const cita = await prisma.cita.create({
+  const tipoCita = data.tipoCita === 'VIDEOCONFERENCIA' ? 'VIDEOCONFERENCIA' : 'PRESENCIAL'
+  let cita = await prisma.cita.create({
     data: {
       pacienteId: paciente.id,
       medicoId: data.medicoId,
@@ -159,8 +167,18 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
       costoCancelacion,
       diasAnticipacionRequierida,
       esDoble,
+      tipoCita,
     },
   })
+
+  // j) Si es videoconferencia, genera el enlace único (usa el id ya creado).
+  if (tipoCita === 'VIDEOCONFERENCIA') {
+    cita = await prisma.cita.update({
+      where: { id: cita.id },
+      data: { enlaceVideoconferencia: generarEnlaceVideo(cita.id) },
+    })
+  }
+
   res.status(201).json(cita)
 })
 

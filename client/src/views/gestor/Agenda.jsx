@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/LanguageContext.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import EstadoBadge from '../../components/EstadoBadge.jsx'
+import JoinVideoButton from '../../components/JoinVideoButton.jsx'
 import { hoyISO, soloFecha } from '../../lib/format.js'
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -246,8 +247,18 @@ function CitaModal({ cita, onClose, onAprobar, onCompletar, onAnular, formatDay 
               <span className="font-medium text-navy-500">{t('citaCard.description')}:</span> {cita.motivoConsulta}
             </div>
           )}
+          <Row
+            label={t('appt.appointmentType')}
+            value={cita.tipoCita === 'VIDEOCONFERENCIA' ? `💻 ${t('appt.videoCall')}` : `📍 ${t('appt.inPerson')}`}
+          />
           {cita.notaAnulacion && <p className="text-red-600">{t('citaCard.cancelled')}: {cita.notaAnulacion}</p>}
         </div>
+
+        {cita.tipoCita === 'VIDEOCONFERENCIA' && (
+          <div className="mt-4">
+            <JoinVideoButton cita={cita} className="w-full" />
+          </div>
+        )}
 
         {(esPendiente || esConfirmada) && !anulando && (
           <div className="mt-5 flex flex-wrap gap-2">

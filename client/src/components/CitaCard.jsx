@@ -26,6 +26,9 @@ export default function CitaCard({ cita, onAprobar, onAnular, onCompletar, busy,
           <p className="font-semibold text-navy-800">{cita.horaInicio} – {cita.horaFin}</p>
           {p && <p className="mt-0.5 truncate text-sm text-navy-700">{p.nombre} {p.apellido}</p>}
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${cita.tipoCita === 'VIDEOCONFERENCIA' ? 'bg-emerald-100 text-emerald-700' : 'bg-navy-100 text-navy-600'}`}>
+              {cita.tipoCita === 'VIDEOCONFERENCIA' ? `💻 ${t('appt.videoCall')}` : `📍 ${t('appt.inPerson')}`}
+            </span>
             {p?.estado && (
               <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${p.estado === 'NUEVO' ? 'bg-brand-100 text-brand-600' : 'bg-navy-100 text-navy-700'}`}>
                 {p.estado === 'NUEVO' ? t('citaCard.newClient') : t('citaCard.returning')}

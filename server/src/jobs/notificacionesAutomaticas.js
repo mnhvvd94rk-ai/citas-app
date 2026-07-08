@@ -64,6 +64,8 @@ export async function ejecutar(ahora = new Date()) {
           hora: cita.horaInicio,
           profesional: cita.medico?.nombre || '',
           citaId: cita.id,
+          enlaceVideoconferencia:
+            cita.tipoCita === 'VIDEOCONFERENCIA' ? cita.enlaceVideoconferencia : null,
         }
 
         let algunOk = false

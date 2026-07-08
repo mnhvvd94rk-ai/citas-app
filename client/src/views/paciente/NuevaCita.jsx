@@ -26,6 +26,7 @@ export default function NuevaCita() {
   const [slots, setSlots] = useState([])
   const [seleccion, setSeleccion] = useState([])
   const [doble, setDoble] = useState(false)
+  const [tipoCita, setTipoCita] = useState('PRESENCIAL')
   const [cargandoSlots, setCargandoSlots] = useState(false)
   const [errorSlots, setErrorSlots] = useState(null)
 
@@ -122,6 +123,7 @@ export default function NuevaCita() {
         slotsElegidos: seleccion.map((s) => ({ horaInicio: s.horaInicio, horaFin: s.horaFin })),
       }
       if (esNuevo) payload.motivoConsulta = motivo.trim()
+      payload.tipoCita = tipoCita
       setExito(await citasApi.reservar(payload))
     } catch (err) {
       setErrorReserva(err)
@@ -254,6 +256,31 @@ export default function NuevaCita() {
               {!esNuevo && doble && seleccion.length === 1 && (
                 <p className="mt-2 text-xs text-amber-600">{t('newAppt.doubleUnavailable')}</p>
               )}
+            </div>
+
+            {/* Tipo de cita: presencial o videoconferencia */}
+            <div className="mt-6">
+              <h2 className="mb-2 text-sm font-semibold text-navy-700">{t('appt.appointmentType')}</h2>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { val: 'PRESENCIAL', icon: '📍', label: t('appt.inPerson') },
+                  { val: 'VIDEOCONFERENCIA', icon: '💻', label: t('appt.videoCall') },
+                ].map((o) => (
+                  <button
+                    key={o.val}
+                    type="button"
+                    onClick={() => setTipoCita(o.val)}
+                    aria-pressed={tipoCita === o.val}
+                    className={`rounded-xl border px-3 py-3 text-sm font-semibold transition ${
+                      tipoCita === o.val
+                        ? 'border-navy-700 bg-navy-700 text-white'
+                        : 'border-navy-200 bg-white text-navy-700 hover:border-navy-400'
+                    }`}
+                  >
+                    {o.icon} {o.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {errorReserva && <ErrorMessage error={errorReserva} className="mt-4" />}

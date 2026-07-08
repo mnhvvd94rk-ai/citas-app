@@ -7,6 +7,7 @@ import Navbar from '../../components/Navbar.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import EstadoBadge from '../../components/EstadoBadge.jsx'
+import JoinVideoButton from '../../components/JoinVideoButton.jsx'
 import { hoyISO, soloFecha, formatFechaLarga, formatFechaCorta } from '../../lib/format.js'
 
 const esActiva = (c) => ['PENDIENTE', 'CONFIRMADA'].includes(c.estado)
@@ -171,7 +172,15 @@ export default function DashboardCliente() {
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <EstadoBadge estado={proxima.estado} />
                           {proxima.esDoble && <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-semibold">{t('clientDash.doubleSlot')}</span>}
+                          <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-semibold">
+                            {proxima.tipoCita === 'VIDEOCONFERENCIA' ? `💻 ${t('appt.videoCall')}` : `📍 ${t('appt.inPerson')}`}
+                          </span>
                         </div>
+                        {proxima.tipoCita === 'VIDEOCONFERENCIA' && (
+                          <div className="mt-3">
+                            <JoinVideoButton cita={proxima} onDark />
+                          </div>
+                        )}
                         {/* Aviso de cancelación */}
                         <p className="mt-3 text-sm text-white/70">
                           {t('clientDash.cancelBefore', { date: pen.fechaLimite })}
