@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { disponibilidadApi } from '../../services/api.js'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 import Spinner from '../../components/Spinner.jsx'
@@ -54,11 +54,21 @@ export default function Disponibilidad() {
   const [errorRango, setErrorRango] = useState(null)
   const [resultado, setResultado] = useState(null)
 
+  // ── Selección múltiple (estilo Gmail) para eliminar en lote ─────────────────
+  const [sel, setSel] = useState(() => new Set())
+  const [confirmandoLote, setConfirmandoLote] = useState(false)
+  const [eliminandoLote, setEliminandoLote] = useState(false)
+  const [mensajeLote, setMensajeLote] = useState(null) // { eliminadas, conCitas }
+  const selectAllRef = useRef(null)
+
   async function cargar() {
     setCargando(true)
     setError(null)
     try {
-      setLista(await disponibilidadApi.listar())
+      const l = await disponibilidadApi.listar()
+      setLista(l)
+      // Poda la selección: descarta ids que ya no existen en la lista.
+      setSel((prev) => new Set([...prev].filter((id) => l.some((d) => d.id === id))))
     } catch (err) {
       setError(err)
     } finally {
@@ -99,6 +109,55 @@ export default function Disponibilidad() {
     } finally {
       setBusy(null)
     }
+  }
+
+  // ── Selección múltiple ──────────────────────────────────────────────────────
+  const todasSeleccionadas = lista.length > 0 && sel.size === lista.length
+  const algunaSeleccionada = sel.size > 0
+
+  // Estado "indeterminado" del checkbox maestro (algunas, pero no todas).
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = algunaSeleccionada && !todasSeleccionadas
+    }
+  }, [algunaSeleccionada, todasSeleccionadas])
+
+  function toggleSel(id) {
+    setMensajeLote(null)
+    setSel((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleTodas() {
+    setMensajeLote(null)
+    setSel(todasSeleccionadas ? new Set() : new Set(lista.map((d) => d.id)))
+  }
+
+  // Elimina en lote las franjas seleccionadas reutilizando DELETE /disponibilidad/:id.
+  // Las que devuelven 409 (tienen citas activas) se excluyen y se avisan aparte.
+  async function eliminarSeleccionadas() {
+    setEliminandoLote(true)
+    setError(null)
+    let eliminadas = 0
+    let conCitas = 0
+    for (const id of [...sel]) {
+      try {
+        await disponibilidadApi.eliminar(id)
+        eliminadas++
+      } catch (err) {
+        if (err?.status === 409) conCitas++
+        else setError(err)
+      }
+    }
+    await cargar()
+    setSel(new Set())
+    setConfirmandoLote(false)
+    setEliminandoLote(false)
+    setMensajeLote({ eliminadas, conCitas })
   }
 
   // ── Lógica del modo rango ───────────────────────────────────────────────────
@@ -236,7 +295,7 @@ export default function Disponibilidad() {
 
           <div className="mt-4">
             <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.selectDays')}</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
               {DIAS_SEMANA.map((d, i) => {
                 const activa = rango.dias.includes(d.valor)
                 const letra = t('availability.dayLetters')[i]
@@ -247,7 +306,7 @@ export default function Disponibilidad() {
                     onClick={() => toggleDia(d.valor)}
                     aria-pressed={activa}
                     title={t(`availability.${d.key}`)}
-                    className={`h-11 w-11 rounded-xl border text-sm font-semibold transition ${
+                    className={`flex h-10 w-full items-center justify-center rounded-xl border text-sm font-semibold transition sm:h-11 ${
                       activa
                         ? 'border-navy-700 bg-navy-700 text-white'
                         : 'border-navy-200 bg-white text-navy-700 hover:border-navy-400'
@@ -260,7 +319,8 @@ export default function Disponibilidad() {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {/* Horas + duración: 1 col en móvil, 2 en tablet pequeña (sm), 3 en tablet/desktop (md) */}
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.startTime')}</label>
               <input type="time" name="horaInicio" value={rango.horaInicio} onChange={setCampoRango} className={inputCls} />
@@ -269,9 +329,6 @@ export default function Disponibilidad() {
               <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.endTime')}</label>
               <input type="time" name="horaFin" value={rango.horaFin} onChange={setCampoRango} className={inputCls} />
             </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.slotDuration')}</label>
               <select
@@ -347,6 +404,21 @@ export default function Disponibilidad() {
 
       <h2 className="mt-6 mb-2 text-sm font-semibold text-navy-700">{t('availability.listTitle')}</h2>
       {error && <ErrorMessage error={error} className="mb-3" />}
+
+      {/* Resultado del borrado en lote */}
+      {mensajeLote && (mensajeLote.eliminadas > 0 || mensajeLote.conCitas > 0) && (
+        <div
+          className={`mb-3 rounded-xl p-3 text-sm font-medium ring-1 ${
+            mensajeLote.conCitas > 0
+              ? 'bg-amber-50 text-amber-700 ring-amber-100'
+              : 'bg-emerald-50 text-emerald-700 ring-emerald-100'
+          }`}
+        >
+          {mensajeLote.eliminadas > 0 && t('availability.deletedSuccessfully', { n: mensajeLote.eliminadas })}
+          {mensajeLote.conCitas > 0 && <> {t('availability.notDeletedHasCitas', { n: mensajeLote.conCitas })}</>}
+        </div>
+      )}
+
       {cargando ? (
         <Spinner label={t('availability.loading')} />
       ) : lista.length === 0 ? (
@@ -354,23 +426,94 @@ export default function Disponibilidad() {
           {t('availability.empty')}
         </div>
       ) : (
-        <ul className="space-y-2">
-          {lista.map((d) => (
-            <li key={d.id} className="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm ring-1 ring-navy-100">
-              <div>
-                <p className="font-semibold text-navy-800">{formatFechaCorta(d.fecha)}</p>
-                <p className="text-sm text-navy-500">{d.horaInicio} – {d.horaFin}</p>
-              </div>
+        <>
+          {/* Barra de acciones: aparece cuando hay 1+ seleccionadas */}
+          {algunaSeleccionada && (
+            <div className="mb-2 flex items-center justify-between rounded-xl bg-navy-800 px-4 py-2.5 text-white">
+              <span className="text-sm font-medium">{t('availability.selected', { n: sel.size })}</span>
               <button
-                disabled={busy === d.id}
-                onClick={() => eliminar(d.id)}
-                className="rounded-lg border border-red-300 px-3.5 py-1.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                onClick={() => setConfirmandoLote(true)}
+                className="rounded-lg bg-red-500 px-3.5 py-1.5 text-sm font-semibold text-white transition hover:bg-red-600"
               >
-                {busy === d.id ? '…' : t('availability.delete')}
+                {t('availability.deleteSelected')}
               </button>
-            </li>
-          ))}
-        </ul>
+            </div>
+          )}
+
+          {/* Seleccionar todas / ninguna */}
+          <label className="mb-2 flex w-fit cursor-pointer items-center gap-2 px-1 text-sm text-navy-600">
+            <input
+              ref={selectAllRef}
+              type="checkbox"
+              checked={todasSeleccionadas}
+              onChange={toggleTodas}
+              className="h-4 w-4 rounded border-navy-300 text-navy-700 focus:ring-navy-500"
+            />
+            {t('availability.selectAll')}
+          </label>
+
+          <ul className="space-y-2">
+            {lista.map((d) => {
+              const marcada = sel.has(d.id)
+              return (
+                <li
+                  key={d.id}
+                  className={`flex items-center gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 transition ${
+                    marcada ? 'ring-2 ring-navy-400' : 'ring-navy-100'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={marcada}
+                    onChange={() => toggleSel(d.id)}
+                    aria-label={`${formatFechaCorta(d.fecha)} ${d.horaInicio}-${d.horaFin}`}
+                    className="h-4 w-4 shrink-0 rounded border-navy-300 text-navy-700 focus:ring-navy-500"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-navy-800">{formatFechaCorta(d.fecha)}</p>
+                    <p className="text-sm text-navy-500">
+                      {d.horaInicio} – {d.horaFin}
+                      {d.duracionMinutos ? ` · ${d.duracionMinutos} ${t('availability.minutes')}` : ''}
+                    </p>
+                  </div>
+                  <button
+                    disabled={busy === d.id}
+                    onClick={() => eliminar(d.id)}
+                    className="shrink-0 rounded-lg border border-red-300 px-3.5 py-1.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {busy === d.id ? '…' : t('availability.delete')}
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      )}
+
+      {/* Modal de confirmación de borrado en lote */}
+      {confirmandoLote && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-navy-800">{t('availability.confirmTitle')}</h3>
+            <p className="mt-2 text-sm text-navy-600">{t('availability.confirmDeleteMultiple', { n: sel.size })}</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmandoLote(false)}
+                disabled={eliminandoLote}
+                className="rounded-lg border border-navy-200 px-4 py-2 text-sm font-semibold text-navy-700 transition hover:bg-navy-50 disabled:opacity-50"
+              >
+                {t('availability.cancel')}
+              </button>
+              <button
+                onClick={eliminarSeleccionadas}
+                disabled={eliminandoLote}
+                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600 disabled:opacity-60"
+              >
+                {eliminandoLote ? '…' : t('availability.delete')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
