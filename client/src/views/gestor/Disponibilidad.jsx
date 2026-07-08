@@ -3,6 +3,7 @@ import { disponibilidadApi } from '../../services/api.js'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
+import TimeSelect from '../../components/TimeSelect.jsx'
 import { hoyISO, formatFechaCorta } from '../../lib/format.js'
 
 // Días de la semana en orden lunes→domingo con su valor JS (0=domingo…6=sábado).
@@ -264,11 +265,11 @@ export default function Disponibilidad() {
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.start')}</label>
-              <input type="time" name="horaInicio" value={form.horaInicio} onChange={setCampo} className={inputCls} />
+              <TimeSelect ariaLabel={t('availability.start')} value={form.horaInicio} onChange={(v) => setForm((prev) => ({ ...prev, horaInicio: v }))} />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.end')}</label>
-              <input type="time" name="horaFin" value={form.horaFin} onChange={setCampo} className={inputCls} />
+              <TimeSelect ariaLabel={t('availability.end')} value={form.horaFin} onChange={(v) => setForm((prev) => ({ ...prev, horaFin: v }))} />
             </div>
           </div>
           {errorForm && <ErrorMessage error={errorForm} className="mt-3" />}
@@ -323,11 +324,11 @@ export default function Disponibilidad() {
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.startTime')}</label>
-              <input type="time" name="horaInicio" value={rango.horaInicio} onChange={setCampoRango} className={inputCls} />
+              <TimeSelect ariaLabel={t('availability.startTime')} value={rango.horaInicio} onChange={(v) => { setResultado(null); setRango((prev) => ({ ...prev, horaInicio: v })) }} />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.endTime')}</label>
-              <input type="time" name="horaFin" value={rango.horaFin} onChange={setCampoRango} className={inputCls} />
+              <TimeSelect ariaLabel={t('availability.endTime')} value={rango.horaFin} onChange={(v) => { setResultado(null); setRango((prev) => ({ ...prev, horaFin: v })) }} />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.slotDuration')}</label>
