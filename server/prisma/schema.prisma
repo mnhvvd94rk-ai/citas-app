@@ -76,6 +76,7 @@ model Medico {
   id               Int              @id @default(autoincrement())
   nombre           String
   especialidad     String
+  telefono         String?
   correo           String           @unique
   passwordHash     String
 

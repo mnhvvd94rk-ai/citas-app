@@ -21,6 +21,7 @@ const registroPacienteSchema = z.object({
 const registroMedicoSchema = z.object({
   nombre: z.string().min(1),
   especialidad: z.string().min(1),
+  telefono: z.string().min(1).optional(),
   correo: z.string().email(),
   password: z.string().min(6),
   costoCancelacion: z.number().min(0).optional(),
@@ -99,6 +100,7 @@ router.post('/registro-medico', async (req, res) => {
       data: {
         nombre: data.nombre,
         especialidad: data.especialidad,
+        telefono: data.telefono,
         correo: data.correo,
         passwordHash,
         ...(data.costoCancelacion !== undefined && { costoCancelacion: data.costoCancelacion }),

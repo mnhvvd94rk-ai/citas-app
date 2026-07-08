@@ -247,6 +247,11 @@ export default function DashboardCliente() {
                         {medico.correo}
                       </a>
                     )}
+                    {medico.telefono && (
+                      <a href={`tel:${medico.telefono}`} className="mt-1 text-sm text-navy-600 hover:text-brand-600">
+                        {medico.telefono}
+                      </a>
+                    )}
                   </div>
                 ) : (
                   <p className="py-6 text-center text-sm text-navy-400">—</p>
