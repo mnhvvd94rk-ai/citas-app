@@ -2,8 +2,21 @@
 
 /* ─────────────────────────────────────────────────────────────────────────
    Ikatun — sistema de diseño premium.
-   Paleta: azul profundo (#1e3a5f) como color principal + verde esmeralda
-   (#10b981) como acento. Tipografía moderna (Inter).
+   Paleta: azul profundo (#1e3a5f) como color principal + ROJO-QUEMADO del
+   logo (#B5451F) como acento de marca / CTAs positivos. Tipografía Inter.
+
+   IMPORTANTE — REBRAND DE ACENTO (8 jul 2026):
+   El acento de marca pasó de verde esmeralda a rojo-quemado (#B5451F, del
+   logo oficial). Las utilidades `green-*` que quedan en el markup se
+   conservan como ALIAS del acento de marca (mismos valores rojo-quemado)
+   para no romper el código existente; `bg-green-500` = #B5451F y
+   `hover:bg-green-600` = #8f3718. El token semántico `brand-*` es idéntico y
+   es el preferido para código nuevo.
+
+   NO confundir con el ROJO SEMÁNTICO (`red-*`, #ef4444, más brillante) usado
+   para errores, cancelar, estado "Anulada" y acciones destructivas: ese es
+   una paleta distinta y NO debe cambiarse. Los estados positivos de negocio
+   (badge "Confirmada") usan `emerald-*`, también intactos.
    ───────────────────────────────────────────────────────────────────────── */
 @theme {
   --color-navy-50: #f2f5f9;
@@ -17,15 +30,27 @@
   --color-navy-800: #172d4a;
   --color-navy-900: #101f33;
 
-  /* Acento verde esmeralda de Ikatun (#10b981) */
-  --color-green-50: #ecfdf5;
-  --color-green-100: #d1fae5;
-  --color-green-200: #a7f3d0;
-  --color-green-300: #6ee7b7;
-  --color-green-400: #34d399;
-  --color-green-500: #10b981;
-  --color-green-600: #059669;
-  --color-green-700: #047857;
+  /* Acento de marca — rojo-quemado del logo Ikatun (base #B5451F). */
+  --color-brand-50: #fbf1ec;
+  --color-brand-100: #f6ddd0;
+  --color-brand-200: #ecbca6;
+  --color-brand-300: #dd9068;
+  --color-brand-400: #cf6f45;
+  --color-brand-500: #b5451f;
+  --color-brand-600: #8f3718;
+  --color-brand-700: #6f2a12;
+  --color-brand: #b5451f;
+
+  /* Alias de compatibilidad: `green-*` mapea al acento rojo-quemado de marca
+     (mismos valores que `brand-*`). Ver nota de rebrand arriba. */
+  --color-green-50: #fbf1ec;
+  --color-green-100: #f6ddd0;
+  --color-green-200: #ecbca6;
+  --color-green-300: #dd9068;
+  --color-green-400: #cf6f45;
+  --color-green-500: #b5451f;
+  --color-green-600: #8f3718;
+  --color-green-700: #6f2a12;
 
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
