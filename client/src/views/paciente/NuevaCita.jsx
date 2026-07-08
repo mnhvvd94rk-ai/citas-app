@@ -9,7 +9,6 @@ import ErrorMessage from '../../components/ErrorMessage.jsx'
 import { hoyISO, formatFechaLarga } from '../../lib/format.js'
 
 const slotKey = (s) => `${s.horaInicio}-${s.horaFin}`
-const consecutivos = (a, b) => a.horaFin === b.horaInicio || b.horaFin === a.horaInicio
 
 export default function NuevaCita() {
   const navigate = useNavigate()
@@ -26,6 +25,7 @@ export default function NuevaCita() {
   const [motivo, setMotivo] = useState('')
   const [slots, setSlots] = useState([])
   const [seleccion, setSeleccion] = useState([])
+  const [doble, setDoble] = useState(false)
   const [cargandoSlots, setCargandoSlots] = useState(false)
   const [errorSlots, setErrorSlots] = useState(null)
 
@@ -71,28 +71,37 @@ export default function NuevaCita() {
   }, [medico, fecha])
 
   const seleccionadas = new Set(seleccion.map(slotKey))
-  const candidatos = new Set()
-  if (!esNuevo && seleccion.length === 1) {
-    for (const s of slots) {
-      if (!seleccionadas.has(slotKey(s)) && consecutivos(seleccion[0], s)) candidatos.add(slotKey(s))
-    }
+
+  // Busca el bloque consecutivo inmediatamente posterior a `slot` entre los libres.
+  function siguienteConsecutivo(slot) {
+    return slots.find((s) => s.horaInicio === slot.horaFin) || null
   }
 
   function toggleSlot(slot) {
     setErrorReserva(null)
     const key = slotKey(slot)
-    if (esNuevo) {
-      setSeleccion(seleccionadas.has(key) ? [] : [slot])
+    if (seleccionadas.has(key)) {
+      setSeleccion([])
       return
     }
-    if (seleccionadas.has(key)) {
-      setSeleccion(seleccion.filter((s) => slotKey(s) !== key))
-    } else if (seleccion.length === 0) {
-      setSeleccion([slot])
-    } else if (seleccion.length === 1 && consecutivos(seleccion[0], slot)) {
-      setSeleccion([seleccion[0], slot].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio)))
-    } else {
-      setSeleccion([slot])
+    // Cita doble (solo pacientes de continuidad): reserva el bloque + el siguiente.
+    if (!esNuevo && doble) {
+      const next = siguienteConsecutivo(slot)
+      setSeleccion(next ? [slot, next] : [slot])
+      return
+    }
+    setSeleccion([slot])
+  }
+
+  function toggleDoble(e) {
+    const val = e.target.checked
+    setDoble(val)
+    setErrorReserva(null)
+    if (val && seleccion.length === 1) {
+      const next = siguienteConsecutivo(seleccion[0])
+      setSeleccion(next ? [seleccion[0], next] : [seleccion[0]])
+    } else if (!val && seleccion.length === 2) {
+      setSeleccion([seleccion[0]])
     }
   }
 
@@ -101,6 +110,10 @@ export default function NuevaCita() {
     if (!medico?.id) return
     if (seleccion.length === 0) return setErrorReserva(t('newAppt.errSelect'))
     if (esNuevo && !motivo.trim()) return setErrorReserva(t('newAppt.errDesc'))
+    // Cita doble marcada: el segundo bloque consecutivo debe estar libre.
+    if (!esNuevo && doble && seleccion.length !== 2) {
+      return setErrorReserva(t('newAppt.doubleUnavailable'))
+    }
     setReservando(true)
     try {
       const payload = {
@@ -192,6 +205,21 @@ export default function NuevaCita() {
               <input type="date" value={fecha} min={hoyISO()} onChange={(e) => setFecha(e.target.value)} className={inputCls} />
             </div>
 
+            {!esNuevo && (
+              <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-navy-200 bg-white p-4">
+                <input
+                  type="checkbox"
+                  checked={doble}
+                  onChange={toggleDoble}
+                  className="mt-0.5 h-5 w-5 rounded border-navy-300 text-navy-700 focus:ring-navy-500"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-navy-800">{t('newAppt.doubleLabel')}</span>
+                  <span className="mt-0.5 block text-xs text-navy-500">{t('newAppt.doubleNote')}</span>
+                </span>
+              </label>
+            )}
+
             <div className="mt-6">
               <h2 className="mb-2 text-sm font-semibold text-navy-700">{t('newAppt.slots')}</h2>
               {cargandoSlots ? (
@@ -207,7 +235,6 @@ export default function NuevaCita() {
                   {slots.map((s) => {
                     const key = slotKey(s)
                     const activa = seleccionadas.has(key)
-                    const candidato = candidatos.has(key)
                     return (
                       <button
                         key={key}
@@ -215,9 +242,7 @@ export default function NuevaCita() {
                         className={`rounded-xl border px-2 py-2.5 text-sm font-semibold transition ${
                           activa
                             ? 'border-navy-700 bg-navy-700 text-white'
-                            : candidato
-                              ? 'border-green-400 bg-green-50 text-green-600 ring-2 ring-green-200'
-                              : 'border-navy-200 bg-white text-navy-700 hover:border-navy-400'
+                            : 'border-navy-200 bg-white text-navy-700 hover:border-navy-400'
                         }`}
                       >
                         {s.horaInicio}
@@ -226,8 +251,8 @@ export default function NuevaCita() {
                   })}
                 </div>
               )}
-              {!esNuevo && seleccion.length === 1 && candidatos.size > 0 && (
-                <p className="mt-2 text-xs text-green-600">{t('newAppt.consecutiveHint')}</p>
+              {!esNuevo && doble && seleccion.length === 1 && (
+                <p className="mt-2 text-xs text-amber-600">{t('newAppt.doubleUnavailable')}</p>
               )}
             </div>
 

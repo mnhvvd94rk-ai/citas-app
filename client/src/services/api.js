@@ -130,6 +130,7 @@ export const disponibilidadApi = {
     return request(`/disponibilidad${q ? `?${q}` : ''}`)
   },
   crear: (payload) => request('/disponibilidad', { method: 'POST', body: payload }),
+  crearRango: (payload) => request('/disponibilidad/rango', { method: 'POST', body: payload }),
   eliminar: (id) => request(`/disponibilidad/${id}`, { method: 'DELETE' }),
 }
 

@@ -24,6 +24,11 @@ function aMinutos(hhmm) {
   return h * 60 + m
 }
 
+/** Date (medianoche UTC) -> "YYYY-MM-DD". */
+function fechaISO(date) {
+  return date.toISOString().slice(0, 10)
+}
+
 /** Valida `body` contra `schema`; si falla, responde 400 y devuelve null. */
 function parseOr400(schema, body, res) {
   const result = schema.safeParse(body)
@@ -56,6 +61,34 @@ const crearDisponibilidadSchema = z
     path: ['horaFin'],
   })
 
+const crearRangoSchema = z
+  .object({
+    fechaInicio: z.string().regex(FECHA_RE, 'Formato esperado YYYY-MM-DD'),
+    fechaFin: z.string().regex(FECHA_RE, 'Formato esperado YYYY-MM-DD'),
+    diasSemana: z
+      .array(z.number().int().min(0).max(6))
+      .min(1, 'Selecciona al menos un día de la semana'),
+    horaInicio: z.string().regex(HORA_RE, 'Formato esperado HH:mm'),
+    horaFin: z.string().regex(HORA_RE, 'Formato esperado HH:mm'),
+    duracionSlotMinutos: z
+      .number()
+      .int()
+      .min(15, 'La duración mínima es 15 minutos')
+      .max(180, 'La duración máxima es 180 minutos'),
+  })
+  .refine((d) => d.fechaFin > d.fechaInicio, {
+    message: 'fechaFin debe ser posterior a fechaInicio',
+    path: ['fechaFin'],
+  })
+  .refine((d) => aMinutos(d.horaFin) > aMinutos(d.horaInicio), {
+    message: 'horaFin debe ser mayor que horaInicio',
+    path: ['horaFin'],
+  })
+  .refine((d) => aMinutos(d.horaFin) - aMinutos(d.horaInicio) >= d.duracionSlotMinutos, {
+    message: 'El rango horario debe ser al menos igual a la duración de un bloque',
+    path: ['horaFin'],
+  })
+
 // ── POST /disponibilidad ─────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
   const data = parseOr400(crearDisponibilidadSchema, req.body, res)
@@ -70,6 +103,67 @@ router.post('/', async (req, res) => {
     },
   })
   res.status(201).json(disponibilidad)
+})
+
+// ── POST /disponibilidad/rango ───────────────────────────────────────────────
+// Genera disponibilidad para cada día del rango cuyo día de la semana esté en
+// `diasSemana`, troceando el horario en bloques de `duracionSlotMinutos`.
+// Evita duplicados: no vuelve a crear un bloque día/hora que ya exista.
+router.post('/rango', async (req, res) => {
+  const data = parseOr400(crearRangoSchema, req.body, res)
+  if (!data) return
+
+  const inicio = parseFecha(data.fechaInicio)
+  const fin = parseFecha(data.fechaFin)
+  const diasSet = new Set(data.diasSemana)
+  const dur = data.duracionSlotMinutos
+  const MS_DIA = 24 * 60 * 60 * 1000
+
+  // Disponibilidad ya existente del médico dentro del rango, para no duplicar.
+  const existentes = await prisma.disponibilidad.findMany({
+    where: { medicoId: req.user.id, fecha: { gte: inicio, lte: fin } },
+  })
+  const yaExiste = new Set(
+    existentes.map((d) => `${fechaISO(d.fecha)}|${d.horaInicio}|${d.horaFin}`),
+  )
+
+  const nuevas = []
+  const fechas = []
+  const totalDias = Math.round((fin.getTime() - inicio.getTime()) / MS_DIA)
+  for (let i = 0; i <= totalDias; i++) {
+    const dia = new Date(inicio.getTime() + i * MS_DIA)
+    if (!diasSet.has(dia.getUTCDay())) continue
+
+    const iso = fechaISO(dia)
+    const bloques = generarSlots(
+      { horaInicio: data.horaInicio, horaFin: data.horaFin },
+      dur,
+    )
+    let creadosEnDia = 0
+    for (const bloque of bloques) {
+      const clave = `${iso}|${bloque.horaInicio}|${bloque.horaFin}`
+      if (yaExiste.has(clave)) continue
+      yaExiste.add(clave)
+      nuevas.push({
+        medicoId: req.user.id,
+        fecha: parseFecha(iso),
+        horaInicio: bloque.horaInicio,
+        horaFin: bloque.horaFin,
+      })
+      creadosEnDia++
+    }
+    if (creadosEnDia > 0) fechas.push(iso)
+  }
+
+  if (nuevas.length > 0) {
+    await prisma.disponibilidad.createMany({ data: nuevas })
+  }
+
+  res.status(201).json({
+    diasCreados: fechas.length,
+    slotsCreados: nuevas.length,
+    fechas,
+  })
 })
 
 // ── GET /disponibilidad ──────────────────────────────────────────────────────
