@@ -1,3 +1,7 @@
+<!--
+  LOGO OFICIAL DEFINITIVO DE IKATUN — NO MODIFICAR SIN AUTORIZACIÓN EXPLÍCITA DEL CLIENTE.
+  Diseño: fuego+teal rotado 90°, aprobado como versión final el 8 julio 2026.
+-->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="fire" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -9,12 +13,9 @@
       <rect x="0" y="0" width="512" height="512" rx="112"/>
     </clipPath>
   </defs>
-  <g clip-path="url(#rounded)" transform="rotate(270 256 256) scale(-1,1) translate(-512,0)">
+  <g clip-path="url(#rounded)" transform="rotate(90 256 256)">
     <rect x="0" y="0" width="512" height="512" fill="url(#fire)"/>
-    <path d="M 200 40
-             C 230 110, 175 150, 210 205
-             C 235 245, 300 260, 285 320
-             C 272 370, 210 400, 235 460"
+    <path d="M 200 40 C 230 110, 175 150, 210 205 C 235 245, 300 260, 285 320 C 272 370, 210 400, 235 460"
           fill="none" stroke="#2C7C79" stroke-width="20" stroke-linecap="round"/>
     <circle cx="350" cy="220" r="46" fill="#2C7C79"/>
     <circle cx="150" cy="290" r="42" fill="#2C7C79"/>
