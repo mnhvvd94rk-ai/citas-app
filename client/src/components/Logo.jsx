@@ -31,9 +31,14 @@ export default function Logo({ variant = 'horizontal', onDark = false, className
   }
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <Mark cls="h-7 w-7 rounded-md shrink-0" />
-      <span className={`text-xl font-bold ${onDark ? 'text-white' : 'text-navy-800'}`}>
-        Ikatun
+      <Mark cls="h-8 w-8 rounded-md shrink-0" />
+      <span className="flex flex-col leading-none">
+        <span className={`text-xl font-bold leading-none ${onDark ? 'text-white' : 'text-navy-800'}`}>
+          iKatun
+        </span>
+        <span className={`mt-0.5 text-[11px] font-medium uppercase tracking-[0.18em] leading-none ${onDark ? 'text-white/60' : 'text-navy-400'}`}>
+          Agenda
+        </span>
       </span>
     </span>
   )
