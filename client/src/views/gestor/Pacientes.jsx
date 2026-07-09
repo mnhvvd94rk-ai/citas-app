@@ -3,6 +3,7 @@ import { pacientesApi } from '../../services/api.js'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
+import ImportarClientesModal from '../../components/ImportarClientesModal.jsx'
 import { formatFechaCorta, soloFecha, hoyISO } from '../../lib/format.js'
 
 const ESTADOS_TRAT = ['ACTIVO', 'COMPLETADO', 'EN_PAUSA']
@@ -39,6 +40,7 @@ export default function Pacientes() {
   const [clientes, setClientes] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
+  const [importar, setImportar] = useState(false)
 
   async function cargar() {
     setCargando(true)
@@ -58,8 +60,22 @@ export default function Pacientes() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight text-navy-800">{t('clients.title')}</h1>
-      <p className="mt-1 text-sm text-navy-500">{t('clients.subtitle')}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-navy-800">{t('clients.title')}</h1>
+          <p className="mt-1 text-sm text-navy-500">{t('clients.subtitle')}</p>
+        </div>
+        <button
+          onClick={() => setImportar(true)}
+          className="shrink-0 rounded-lg bg-navy-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-navy-800"
+        >
+          {t('clients.import.title')}
+        </button>
+      </div>
+
+      {importar && (
+        <ImportarClientesModal onClose={() => setImportar(false)} onImported={cargar} />
+      )}
 
       {error && <ErrorMessage error={error} onRetry={cargar} className="mt-4" />}
 
