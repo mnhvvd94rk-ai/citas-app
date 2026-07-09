@@ -37,6 +37,18 @@ app.use('/notas-por-cita', notaCitaRouter)
 app.use('/medicos', medicoRouter)
 app.use('/contacto', contactoRouter)
 
+app.post('/test-whatsapp-temp', async (req, res) => {
+  const { default: notificationService } = await import('./services/notificationService.js')
+  const resultado = await notificationService.send({
+    tipo: 'RECORDATORIO_CITA',
+    canal: 'WHATSAPP',
+    idioma: 'ES',
+    destinatario: { id: 0, tipoDestinatario: 'PACIENTE', telefono: '33749479280' },
+    payload: { texto: 'Prueba con token permanente: WhatsApp funcionando ✅' },
+  })
+  res.json(resultado)
+})
+
 app.get('/', (req, res) => {
   res.json({ message: 'Citas App API — hola mundo' })
 })
