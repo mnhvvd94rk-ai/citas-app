@@ -52,7 +52,7 @@ export default function GestorLayout() {
             >
               <span className="text-lg">☰</span>
             </button>
-            <button onClick={() => navigate('/')} className="flex items-center" aria-label="Ikatun">
+            <button onClick={() => navigate('/')} className="flex items-center" aria-label="Kohtun">
               <Logo />
             </button>
           </div>

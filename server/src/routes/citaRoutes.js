@@ -65,7 +65,7 @@ const reservarSchema = z.object({
 /** Enlace único de Jitsi Meet para una cita de videoconferencia. */
 function generarEnlaceVideo(citaId) {
   const random = Math.random().toString(36).slice(2, 8) // 6 caracteres alfanuméricos
-  return `https://meet.jit.si/ikatun-${citaId}-${random}`
+  return `https://meet.jit.si/kohtun-${citaId}-${random}`
 }
 
 const anularSchema = z.object({

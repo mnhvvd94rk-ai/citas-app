@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Ikatun — sistema de diseño premium.
+   Kohtun — sistema de diseño premium.
    Paleta: azul profundo (#1e3a5f) como color principal + ROJO-QUEMADO del
    logo (#B5451F) como acento de marca / CTAs positivos. Tipografía Inter.
 
@@ -27,7 +27,7 @@
   --color-navy-800: #172d4a;
   --color-navy-900: #101f33;
 
-  /* Acento de marca — rojo-quemado del logo Ikatun (base #B5451F). */
+  /* Acento de marca — rojo-quemado del logo Kohtun (base #B5451F). */
   --color-brand-50: #fbf1ec;
   --color-brand-100: #f6ddd0;
   --color-brand-200: #ecbca6;

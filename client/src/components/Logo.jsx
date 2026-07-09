@@ -1,21 +1,21 @@
-// LOGO OFICIAL DEFINITIVO DE IKATUN — NO MODIFICAR SIN AUTORIZACIÓN EXPLÍCITA DEL CLIENTE.
+// LOGO OFICIAL DEFINITIVO DE KOHTUN — NO MODIFICAR SIN AUTORIZACIÓN EXPLÍCITA DEL CLIENTE.
 // Diseño: fuego+teal rotado 90°, aprobado como versión final el 8 julio 2026.
 // variant: 'horizontal' (marca + wordmark) | 'mark' (solo icono).
 function Mark({ cls }) {
   return (
     <svg viewBox="0 0 512 512" className={cls} xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
-        <linearGradient id="ikatun-fire" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="kohtun-fire" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#E8823A"/>
           <stop offset="45%" stopColor="#B5451F"/>
           <stop offset="100%" stopColor="#100D0B"/>
         </linearGradient>
-        <clipPath id="ikatun-rounded">
+        <clipPath id="kohtun-rounded">
           <rect x="0" y="0" width="512" height="512" rx="112"/>
         </clipPath>
       </defs>
-      <g clipPath="url(#ikatun-rounded)" transform="rotate(90 256 256)">
-        <rect x="0" y="0" width="512" height="512" fill="url(#ikatun-fire)"/>
+      <g clipPath="url(#kohtun-rounded)" transform="rotate(90 256 256)">
+        <rect x="0" y="0" width="512" height="512" fill="url(#kohtun-fire)"/>
         <path d="M 200 40 C 230 110, 175 150, 210 205 C 235 245, 300 260, 285 320 C 272 370, 210 400, 235 460"
               fill="none" stroke="#2C7C79" strokeWidth="20" strokeLinecap="round"/>
         <circle cx="350" cy="220" r="46" fill="#2C7C79"/>
@@ -34,7 +34,7 @@ export default function Logo({ variant = 'horizontal', onDark = false, className
       <Mark cls="h-8 w-8 rounded-md shrink-0" />
       <span className="flex flex-col leading-none">
         <span className={`text-xl font-bold leading-none ${onDark ? 'text-white' : 'text-navy-800'}`}>
-          iKatun
+          Kohtun
         </span>
         <span className={`mt-0.5 text-[11px] font-medium uppercase tracking-[0.18em] leading-none ${onDark ? 'text-white/60' : 'text-navy-400'}`}>
           Agenda

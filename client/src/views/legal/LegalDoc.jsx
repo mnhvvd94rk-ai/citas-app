@@ -13,7 +13,7 @@ export default function LegalDoc({ title, sections }) {
     <div className="min-h-screen bg-white text-slate-800">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-3">
-          <button onClick={() => navigate('/landing')} aria-label="Ikatun"><Logo /></button>
+          <button onClick={() => navigate('/landing')} aria-label="Kohtun"><Logo /></button>
           <LanguageSelector />
         </div>
       </header>
