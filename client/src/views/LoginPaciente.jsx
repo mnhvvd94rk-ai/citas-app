@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { authApi } from '../services/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
@@ -9,16 +9,20 @@ import LanguageSelector from '../components/LanguageSelector.jsx'
 // Login del cliente.
 export default function LoginPaciente() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
   const { login } = useAuth()
   const { t } = useLanguage()
+  const recienActivada = params.get('activated') === '1'
   const [correo, setCorreo] = useState('')
   const [password, setPassword] = useState('')
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
+  const [noActivada, setNoActivada] = useState(false)
 
   async function onSubmit(e) {
     e.preventDefault()
     setError(null)
+    setNoActivada(false)
     setCargando(true)
     try {
       const res = await authApi.loginPaciente(correo, password)
@@ -26,6 +30,7 @@ export default function LoginPaciente() {
       navigate('/paciente/citas', { replace: true })
     } catch (err) {
       setError(err)
+      if (err.code === 'CUENTA_NO_ACTIVADA') setNoActivada(true)
     } finally {
       setCargando(false)
     }
@@ -50,7 +55,25 @@ export default function LoginPaciente() {
               {t('loginClient.title')}
             </h1>
 
+            {recienActivada && !error && (
+              <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-center text-sm text-emerald-700">
+                {t('activate.activationSuccess')}
+              </p>
+            )}
+
             {error && <ErrorMessage error={error} className="mb-4" />}
+
+            {noActivada && (
+              <p className="mb-4 rounded-xl bg-brand-50 px-4 py-3 text-center text-sm text-navy-700">
+                {t('activate.accountNotActivated')}{' '}
+                <Link
+                  to={`/activar-cuenta${correo ? `?email=${encodeURIComponent(correo)}` : ''}`}
+                  className="font-semibold text-brand-600 hover:text-brand-700 underline"
+                >
+                  {t('activate.activateHereLink')}
+                </Link>
+              </p>
+            )}
 
             <form onSubmit={onSubmit} className="space-y-4">
               <div>

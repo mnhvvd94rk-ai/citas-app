@@ -17,11 +17,12 @@ export function setToken(token) {
 }
 
 export class ApiError extends Error {
-  constructor(message, status, detalles) {
+  constructor(message, status, detalles, code) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.detalles = detalles
+    this.code = code // código de negocio opcional (p.ej. 'CUENTA_NO_ACTIVADA')
   }
 }
 
@@ -67,7 +68,7 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
       (data && typeof data === 'object' && data.error) ||
       (typeof data === 'string' && data) ||
       `Error ${res.status}`
-    throw new ApiError(message, res.status, data && data.detalles)
+    throw new ApiError(message, res.status, data && data.detalles, data && data.code)
   }
 
   return data
@@ -86,6 +87,10 @@ export const authApi = {
   me: () => request('/auth/me'),
   actualizarIdioma: (idiomaPreferido) =>
     request('/auth/me', { method: 'PATCH', body: { idiomaPreferido } }),
+  activarCuenta: (correo) =>
+    request('/auth/activar-cuenta', { method: 'POST', body: { correo }, auth: false }),
+  completarActivacion: (token, password) =>
+    request('/auth/completar-activacion', { method: 'POST', body: { token, password }, auth: false }),
 }
 
 // ── Profesional (agenda personal: hay uno solo) ──────────────────────────────

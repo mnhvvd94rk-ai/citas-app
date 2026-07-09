@@ -1,9 +1,8 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { randomUUID, randomBytes } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { prisma } from '../services/db.js'
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js'
-import { hashPassword } from '../services/authService.js'
 
 const router = Router()
 
@@ -73,11 +72,12 @@ router.get('/', async (req, res) => {
 // El profesional envía filas ya mapeadas a {nombre, apellido?, telefono?, correo?}.
 // Solo `nombre` es obligatorio; los demás son opcionales.
 //
-// El modelo Usuario exige documentoIdentidad y correo únicos y no nulos, además
-// de passwordHash: como los clientes importados no inician sesión, se generan
-// valores marcador (documento IMPORT-*, correo placeholder si falta) y una
-// contraseña ALEATORIA E INDIVIDUAL por cliente que nunca se comunica a nadie.
-// Al ser única por registro, aunque una se filtrara no afectaría a las demás.
+// El modelo Usuario exige documentoIdentidad y correo únicos y no nulos: se
+// generan valores marcador (documento IMPORT-*, correo placeholder si falta).
+// El sistema NO genera ninguna contraseña: los importados nacen con
+// passwordHash: null y cuentaActivada: false. No pueden iniciar sesión hasta
+// que el propio cliente activa su cuenta y define su contraseña (ver
+// /auth/activar-cuenta y /auth/completar-activacion).
 const importarSchema = z.object({
   clientes: z
     .array(
@@ -107,9 +107,6 @@ router.post('/importar', async (req, res) => {
 
   for (const c of parsed.data.clientes) {
     const correo = c.correo ? c.correo.toLowerCase() : `importado-${randomUUID()}@sin-correo.local`
-    // Contraseña aleatoria e individual por cliente: nunca se revela ni se
-    // reutiliza, por lo que estas cuentas no pueden iniciar sesión en la práctica.
-    const passwordHash = await hashPassword(randomBytes(32).toString('hex'))
     try {
       await prisma.usuario.create({
         data: {
@@ -118,7 +115,8 @@ router.post('/importar', async (req, res) => {
           documentoIdentidad: `IMPORT-${randomUUID()}`,
           telefono: c.telefono || '',
           correo,
-          passwordHash,
+          passwordHash: null, // sin contraseña: la crea el cliente al activar
+          cuentaActivada: false,
           estado: 'NUEVO',
         },
       })

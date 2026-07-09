@@ -15,6 +15,7 @@ const RegistroPaciente = lazy(() => import('./views/RegistroPaciente.jsx'))
 const RegistroProfesional = lazy(() => import('./views/RegistroProfesional.jsx'))
 const LoginPaciente = lazy(() => import('./views/LoginPaciente.jsx'))
 const LoginMedico = lazy(() => import('./views/LoginMedico.jsx'))
+const ActivarCuenta = lazy(() => import('./views/ActivarCuenta.jsx'))
 const DashboardCliente = lazy(() => import('./views/paciente/DashboardCliente.jsx'))
 const NuevaCita = lazy(() => import('./views/paciente/NuevaCita.jsx'))
 const Agenda = lazy(() => import('./views/gestor/Agenda.jsx'))
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="/login-cliente" element={<LoginPaciente />} />
         <Route path="/login-paciente" element={<LoginPaciente />} />
         <Route path="/login-medico" element={<LoginMedico />} />
+        <Route path="/activar-cuenta" element={<ActivarCuenta />} />
 
         {/* Paciente */}
         <Route

@@ -57,10 +57,16 @@ model Usuario {
   firmaUrl           String?
   telefono           String
   correo             String         @unique
-  passwordHash       String
+  // Nullable: los clientes importados nacen sin contraseña; la crean ellos al
+  // activar su cuenta (ver `cuentaActivada`).
+  passwordHash       String?
   estado             String         @default("NUEVO") // NUEVO | CONTINUIDAD
   fechaRegistro      DateTime       @default(now())
   idiomaPreferido    String         @default("ES") // ES | EN | FR (para notificaciones)
+  // Los clientes creados por registro propio nacen activados (true). Los
+  // importados por el profesional nacen en false: no pueden iniciar sesión
+  // hasta que activan la cuenta y definen su propia contraseña.
+  cuentaActivada     Boolean        @default(true)
 
   // Gestión del cliente por el profesional (no proviene del registro):
   edadManual              Int?      // edad introducida a mano (no hay fecha de nacimiento)

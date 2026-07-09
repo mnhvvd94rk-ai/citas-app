@@ -45,3 +45,27 @@ export function verifyToken(token) {
   if (!secret) throw new Error('JWT_SECRET no está definido en el entorno')
   return jwt.verify(token, secret)
 }
+
+/**
+ * Firma un token de activación de cuenta (cliente importado), válido 24h.
+ * Lleva `purpose: 'activacion'` para no ser confundible con un token de sesión.
+ * @param {number} usuarioId
+ * @returns {string} token firmado
+ */
+export function signActivationToken(usuarioId) {
+  const secret = process.env.JWT_SECRET
+  if (!secret) throw new Error('JWT_SECRET no está definido en el entorno')
+  return jwt.sign({ id: usuarioId, purpose: 'activacion' }, secret, { expiresIn: '24h' })
+}
+
+/**
+ * Verifica un token de activación. Lanza si es inválido, expiró o no es de
+ * activación.
+ * @param {string} token
+ * @returns {{ id: number, purpose: string, iat: number, exp: number }}
+ */
+export function verifyActivationToken(token) {
+  const payload = verifyToken(token)
+  if (payload.purpose !== 'activacion') throw new Error('El token no es de activación')
+  return payload
+}

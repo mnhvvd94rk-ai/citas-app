@@ -1,8 +1,18 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../services/db.js'
-import { hashPassword, verifyPassword, signToken } from '../services/authService.js'
+import {
+  hashPassword,
+  verifyPassword,
+  signToken,
+  signActivationToken,
+  verifyActivationToken,
+} from '../services/authService.js'
+import { enviarEmailActivacion } from '../services/emailService.js'
 import { requireAuth } from '../middleware/authMiddleware.js'
+
+// Base del frontend para construir el enlace de activación.
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://citas-app-client.vercel.app'
 
 const router = Router()
 
@@ -126,11 +136,82 @@ router.post('/login-paciente', async (req, res) => {
   if (!data) return
 
   const usuario = await prisma.usuario.findUnique({ where: { correo: data.correo } })
-  if (!usuario || !(await verifyPassword(data.password, usuario.passwordHash))) {
+  if (!usuario) {
+    return res.status(401).json({ error: 'Credenciales inválidas' })
+  }
+  // Cuenta importada aún sin activar: mensaje claro y código para el frontend.
+  if (!usuario.cuentaActivada) {
+    return res.status(403).json({
+      error: 'Esta cuenta aún no está activada. Revisa tu correo o solicita activarla.',
+      code: 'CUENTA_NO_ACTIVADA',
+    })
+  }
+  if (!usuario.passwordHash || !(await verifyPassword(data.password, usuario.passwordHash))) {
     return res.status(401).json({ error: 'Credenciales inválidas' })
   }
   const token = signToken({ id: usuario.id, tipo: 'PACIENTE' })
   res.json({ token, usuario: sinPassword(usuario) })
+})
+
+// POST /auth/activar-cuenta  — solicita el email con el enlace de activación.
+// Respuesta genérica (no revela si el correo existe) salvo el caso de que la
+// cuenta ya esté activada, donde conviene un mensaje útil.
+const activarSchema = z.object({ correo: z.string().email() })
+
+router.post('/activar-cuenta', async (req, res) => {
+  const data = parseOr400(activarSchema, req.body, res)
+  if (!data) return
+
+  const correo = data.correo.toLowerCase()
+  const usuario = await prisma.usuario.findUnique({ where: { correo } })
+
+  // Solo enviamos si existe y aún no está activada. En cualquier otro caso
+  // devolvemos el mismo 200 para no filtrar qué correos están registrados.
+  if (usuario && !usuario.cuentaActivada) {
+    const token = signActivationToken(usuario.id)
+    const link = `${FRONTEND_URL}/activar-cuenta?token=${encodeURIComponent(token)}`
+    const r = await enviarEmailActivacion({ correo: usuario.correo, nombre: usuario.nombre, link })
+    if (!r.ok) {
+      console.error('[activar-cuenta] No se pudo enviar el email:', r.error)
+      return res.status(502).json({ error: 'No se pudo enviar el correo de activación. Inténtalo más tarde.' })
+    }
+  }
+
+  res.json({ ok: true, mensaje: 'Si el correo corresponde a una cuenta pendiente, te hemos enviado un enlace de activación.' })
+})
+
+// POST /auth/completar-activacion  — el cliente define su contraseña.
+const completarSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(6),
+})
+
+router.post('/completar-activacion', async (req, res) => {
+  const data = parseOr400(completarSchema, req.body, res)
+  if (!data) return
+
+  let payload
+  try {
+    payload = verifyActivationToken(data.token)
+  } catch {
+    return res.status(400).json({ error: 'El enlace de activación no es válido o ha caducado.' })
+  }
+
+  const usuario = await prisma.usuario.findUnique({ where: { id: payload.id } })
+  if (!usuario) {
+    return res.status(404).json({ error: 'Cuenta no encontrada.' })
+  }
+  if (usuario.cuentaActivada) {
+    return res.status(409).json({ error: 'Esta cuenta ya está activada. Inicia sesión con tu contraseña.' })
+  }
+
+  const passwordHash = await hashPassword(data.password)
+  await prisma.usuario.update({
+    where: { id: usuario.id },
+    data: { passwordHash, cuentaActivada: true },
+  })
+
+  res.json({ ok: true, mensaje: 'Cuenta activada. Ya puedes iniciar sesión.' })
 })
 
 // POST /auth/login-medico
