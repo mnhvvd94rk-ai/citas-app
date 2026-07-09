@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, randomBytes } from 'node:crypto'
 import { prisma } from '../services/db.js'
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js'
 import { hashPassword } from '../services/authService.js'
@@ -75,8 +75,9 @@ router.get('/', async (req, res) => {
 //
 // El modelo Usuario exige documentoIdentidad y correo únicos y no nulos, además
 // de passwordHash: como los clientes importados no inician sesión, se generan
-// valores marcador (documento IMPORT-*, correo placeholder si falta) y se
-// comparte un único hash aleatorio para todo el lote.
+// valores marcador (documento IMPORT-*, correo placeholder si falta) y una
+// contraseña ALEATORIA E INDIVIDUAL por cliente que nunca se comunica a nadie.
+// Al ser única por registro, aunque una se filtrara no afectaría a las demás.
 const importarSchema = z.object({
   clientes: z
     .array(
@@ -100,15 +101,15 @@ router.post('/importar', async (req, res) => {
     })
   }
 
-  // Un solo hash aleatorio para todo el lote (los importados no inician sesión).
-  const passwordHash = await hashPassword(randomUUID())
-
   let creados = 0
   let duplicados = 0
   let errores = 0
 
   for (const c of parsed.data.clientes) {
     const correo = c.correo ? c.correo.toLowerCase() : `importado-${randomUUID()}@sin-correo.local`
+    // Contraseña aleatoria e individual por cliente: nunca se revela ni se
+    // reutiliza, por lo que estas cuentas no pueden iniciar sesión en la práctica.
+    const passwordHash = await hashPassword(randomBytes(32).toString('hex'))
     try {
       await prisma.usuario.create({
         data: {
