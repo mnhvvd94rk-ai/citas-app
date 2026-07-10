@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../context/LanguageContext.jsx'
 import LanguageSelector from '../components/LanguageSelector.jsx'
 import Logo from '../components/Logo.jsx'
+import Footer from '../components/Footer.jsx'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", "Playfair Display", serif' }
 
@@ -170,6 +171,45 @@ export default function HistoriaPage() {
           {t('historia.historiaCita')}
         </blockquote>
 
+        {/* ¿Por qué existe Kohtun? */}
+        <section className="mt-24">
+          <div
+            className="mx-auto mb-12 h-px w-40"
+            style={{ background: 'linear-gradient(90deg, transparent, #e8a978, transparent)', boxShadow: '0 0 14px 1px rgba(232,169,120,0.5)' }}
+          />
+          <h2 className="text-center text-3xl leading-tight sm:text-4xl" style={{ ...serif, fontWeight: 400, color: '#f4ece4' }}>
+            {t('historia.whyKohtunTitle')}
+          </h2>
+
+          <div className="mx-auto mt-8 max-w-2xl space-y-5 text-lg leading-loose text-white/75" style={serif}>
+            <p>{t('historia.whyKohtunP1')}</p>
+            <p>{t('historia.whyKohtunP2')}</p>
+          </div>
+
+          <div className="mx-auto mt-10 max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: '#e8a978' }}>
+              {t('historia.whyKohtunListTitle')}
+            </p>
+            <ul className="mt-5 space-y-3.5">
+              {t('historia.whyKohtunList').map((item, i) => (
+                <li key={i} className="flex gap-3 text-white/80" style={serif}>
+                  <span aria-hidden="true" className="shrink-0 font-semibold" style={{ color: '#e8a978' }}>—</span>
+                  <span className="text-[15px] leading-relaxed">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="mt-12 text-center">
+            <button
+              onClick={() => navigate('/registro-cliente')}
+              className="rounded-xl bg-brand-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:-translate-y-0.5 hover:bg-brand-600"
+            >
+              {t('historia.startFreeButton')}
+            </button>
+          </div>
+        </section>
+
         {/* Volver */}
         <div className="mt-16 text-center">
           <Link to="/landing" className="text-sm font-medium tracking-wide text-white/50 transition hover:text-white/90">
@@ -177,6 +217,8 @@ export default function HistoriaPage() {
           </Link>
         </div>
       </main>
+
+      <Footer />
     </div>
   )
 }

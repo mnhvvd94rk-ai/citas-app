@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 import LanguageSelector from '../../components/LanguageSelector.jsx'
 import Logo from '../../components/Logo.jsx'
+import Footer from '../../components/Footer.jsx'
 
 // Documento legal genérico (Términos / Privacidad). Recibe título + secciones
 // [{ title, body: [párrafos] }].
@@ -41,6 +42,8 @@ export default function LegalDoc({ title, sections }) {
           </Link>
         </div>
       </main>
+
+      <Footer />
     </div>
   )
 }

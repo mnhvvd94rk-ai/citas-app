@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
 import { Zap, Bell, CalendarCheck } from 'lucide-react'
 import LanguageSelector from '../components/LanguageSelector.jsx'
 import Logo from '../components/Logo.jsx'
+import Footer from '../components/Footer.jsx'
 
 // Fade-in al entrar en viewport.
 function Reveal({ children, className = '' }) {
@@ -231,28 +232,8 @@ export default function LandingPage() {
         </Reveal>
       </section>
 
-      {/* FOOTER */}
-      <footer className="border-t border-slate-200 bg-navy-900 text-white">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-6 py-10 sm:flex-row sm:justify-between">
-          <div className="flex items-center gap-2">
-            <Logo onDark />
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/70">
-            <Link to="/historia" className="hover:text-brand-300">{t('landingPublic.footerStory')}</Link>
-            <Link to="/terminos" className="hover:text-brand-300">{t('landingPublic.footerTerms')}</Link>
-            <Link to="/privacidad" className="hover:text-brand-300">{t('landingPublic.footerPrivacy')}</Link>
-            <Link to="/contacto" className="hover:text-brand-300">{t('landingPublic.footerContact')}</Link>
-            <Link to="/faq" className="hover:text-brand-300">{t('landingPublic.footerFaq')}</Link>
-            <a href="#" className="hover:text-brand-300">{t('landingPublic.footerBlog')}</a>
-          </div>
-          <div className="flex items-center gap-3 text-white/60">
-            <a href="#" aria-label="X" className="hover:text-white">𝕏</a>
-            <a href="#" aria-label="Instagram" className="hover:text-white">◎</a>
-            <a href="#" aria-label="LinkedIn" className="hover:text-white">in</a>
-          </div>
-        </div>
-        <p className="pb-6 text-center text-xs text-white/40">{t('landingPublic.copyright')}</p>
-      </footer>
+      {/* FOOTER compartido */}
+      <Footer />
     </div>
   )
 }

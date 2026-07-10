@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../context/LanguageContext.jsx'
 import LanguageSelector from '../components/LanguageSelector.jsx'
 import Logo from '../components/Logo.jsx'
+import Footer from '../components/Footer.jsx'
 
 // Acordeón de una pregunta (mismo estilo que el FAQ de la landing).
 function FaqItem({ q, a }) {
@@ -47,6 +48,8 @@ export default function FAQPage() {
           </Link>
         </div>
       </main>
+
+      <Footer />
     </div>
   )
 }

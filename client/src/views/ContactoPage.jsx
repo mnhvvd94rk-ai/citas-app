@@ -4,6 +4,7 @@ import { contactoApi } from '../services/api.js'
 import { useLanguage } from '../context/LanguageContext.jsx'
 import LanguageSelector from '../components/LanguageSelector.jsx'
 import Logo from '../components/Logo.jsx'
+import Footer from '../components/Footer.jsx'
 import ErrorMessage from '../components/ErrorMessage.jsx'
 
 export default function ContactoPage() {
@@ -92,6 +93,8 @@ export default function ContactoPage() {
           </form>
         )}
       </main>
+
+      <Footer />
     </div>
   )
 }
