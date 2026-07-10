@@ -17,10 +17,12 @@ import notificacionesJob from './jobs/notificacionesAutomaticas.js'
 const app = express()
 const PORT = process.env.PORT || 3001
 
-// Orígenes permitidos: localhost (dev) y el frontend desplegado en Vercel.
+// Orígenes permitidos: localhost (dev), el frontend en Vercel y el dominio propio.
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://citas-app-client.vercel.app"
+  "https://citas-app-client.vercel.app",
+  "https://kohtun.com",
+  "https://www.kohtun.com"
 ];
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 // Límite amplio: el registro de paciente envía foto de identidad y firma como
