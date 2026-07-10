@@ -117,7 +117,7 @@ const translations = {
         { title: '6. Indemnización', body: ['El profesional mantendrá indemne a Kohtun frente a cualquier reclamación de sus clientes derivada del uso del servicio.'] },
         { title: '7. Ley aplicable y jurisdicción', body: ['Se aplicarán las leyes del país del operador de Kohtun, sin perjuicio de los derechos irrenunciables que correspondan al consumidor en su jurisdicción, incluidos los marcos GDPR (UE), CCPA (California), PIPEDA (Canadá) y LFPDPPP (México).'] },
         { title: '8. Modificaciones', body: ['Kohtun podrá modificar el servicio y los presentes términos, notificándolo con una antelación razonable.'] },
-        { title: '9. Contacto', body: ['Para cuestiones legales: legal@kohtun.app.'] },
+        { title: '9. Contacto', body: ['Para cuestiones legales: legal@kohtun.com.'] },
       ],
       privacy: [
         { title: '1. Responsable del tratamiento', body: ['El profesional que utiliza Kohtun es el Responsable del Tratamiento de los datos de sus clientes. Kohtun procesa dichos datos como Encargado, por cuenta y siguiendo las instrucciones del profesional.'] },
@@ -129,7 +129,7 @@ const translations = {
         { title: '7. Conservación', body: ['Los datos se conservan mientras la cuenta del profesional esté activa. Al cerrarla, se eliminan o anonimizan en un plazo razonable.'] },
         { title: '8. Brechas de seguridad', body: ['Kohtun notificará al profesional sin dilación indebida ante cualquier brecha de seguridad.'] },
         { title: '9. Cookies', body: ['Solo se utiliza almacenamiento local (localStorage) para la sesión y el idioma. No se usan cookies de rastreo ni analítica invasiva.'] },
-        { title: '10. Contacto', body: ['Para cuestiones de privacidad: privacy@kohtun.app.'] },
+        { title: '10. Contacto', body: ['Para cuestiones de privacidad: privacy@kohtun.com.'] },
       ],
     },
     loginClient: {
@@ -586,7 +586,7 @@ const translations = {
         { title: '6. Indemnification', body: ['The professional shall indemnify and hold Kohtun harmless against any claim from their clients arising from the use of the service.'] },
         { title: '7. Governing law and jurisdiction', body: ['The laws of the country of Kohtun\'s operator apply, without prejudice to the non-waivable consumer rights in the user\'s jurisdiction, including the GDPR (EU), CCPA (California), PIPEDA (Canada) and LFPDPPP (Mexico) frameworks.'] },
         { title: '8. Modifications', body: ['Kohtun may modify the service and these terms, providing reasonable prior notice.'] },
-        { title: '9. Contact', body: ['For legal matters: legal@kohtun.app.'] },
+        { title: '9. Contact', body: ['For legal matters: legal@kohtun.com.'] },
       ],
       privacy: [
         { title: '1. Data controller', body: ['The professional using Kohtun is the Data Controller for their clients\' data. Kohtun processes such data as a Processor, on behalf of and following the professional\'s instructions.'] },
@@ -598,7 +598,7 @@ const translations = {
         { title: '7. Retention', body: ['Data is retained while the professional\'s account is active. Upon closure, it is deleted or anonymized within a reasonable period.'] },
         { title: '8. Breaches', body: ['Kohtun will notify the professional without undue delay of any security breach.'] },
         { title: '9. Cookies', body: ['Only local storage (localStorage) is used for session and language. No tracking cookies or invasive analytics are used.'] },
-        { title: '10. Contact', body: ['For privacy matters: privacy@kohtun.app.'] },
+        { title: '10. Contact', body: ['For privacy matters: privacy@kohtun.com.'] },
       ],
     },
     loginClient: {
@@ -1053,7 +1053,7 @@ const translations = {
         { title: '6. Indemnisation', body: ['Le professionnel garantit Kohtun contre toute réclamation de ses clients découlant de l\'utilisation du service.'] },
         { title: '7. Droit applicable et juridiction', body: ['Les lois du pays de l\'opérateur de Kohtun s\'appliquent, sans préjudice des droits incessibles du consommateur dans sa juridiction, y compris les cadres RGPD (UE), CCPA (Californie), PIPEDA (Canada) et LFPDPPP (Mexique).'] },
         { title: '8. Modifications', body: ['Kohtun peut modifier le service et les présentes conditions, moyennant un préavis raisonnable.'] },
-        { title: '9. Contact', body: ['Pour les questions juridiques : legal@kohtun.app.'] },
+        { title: '9. Contact', body: ['Pour les questions juridiques : legal@kohtun.com.'] },
       ],
       privacy: [
         { title: '1. Responsable du traitement', body: ['Le professionnel qui utilise Kohtun est le Responsable du traitement des données de ses clients. Kohtun traite ces données en tant que Sous-traitant, pour le compte et selon les instructions du professionnel.'] },
@@ -1065,7 +1065,7 @@ const translations = {
         { title: '7. Conservation', body: ['Les données sont conservées tant que le compte du professionnel est actif. À sa fermeture, elles sont supprimées ou anonymisées dans un délai raisonnable.'] },
         { title: '8. Violations de données', body: ['Kohtun notifiera le professionnel sans retard injustifié en cas de violation de sécurité.'] },
         { title: '9. Cookies', body: ['Seul le stockage local (localStorage) est utilisé pour la session et la langue. Aucun cookie de suivi ni analyse invasive n\'est utilisé.'] },
-        { title: '10. Contact', body: ['Pour les questions de confidentialité : privacy@kohtun.app.'] },
+        { title: '10. Contact', body: ['Pour les questions de confidentialité : privacy@kohtun.com.'] },
       ],
     },
     loginClient: {
