@@ -9,6 +9,7 @@ import LandingPage from './views/LandingPage.jsx' // eager: primera pintura
 // bundle inicial.
 const ContactoPage = lazy(() => import('./views/ContactoPage.jsx'))
 const FAQPage = lazy(() => import('./views/FAQPage.jsx'))
+const HistoriaPage = lazy(() => import('./views/HistoriaPage.jsx'))
 const TerminosPage = lazy(() => import('./views/legal/TerminosPage.jsx'))
 const PrivacyPage = lazy(() => import('./views/legal/PrivacyPage.jsx'))
 const RegistroPaciente = lazy(() => import('./views/RegistroPaciente.jsx'))
@@ -49,6 +50,8 @@ export default function App() {
         <Route path="/contact" element={<ContactoPage />} />
         <Route path="/faq" element={<FAQPage />} />
         <Route path="/ayuda" element={<FAQPage />} />
+        <Route path="/historia" element={<HistoriaPage />} />
+        <Route path="/nuestra-historia" element={<HistoriaPage />} />
         {/* Rutas de cliente: /*-cliente son las canónicas; /*-paciente se
             mantienen como alias para no romper enlaces guardados/compartidos. */}
         <Route path="/registro-cliente" element={<RegistroPaciente />} />

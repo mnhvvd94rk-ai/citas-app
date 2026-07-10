@@ -238,6 +238,7 @@ export default function LandingPage() {
             <Logo onDark />
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/70">
+            <Link to="/historia" className="hover:text-brand-300">{t('landingPublic.footerStory')}</Link>
             <Link to="/terminos" className="hover:text-brand-300">{t('landingPublic.footerTerms')}</Link>
             <Link to="/privacidad" className="hover:text-brand-300">{t('landingPublic.footerPrivacy')}</Link>
             <Link to="/contacto" className="hover:text-brand-300">{t('landingPublic.footerContact')}</Link>
