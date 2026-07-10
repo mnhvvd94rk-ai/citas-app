@@ -97,19 +97,19 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white text-slate-800">
       {/* NAVBAR */}
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 backdrop-blur">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-          <button onClick={() => navigate('/landing')} aria-label="Kohtun"><Logo /></button>
+        <nav className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
+          <button onClick={() => navigate('/landing')} aria-label="Kohtun" className="shrink-0"><Logo /></button>
           <div className="hidden items-center gap-6 text-sm font-medium text-navy-600 md:flex">
             <a href="#clientes" className="hover:text-brand-600">{t('landingPublic.navClients')}</a>
             <a href="#profesionales" className="hover:text-brand-600">{t('landingPublic.navPros')}</a>
             <a href="#como-funciona" className="hover:text-brand-600">{t('landingPublic.navHow')}</a>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             <LanguageSelector />
             <button onClick={() => navigate('/login-cliente')} className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-navy-700 hover:text-brand-600 sm:block">
               {t('landingPublic.login')}
             </button>
-            <button onClick={() => navigate('/registro-cliente')} className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600">
+            <button onClick={() => navigate('/registro-cliente')} className="whitespace-nowrap rounded-lg bg-brand-500 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-600 sm:px-4 sm:py-2 sm:text-sm">
               {t('landingPublic.startFree')}
             </button>
           </div>
