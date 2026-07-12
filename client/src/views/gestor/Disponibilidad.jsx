@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/LanguageContext.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import TimeSelect from '../../components/TimeSelect.jsx'
+import DuracionField from '../../components/DuracionField.jsx'
 import { hoyISO, formatFechaCorta } from '../../lib/format.js'
 
 // Días de la semana en orden lunes→domingo con su valor JS (0=domingo…6=sábado).
@@ -16,8 +17,6 @@ const DIAS_SEMANA = [
   { valor: 6, key: 'saturday' },
   { valor: 0, key: 'sunday' },
 ]
-
-const DURACIONES = [30, 45, 50, 55, 60, 90]
 
 /** Suma un número de días a una fecha "YYYY-MM-DD" y devuelve "YYYY-MM-DD". */
 function sumarDias(iso, n) {
@@ -481,40 +480,5 @@ export default function Disponibilidad() {
         </div>
       )}
     </div>
-  )
-}
-
-// Selector de "Duración del bloque" compartido por los modos "Un día" y "Rango".
-// Renderiza el dropdown de duraciones + el input personalizado ("custom").
-function DuracionField({ sel, onChangeSel, custom, onChangeCustom, inputCls, t }) {
-  return (
-    <>
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.slotDuration')}</label>
-        <select value={sel} onChange={(e) => onChangeSel(e.target.value)} className={inputCls}>
-          {DURACIONES.map((m) => (
-            <option key={m} value={String(m)}>
-              {m} {t('availability.minutes')}
-            </option>
-          ))}
-          <option value="custom">{t('availability.custom')}</option>
-        </select>
-      </div>
-      {sel === 'custom' && (
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-navy-700">
-            {t('availability.custom')} ({t('availability.minutes')})
-          </label>
-          <input
-            type="number"
-            min={15}
-            max={180}
-            value={custom}
-            onChange={(e) => onChangeCustom(e.target.value)}
-            className={inputCls}
-          />
-        </div>
-      )}
-    </>
   )
 }

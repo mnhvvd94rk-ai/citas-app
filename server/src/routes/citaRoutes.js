@@ -225,13 +225,19 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
 // El profesional agenda una cita para uno de SUS clientes, sin que el cliente
 // la reserve. Nace CONFIRMADA (no necesita aprobación). Los recordatorios
 // automáticos (48/24/3h) la toman igual que a cualquier cita CONFIRMADA.
-const DURACION_MANUAL_MIN = 45 // bloque base de la app
-
 const crearManualSchema = z.object({
   clienteId: z.number().int().positive(),
   fecha: z.string().regex(FECHA_RE, 'Formato esperado YYYY-MM-DD'),
   horaInicio: z.string().regex(HORA_RE, 'Formato esperado HH:mm'),
   tipoCita: z.enum(['PRESENCIAL', 'VIDEOCONFERENCIA']).optional(),
+  // Duración del bloque de esta cita puntual (default 45, el bloque base).
+  duracionMinutos: z
+    .number()
+    .int()
+    .min(15, 'La duración mínima es 15 minutos')
+    .max(180, 'La duración máxima es 180 minutos')
+    .optional()
+    .default(45),
 })
 
 router.post('/crear-manual', requireAuth, requireRole('MEDICO'), async (req, res) => {
@@ -250,11 +256,12 @@ router.post('/crear-manual', requireAuth, requireRole('MEDICO'), async (req, res
     return res.status(403).json({ error: 'Este cliente no te pertenece' })
   }
 
-  // b) Calcula el fin del bloque (45 min). Rechaza si se pasa de medianoche.
+  // b) Calcula el fin del bloque con la duración elegida. Rechaza si se pasa
+  //    de medianoche.
   const inicioMin = aMinutos(data.horaInicio)
-  const finMin = inicioMin + DURACION_MANUAL_MIN
+  const finMin = inicioMin + data.duracionMinutos
   if (finMin > 24 * 60) {
-    return res.status(400).json({ error: 'La hora es demasiado tarde para un bloque de 45 min.' })
+    return res.status(400).json({ error: 'La hora es demasiado tarde para esa duración.' })
   }
   const horaFin = aHora(finMin)
 

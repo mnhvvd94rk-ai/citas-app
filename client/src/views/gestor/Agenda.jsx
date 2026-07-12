@@ -8,6 +8,7 @@ import EstadoBadge from '../../components/EstadoBadge.jsx'
 import JoinVideoButton from '../../components/JoinVideoButton.jsx'
 import PushToggle from '../../components/PushToggle.jsx'
 import TimeSelect from '../../components/TimeSelect.jsx'
+import DuracionField, { DURACIONES } from '../../components/DuracionField.jsx'
 import { hoyISO, soloFecha } from '../../lib/format.js'
 
 // Dominio público donde vive el enlace de registro que el profesional comparte.
@@ -266,8 +267,12 @@ function AgendarCitaModal({ fechaInicial, onClose, onCreated }) {
   const [fecha, setFecha] = useState(fechaInicial || hoyISO())
   const [hora, setHora] = useState('09:00')
   const [tipoCita, setTipoCita] = useState('PRESENCIAL')
+  const [duracionSel, setDuracionSel] = useState('45')
+  const [duracionCustom, setDuracionCustom] = useState(45)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState(null)
+
+  const duracion = duracionSel === 'custom' ? Number(duracionCustom) : Number(duracionSel)
 
   useEffect(() => {
     let cancelado = false
@@ -285,6 +290,29 @@ function AgendarCitaModal({ fechaInicial, onClose, onCreated }) {
     }
   }, [])
 
+  // Sugerencia: si el día ya tiene disponibilidad configurada, prellena la
+  // duración con la de esa franja (el profesional puede cambiarla). Al cambiar
+  // el día se vuelve a sugerir; un cambio manual de duración persiste.
+  useEffect(() => {
+    let cancelado = false
+    disponibilidadApi
+      .listar({ desde: fecha, hasta: fecha })
+      .then((disp) => {
+        if (cancelado) return
+        const dur = disp?.[0]?.duracionMinutos
+        if (!dur) return
+        if (DURACIONES.includes(dur)) setDuracionSel(String(dur))
+        else {
+          setDuracionSel('custom')
+          setDuracionCustom(dur)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelado = true
+    }
+  }, [fecha])
+
   const inputCls =
     'w-full rounded-xl border border-navy-200 px-4 py-3 text-navy-900 transition focus:border-navy-500 focus:ring-4 focus:ring-navy-100 focus:outline-none'
 
@@ -301,6 +329,7 @@ function AgendarCitaModal({ fechaInicial, onClose, onCreated }) {
         fecha,
         horaInicio: hora,
         tipoCita,
+        duracionMinutos: duracion,
       })
       await onCreated()
     } catch (err) {
@@ -343,9 +372,19 @@ function AgendarCitaModal({ fechaInicial, onClose, onCreated }) {
             <input type="date" value={fecha} min={hoyISO()} onChange={(e) => setFecha(e.target.value)} className={inputCls} />
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('agenda.time')}</label>
-            <TimeSelect ariaLabel={t('agenda.time')} value={hora} onChange={setHora} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('agenda.time')}</label>
+              <TimeSelect ariaLabel={t('agenda.time')} value={hora} onChange={setHora} />
+            </div>
+            <DuracionField
+              sel={duracionSel}
+              onChangeSel={setDuracionSel}
+              custom={duracionCustom}
+              onChangeCustom={setDuracionCustom}
+              inputCls={inputCls}
+              t={t}
+            />
           </div>
 
           <div>
