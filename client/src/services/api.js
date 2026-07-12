@@ -108,6 +108,8 @@ export const citasApi = {
   slotsDisponibles: (medicoId, fecha) =>
     request(`/citas/slots-disponibles?medicoId=${medicoId}&fecha=${fecha}`),
   reservar: (payload) => request('/citas/reservar', { method: 'POST', body: payload }),
+  // El profesional agenda manualmente una cita para uno de sus clientes.
+  crearManual: (payload) => request('/citas/crear-manual', { method: 'POST', body: payload }),
   misCitas: () => request('/citas/mis-citas'),
   cancelarCliente: (id) => request(`/citas/${id}/cancelar`, { method: 'PATCH' }),
   recordar: (id) => request(`/citas/${id}/recordar`, { method: 'POST' }),

@@ -22,6 +22,13 @@ function aMinutos(hhmm) {
   return h * 60 + m
 }
 
+/** minutos desde medianoche -> "HH:mm". */
+function aHora(min) {
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
 /** Valida `body` contra `schema`; si falla, responde 400 y devuelve null. */
 function parseOr400(schema, body, res) {
   const result = schema.safeParse(body)
@@ -204,6 +211,94 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
   })
 
   // j) Si es videoconferencia, genera el enlace único (usa el id ya creado).
+  if (tipoCita === 'VIDEOCONFERENCIA') {
+    cita = await prisma.cita.update({
+      where: { id: cita.id },
+      data: { enlaceVideoconferencia: generarEnlaceVideo(cita.id) },
+    })
+  }
+
+  res.status(201).json(cita)
+})
+
+// ── POST /citas/crear-manual ─────────────────────────────────────────────────
+// El profesional agenda una cita para uno de SUS clientes, sin que el cliente
+// la reserve. Nace CONFIRMADA (no necesita aprobación). Los recordatorios
+// automáticos (48/24/3h) la toman igual que a cualquier cita CONFIRMADA.
+const DURACION_MANUAL_MIN = 45 // bloque base de la app
+
+const crearManualSchema = z.object({
+  clienteId: z.number().int().positive(),
+  fecha: z.string().regex(FECHA_RE, 'Formato esperado YYYY-MM-DD'),
+  horaInicio: z.string().regex(HORA_RE, 'Formato esperado HH:mm'),
+  tipoCita: z.enum(['PRESENCIAL', 'VIDEOCONFERENCIA']).optional(),
+})
+
+router.post('/crear-manual', requireAuth, requireRole('MEDICO'), async (req, res) => {
+  const data = parseOr400(crearManualSchema, req.body, res)
+  if (!data) return
+
+  const medicoId = req.user.id
+
+  // a) El cliente debe pertenecer a este profesional (aislamiento).
+  const cliente = await prisma.usuario.findUnique({
+    where: { id: data.clienteId },
+    select: { id: true, profesionalId: true },
+  })
+  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' })
+  if (cliente.profesionalId !== medicoId) {
+    return res.status(403).json({ error: 'Este cliente no te pertenece' })
+  }
+
+  // b) Calcula el fin del bloque (45 min). Rechaza si se pasa de medianoche.
+  const inicioMin = aMinutos(data.horaInicio)
+  const finMin = inicioMin + DURACION_MANUAL_MIN
+  if (finMin > 24 * 60) {
+    return res.status(400).json({ error: 'La hora es demasiado tarde para un bloque de 45 min.' })
+  }
+  const horaFin = aHora(finMin)
+
+  // c) No debe solaparse con otra cita activa del profesional ese día.
+  const fechaDate = parseFecha(data.fecha)
+  const citasDia = await prisma.cita.findMany({
+    where: { medicoId, fecha: fechaDate, estado: { in: ['PENDIENTE', 'CONFIRMADA'] } },
+    select: { horaInicio: true, horaFin: true },
+  })
+  const solapa = citasDia.some(
+    (c) => inicioMin < aMinutos(c.horaFin) && aMinutos(c.horaInicio) < finMin,
+  )
+  if (solapa) {
+    return res.status(409).json({
+      error: 'Ese horario se solapa con otra cita existente.',
+      code: 'HORARIO_OCUPADO',
+    })
+  }
+
+  // d) Penalización por cancelación copiada del profesional (igual que reservar).
+  const medico = await prisma.medico.findUnique({
+    where: { id: medicoId },
+    select: { costoCancelacion: true, diasAnticipacionRequierida: true },
+  })
+
+  // e) Crea la cita CONFIRMADA.
+  const tipoCita = data.tipoCita === 'VIDEOCONFERENCIA' ? 'VIDEOCONFERENCIA' : 'PRESENCIAL'
+  let cita = await prisma.cita.create({
+    data: {
+      pacienteId: cliente.id,
+      medicoId,
+      fecha: fechaDate,
+      horaInicio: data.horaInicio,
+      horaFin,
+      numeroSlots: 1,
+      estado: 'CONFIRMADA',
+      costoCancelacion: medico?.costoCancelacion ?? 0,
+      diasAnticipacionRequierida: medico?.diasAnticipacionRequierida ?? 7,
+      esDoble: false,
+      tipoCita,
+    },
+  })
+
+  // f) Videoconferencia: enlace único de Jitsi (mismo flujo que reservar).
   if (tipoCita === 'VIDEOCONFERENCIA') {
     cita = await prisma.cita.update({
       where: { id: cita.id },

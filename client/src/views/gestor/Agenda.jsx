@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { citasApi, disponibilidadApi, medicosApi } from '../../services/api.js'
+import { citasApi, disponibilidadApi, medicosApi, pacientesApi } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 import Spinner from '../../components/Spinner.jsx'
@@ -7,6 +7,7 @@ import ErrorMessage from '../../components/ErrorMessage.jsx'
 import EstadoBadge from '../../components/EstadoBadge.jsx'
 import JoinVideoButton from '../../components/JoinVideoButton.jsx'
 import PushToggle from '../../components/PushToggle.jsx'
+import TimeSelect from '../../components/TimeSelect.jsx'
 import { hoyISO, soloFecha } from '../../lib/format.js'
 
 // Dominio público donde vive el enlace de registro que el profesional comparte.
@@ -39,6 +40,8 @@ export default function Agenda() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
   const [detalle, setDetalle] = useState(null)
+  const [agendar, setAgendar] = useState(false) // modal "Agendar cita"
+  const [avisoCita, setAvisoCita] = useState(null)
 
   const meses = t('calendar.months')
   const semana = t('calendar.weekdays')
@@ -119,10 +122,24 @@ export default function Agenda() {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight text-navy-800">{t('agenda.title')}</h1>
-        <PushToggle />
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setAgendar(true)}
+            className="rounded-xl bg-navy-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-navy-800"
+          >
+            + {t('agenda.scheduleAppointment')}
+          </button>
+          <PushToggle />
+        </div>
       </div>
 
       <EnlaceReserva />
+
+      {avisoCita && (
+        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {avisoCita}
+        </div>
+      )}
 
       {error && <ErrorMessage error={error} onRetry={cargar} className="mb-4" />}
 
@@ -223,6 +240,147 @@ export default function Agenda() {
           formatDay={formatDayLong}
         />
       )}
+
+      {agendar && (
+        <AgendarCitaModal
+          fechaInicial={selectedDay}
+          onClose={() => setAgendar(false)}
+          onCreated={async () => {
+            setAgendar(false)
+            setAvisoCita(t('agenda.appointmentScheduled'))
+            setTimeout(() => setAvisoCita(null), 4000)
+            await cargar()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Modal: el profesional agenda una cita para uno de sus clientes ───────────
+function AgendarCitaModal({ fechaInicial, onClose, onCreated }) {
+  const { t } = useLanguage()
+  const [clientes, setClientes] = useState([])
+  const [cargandoCli, setCargandoCli] = useState(true)
+  const [clienteId, setClienteId] = useState('')
+  const [fecha, setFecha] = useState(fechaInicial || hoyISO())
+  const [hora, setHora] = useState('09:00')
+  const [tipoCita, setTipoCita] = useState('PRESENCIAL')
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let cancelado = false
+    pacientesApi
+      .listar()
+      .then((cs) => {
+        if (cancelado) return
+        setClientes(cs)
+        if (cs.length) setClienteId(String(cs[0].id))
+      })
+      .catch((e) => !cancelado && setError(e))
+      .finally(() => !cancelado && setCargandoCli(false))
+    return () => {
+      cancelado = true
+    }
+  }, [])
+
+  const inputCls =
+    'w-full rounded-xl border border-navy-200 px-4 py-3 text-navy-900 transition focus:border-navy-500 focus:ring-4 focus:ring-navy-100 focus:outline-none'
+
+  async function confirmar() {
+    setError(null)
+    if (!clienteId) {
+      setError(new Error(t('agenda.selectClient')))
+      return
+    }
+    setGuardando(true)
+    try {
+      await citasApi.crearManual({
+        clienteId: Number(clienteId),
+        fecha,
+        horaInicio: hora,
+        tipoCita,
+      })
+      await onCreated()
+    } catch (err) {
+      setError(err)
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-navy-800">{t('agenda.scheduleAppointment')}</h3>
+          <button onClick={onClose} className="rounded-lg p-1 text-navy-400 hover:bg-navy-50" aria-label={t('agenda.close')}>✕</button>
+        </div>
+
+        {error && <ErrorMessage error={error} className="mb-3" />}
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('agenda.selectClient')}</label>
+            {cargandoCli ? (
+              <Spinner />
+            ) : clientes.length === 0 ? (
+              <p className="text-sm text-navy-400">{t('clients.empty')}</p>
+            ) : (
+              <select value={clienteId} onChange={(e) => setClienteId(e.target.value)} className={inputCls}>
+                {clientes.map((c) => (
+                  <option key={c.id} value={String(c.id)}>
+                    {c.nombre} {c.apellido}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('agenda.date')}</label>
+            <input type="date" value={fecha} min={hoyISO()} onChange={(e) => setFecha(e.target.value)} className={inputCls} />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('agenda.time')}</label>
+            <TimeSelect ariaLabel={t('agenda.time')} value={hora} onChange={setHora} />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('appt.appointmentType')}</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { val: 'PRESENCIAL', icon: '📍', label: t('appt.inPerson') },
+                { val: 'VIDEOCONFERENCIA', icon: '💻', label: t('appt.videoCall') },
+              ].map((o) => (
+                <button
+                  key={o.val}
+                  type="button"
+                  onClick={() => setTipoCita(o.val)}
+                  aria-pressed={tipoCita === o.val}
+                  className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
+                    tipoCita === o.val
+                      ? 'border-navy-700 bg-navy-700 text-white'
+                      : 'border-navy-200 bg-white text-navy-700 hover:border-navy-400'
+                  }`}
+                >
+                  {o.icon} {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={confirmar}
+          disabled={guardando || cargandoCli || clientes.length === 0}
+          className="mt-5 w-full rounded-xl bg-navy-700 py-3 font-semibold text-white transition hover:bg-navy-800 disabled:bg-navy-300"
+        >
+          {guardando ? t('agenda.scheduling') : t('agenda.confirmAppointment')}
+        </button>
+      </div>
     </div>
   )
 }
