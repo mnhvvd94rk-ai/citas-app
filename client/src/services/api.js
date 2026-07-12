@@ -151,6 +151,7 @@ export const pacientesApi = {
   listar: () => request('/pacientes'),
   importar: (clientes) => request('/pacientes/importar', { method: 'POST', body: { clientes } }),
   actualizar: (id, data) => request(`/pacientes/${id}`, { method: 'PATCH', body: data }),
+  eliminar: (id) => request(`/pacientes/${id}`, { method: 'DELETE' }),
   notas: (pacienteId) => request(`/notas/${pacienteId}`),
   agregarNota: (pacienteId, texto) =>
     request('/notas', { method: 'POST', body: { pacienteId, texto } }),

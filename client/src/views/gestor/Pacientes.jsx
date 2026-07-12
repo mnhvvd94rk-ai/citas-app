@@ -41,6 +41,7 @@ export default function Pacientes() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
   const [importar, setImportar] = useState(false)
+  const [aviso, setAviso] = useState(null)
 
   async function cargar() {
     setCargando(true)
@@ -57,6 +58,12 @@ export default function Pacientes() {
   useEffect(() => {
     cargar()
   }, [])
+
+  async function handleEliminado(nombre) {
+    setAviso(t('clients.clientDeleted', { name: nombre }))
+    setTimeout(() => setAviso(null), 4000)
+    await cargar()
+  }
 
   return (
     <div>
@@ -77,6 +84,12 @@ export default function Pacientes() {
         <ImportarClientesModal onClose={() => setImportar(false)} onImported={cargar} />
       )}
 
+      {aviso && (
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {aviso}
+        </div>
+      )}
+
       {error && <ErrorMessage error={error} onRetry={cargar} className="mt-4" />}
 
       <div className="mt-5">
@@ -88,7 +101,7 @@ export default function Pacientes() {
           </div>
         ) : (
           <ul className="flex flex-col gap-3">
-            {clientes.map((c) => <ClienteCard key={c.id} cliente={c} />)}
+            {clientes.map((c) => <ClienteCard key={c.id} cliente={c} onEliminado={handleEliminado} />)}
           </ul>
         )}
       </div>
@@ -96,9 +109,12 @@ export default function Pacientes() {
   )
 }
 
-function ClienteCard({ cliente }) {
+function ClienteCard({ cliente, onEliminado }) {
   const { t } = useLanguage()
   const [abierto, setAbierto] = useState(false)
+  const [confirmando, setConfirmando] = useState(false)
+  const [eliminando, setEliminando] = useState(false)
+  const [errorDel, setErrorDel] = useState(null)
 
   // Estado editable local (se sincroniza con el backend vía PATCH).
   const [edad, setEdad] = useState(cliente.edad)
@@ -137,6 +153,27 @@ function ClienteCard({ cliente }) {
       /* noop */
     } finally {
       setEditandoEdad(false)
+    }
+  }
+
+  const nombreCompleto = `${cliente.nombre} ${cliente.apellido || ''}`.trim()
+
+  async function eliminar() {
+    setEliminando(true)
+    setErrorDel(null)
+    try {
+      await pacientesApi.eliminar(cliente.id)
+      setConfirmando(false)
+      onEliminado?.(nombreCompleto)
+    } catch (err) {
+      // 409: tiene citas pendientes → mensaje claro traducido.
+      setErrorDel(
+        err?.code === 'CLIENTE_CON_CITAS_PENDIENTES'
+          ? t('clients.cannotDeleteHasPendingAppointments')
+          : err?.message || t('common.genericError'),
+      )
+    } finally {
+      setEliminando(false)
     }
   }
 
@@ -236,6 +273,47 @@ function ClienteCard({ cliente }) {
 
           {/* SECCIÓN 4 — Notas (inline) */}
           <NotasInline cliente={cliente} historial={historial} />
+
+          {/* SECCIÓN 5 — Zona de peligro: eliminar cliente */}
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => { setErrorDel(null); setConfirmando(true) }}
+              className="rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+            >
+              {t('clients.deleteClient')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirmando && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/50 p-0 sm:items-center sm:p-4"
+          onClick={() => !eliminando && setConfirmando(false)}
+        >
+          <div className="w-full max-w-sm rounded-t-2xl bg-white p-6 text-center sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-navy-800">{t('clients.deleteClient')}</h3>
+            <p className="mt-2 text-sm text-navy-600">{t('clients.confirmDeleteClient', { name: nombreCompleto })}</p>
+            {errorDel && (
+              <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{errorDel}</p>
+            )}
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                onClick={eliminar}
+                disabled={eliminando}
+                className="rounded-xl bg-red-600 py-3 font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+              >
+                {eliminando ? t('clients.deleting') : t('clients.deleteClient')}
+              </button>
+              <button
+                onClick={() => setConfirmando(false)}
+                disabled={eliminando}
+                className="rounded-xl border border-navy-200 py-3 font-medium text-navy-700 transition hover:bg-navy-50"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </li>

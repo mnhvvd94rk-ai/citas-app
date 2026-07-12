@@ -189,4 +189,48 @@ router.patch('/:id', async (req, res) => {
   res.json({ ...actualizado, edad: actualizado.edadManual ?? null })
 })
 
+// ── DELETE /pacientes/:id ────────────────────────────────────────────────────
+// Elimina un cliente del profesional autenticado.
+// - Solo el profesional dueño (profesionalId) puede eliminarlo.
+// - Si tiene citas activas (PENDIENTE/CONFIRMADA), se bloquea con 409.
+// - Si no, se elimina en cascada: notas + citas históricas + suscripciones push
+//   (estas últimas por onDelete: Cascade). Criterio: el más simple y seguro; el
+//   bloqueo previo evita borrar clientes con compromisos futuros.
+router.delete('/:id', async (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'id inválido' })
+
+  const cliente = await prisma.usuario.findUnique({
+    where: { id },
+    select: { id: true, nombre: true, apellido: true, profesionalId: true },
+  })
+  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' })
+
+  // Solo el profesional dueño de este cliente puede eliminarlo.
+  if (cliente.profesionalId !== req.user.id) {
+    return res.status(403).json({ error: 'Este cliente no te pertenece' })
+  }
+
+  // Bloqueo si tiene citas activas (pendientes o confirmadas).
+  const citasActivas = await prisma.cita.count({
+    where: { pacienteId: id, estado: { in: ACTIVAS } },
+  })
+  if (citasActivas > 0) {
+    return res.status(409).json({
+      error: 'Este cliente tiene citas pendientes. Cancélalas primero.',
+      code: 'CLIENTE_CON_CITAS_PENDIENTES',
+    })
+  }
+
+  // Borrado en cascada dentro de una transacción. Las suscripciones push se
+  // borran solas (onDelete: Cascade); notas y citas requieren borrado explícito.
+  await prisma.$transaction([
+    prisma.notaPaciente.deleteMany({ where: { pacienteId: id } }),
+    prisma.cita.deleteMany({ where: { pacienteId: id } }),
+    prisma.usuario.delete({ where: { id } }),
+  ])
+
+  res.json({ ok: true, id })
+})
+
 export default router
