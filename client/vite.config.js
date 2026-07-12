@@ -1,49 +1,123 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  build: {
-    minify: 'esbuild',
-    sourcemap: false,
-  },
-  plugins: [
-    react(),
-    tailwindcss(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      workbox: {
-        // El SW nuevo toma control de inmediato, sin quedar atorado en caché viejo.
-        skipWaiting: true,
-        clientsClaim: true,
-      },
-      devOptions: {
-        // Permite probar el service worker en `npm run dev`
-        enabled: true,
-      },
-      manifest: {
-        name: 'Kohtun',
-        short_name: 'Kohtun',
-        description: 'Smart Appointment Scheduling',
-        display: 'standalone',
-        theme_color: '#1e3a5f',
-        background_color: '#ffffff',
-        start_url: '/',
-        icons: [
-          {
-            src: '/kohtun-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: '/kohtun-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
-        ],
-      },
-    }),
-  ],
+export default defineConfig(({ mode }) => {
+  // Origen del backend según el modo (VITE_API_URL). Se usa para aplicar
+  // network-first solo a las llamadas de la API (p.ej. Render en producción,
+  // localhost:3001 en desarrollo).
+  // OJO: las `urlPattern` de tipo función se serializan con `.toString()` en el
+  // SW generado y NO capturan variables de cierre. Por eso el origen de la API
+  // se inyecta como un RegExp (se serializa como literal y sí funciona en el SW).
+  const env = loadEnv(mode, process.cwd(), '')
+  let apiUrlPattern = null
+  try {
+    const apiOrigin = new URL(env.VITE_API_URL).origin
+    const escapado = apiOrigin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    apiUrlPattern = new RegExp(`^${escapado}/`)
+  } catch {
+    apiUrlPattern = null
+  }
+
+  return {
+    build: {
+      minify: 'esbuild',
+      sourcemap: false,
+    },
+    plugins: [
+      react(),
+      tailwindcss(),
+      VitePWA({
+        registerType: 'autoUpdate',
+        workbox: {
+          // El SW nuevo toma control de inmediato, sin quedar atorado en caché viejo.
+          skipWaiting: true,
+          clientsClaim: true,
+          // Precache (cache-first) de todo el build estático: JS, CSS, HTML,
+          // iconos, SVG e imágenes emitidas por Vite.
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,woff,woff2}'],
+          runtimeCaching: [
+            // API del backend → network-first: siempre intenta la red y, si falla
+            // (offline), sirve la última respuesta GET cacheada. Solo se aplica si
+            // conocemos el origen de la API. NetworkFirst nunca cachea mutaciones
+            // (POST/PATCH/DELETE), solo GET.
+            ...(apiUrlPattern
+              ? [
+                  {
+                    urlPattern: apiUrlPattern,
+                    handler: 'NetworkFirst',
+                    options: {
+                      cacheName: 'kohtun-api',
+                      networkTimeoutSeconds: 10,
+                      expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 }, // 1 día
+                      cacheableResponse: { statuses: [0, 200] },
+                    },
+                  },
+                ]
+              : []),
+            // Imágenes (de cualquier origen) → cache-first, con expiración.
+            {
+              urlPattern: ({ request }) => request.destination === 'image',
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'kohtun-images',
+                expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 }, // 30 días
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            // Hojas de estilo de Google Fonts → stale-while-revalidate.
+            {
+              urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
+              handler: 'StaleWhileRevalidate',
+              options: { cacheName: 'google-fonts-stylesheets' },
+            },
+            // Archivos de fuente de Google Fonts → cache-first (rara vez cambian).
+            {
+              urlPattern: ({ url }) => url.origin === 'https://fonts.gstatic.com',
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'google-fonts-webfonts',
+                expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 }, // 1 año
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+          ],
+        },
+        devOptions: {
+          // Permite probar el service worker en `npm run dev`
+          enabled: true,
+        },
+        manifest: {
+          // `id` estable de la app: PWABuilder recomienda usar el mismo valor
+          // que `start_url` para identificar la instalación de forma única.
+          id: '/',
+          name: 'Kohtun',
+          short_name: 'Kohtun',
+          description: 'Smart Appointment Scheduling',
+          display: 'standalone',
+          orientation: 'portrait',
+          theme_color: '#1e3a5f',
+          background_color: '#ffffff',
+          start_url: '/',
+          // Sin capturas por ahora; se añadirán cuando estén listas para
+          // enriquecer la ficha de instalación.
+          screenshots: [],
+          icons: [
+            {
+              src: '/kohtun-192x192.png',
+              sizes: '192x192',
+              type: 'image/png',
+            },
+            {
+              src: '/kohtun-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+            },
+          ],
+        },
+      }),
+    ],
+  }
 })
