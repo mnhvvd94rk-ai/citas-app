@@ -31,6 +31,11 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        // 'inline' escribe la llamada navigator.serviceWorker.register(...)
+        // DIRECTAMENTE en el <head> del HTML (en vez de un <script src="/registerSW.js">
+        // externo). Así los analizadores que inspeccionan el HTML servido
+        // (como PWABuilder) detectan el registro del service worker.
+        injectRegister: 'inline',
         workbox: {
           // El SW nuevo toma control de inmediato, sin quedar atorado en caché viejo.
           skipWaiting: true,
