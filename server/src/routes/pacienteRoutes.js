@@ -53,8 +53,10 @@ function conResumen({ citas, ...p }) {
 }
 
 // ── GET /pacientes ───────────────────────────────────────────────────────────
+// Solo los clientes del profesional autenticado (aislamiento entre profesionales).
 router.get('/', async (req, res) => {
   const pacientes = await prisma.usuario.findMany({
+    where: { profesionalId: req.user.id },
     select: {
       ...PACIENTE_SELECT,
       citas: {
@@ -163,6 +165,10 @@ router.patch('/:id', async (req, res) => {
 
   const actual = await prisma.usuario.findUnique({ where: { id } })
   if (!actual) return res.status(404).json({ error: 'Cliente no encontrado' })
+  // Solo el profesional dueño puede modificar a este cliente.
+  if (actual.profesionalId !== req.user.id) {
+    return res.status(403).json({ error: 'Este cliente no te pertenece' })
+  }
 
   const data = {}
   if (parsed.data.edadManual !== undefined) data.edadManual = parsed.data.edadManual

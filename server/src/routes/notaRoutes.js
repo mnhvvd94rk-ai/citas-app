@@ -39,6 +39,10 @@ router.post('/', async (req, res) => {
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' })
   }
+  // Solo el profesional dueño del cliente puede añadirle notas.
+  if (paciente.profesionalId !== req.user.id) {
+    return res.status(403).json({ error: 'Este cliente no te pertenece' })
+  }
 
   const nota = await prisma.notaPaciente.create({
     data: { pacienteId: data.pacienteId, medicoId: req.user.id, texto: data.texto },
@@ -53,6 +57,15 @@ router.get('/:pacienteId', async (req, res) => {
   const pacienteId = Number(req.params.pacienteId)
   if (!Number.isInteger(pacienteId)) {
     return res.status(400).json({ error: 'pacienteId inválido' })
+  }
+  // Solo el profesional dueño del cliente puede leer su historial de notas.
+  const paciente = await prisma.usuario.findUnique({
+    where: { id: pacienteId },
+    select: { profesionalId: true },
+  })
+  if (!paciente) return res.status(404).json({ error: 'Cliente no encontrado' })
+  if (paciente.profesionalId !== req.user.id) {
+    return res.status(403).json({ error: 'Este cliente no te pertenece' })
   }
   const notas = await prisma.notaPaciente.findMany({
     where: { pacienteId },
