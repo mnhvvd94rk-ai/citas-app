@@ -96,14 +96,35 @@ export default defineConfig(({ mode }) => {
           name: 'Kohtun',
           short_name: 'Kohtun',
           description: 'Smart Appointment Scheduling',
+          dir: 'ltr',
+          categories: ['business', 'productivity'],
           display: 'standalone',
-          orientation: 'portrait',
+          // `any`: la app se usa tanto en móvil (clientes) como en desktop/tablet
+          // (panel del profesional con sidebar y grids), no se fuerza vertical.
+          orientation: 'any',
           theme_color: '#1e3a5f',
           background_color: '#ffffff',
           start_url: '/',
           // Sin capturas por ahora; se añadirán cuando estén listas para
           // enriquecer la ficha de instalación.
           screenshots: [],
+          // Accesos directos del icono instalado.
+          shortcuts: [
+            {
+              name: 'Ver agenda',
+              short_name: 'Agenda',
+              description: 'Abre tu agenda de citas',
+              url: '/gestor/agenda',
+              icons: [{ src: '/kohtun-192x192.png', sizes: '192x192', type: 'image/png' }],
+            },
+            {
+              name: 'Nueva cita',
+              short_name: 'Nueva cita',
+              description: 'Reserva una nueva cita',
+              url: '/paciente/nueva-cita',
+              icons: [{ src: '/kohtun-192x192.png', sizes: '192x192', type: 'image/png' }],
+            },
+          ],
           icons: [
             {
               src: '/kohtun-192x192.png',
