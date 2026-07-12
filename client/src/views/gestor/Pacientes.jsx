@@ -1,10 +1,65 @@
 import { useEffect, useState } from 'react'
 import { pacientesApi } from '../../services/api.js'
+import { useAuth } from '../../context/AuthContext.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import ImportarClientesModal from '../../components/ImportarClientesModal.jsx'
 import { formatFechaCorta, soloFecha, hoyISO } from '../../lib/format.js'
+
+/** Nombre de archivo seguro: sin acentos, minúsculas, con guiones. */
+function slugArchivo(texto) {
+  return String(texto || 'cliente')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'cliente'
+}
+
+/** Construye el contenido .txt del historial del cliente. */
+function construirHistorialTxt({ cliente, notas, profesionalNombre }) {
+  const nombre = `${cliente.nombre} ${cliente.apellido || ''}`.trim()
+  const notasOrden = [...(notas || [])].sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+  const lineasNotas = notasOrden.length
+    ? notasOrden.map((n) => `[${formatFechaCorta(n.fecha)}] ${n.texto}`).join('\n')
+    : 'Sin notas registradas.'
+
+  return [
+    'HISTORIAL DEL CLIENTE',
+    '=====================',
+    '',
+    `Nombre: ${nombre}`,
+    `Teléfono: ${cliente.telefono || '—'}`,
+    `Correo: ${cliente.correo || '—'}`,
+    `Fecha de registro: ${cliente.fechaRegistro ? formatFechaCorta(cliente.fechaRegistro) : '—'}`,
+    '',
+    `Citas completadas: ${cliente.totalCitasCompletadas ?? 0}`,
+    `Citas anuladas: ${cliente.totalCitasAnuladas ?? 0}`,
+    '',
+    'NOTAS / COMENTARIOS',
+    '-------------------',
+    lineasNotas,
+    '',
+    '---',
+    `Generado por: ${profesionalNombre || '—'}`,
+    `Fecha de generación: ${formatFechaCorta(new Date().toISOString())}`,
+    '',
+  ].join('\n')
+}
+
+/** Descarga un texto como archivo en el navegador del profesional. */
+function descargarTxt(nombreArchivo, contenido) {
+  const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = nombreArchivo
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
 
 const ESTADOS_TRAT = ['ACTIVO', 'COMPLETADO', 'EN_PAUSA']
 
@@ -111,10 +166,13 @@ export default function Pacientes() {
 
 function ClienteCard({ cliente, onEliminado }) {
   const { t } = useLanguage()
+  const { user } = useAuth()
   const [abierto, setAbierto] = useState(false)
   const [confirmando, setConfirmando] = useState(false)
   const [eliminando, setEliminando] = useState(false)
   const [errorDel, setErrorDel] = useState(null)
+  const [descargando, setDescargando] = useState(false)
+  const [histAviso, setHistAviso] = useState(false)
 
   // Estado editable local (se sincroniza con el backend vía PATCH).
   const [edad, setEdad] = useState(cliente.edad)
@@ -157,6 +215,26 @@ function ClienteCard({ cliente, onEliminado }) {
   }
 
   const nombreCompleto = `${cliente.nombre} ${cliente.apellido || ''}`.trim()
+
+  async function descargarHistorial() {
+    setDescargando(true)
+    setHistAviso(false)
+    try {
+      // Trae las notas frescas (orden cronológico se resuelve en el helper).
+      const notas = await pacientesApi.notas(cliente.id).catch(() => [])
+      const contenido = construirHistorialTxt({
+        cliente,
+        notas,
+        profesionalNombre: user?.nombre,
+      })
+      const nombreArchivo = `historial-${slugArchivo(nombreCompleto)}-${hoyISO()}.txt`
+      descargarTxt(nombreArchivo, contenido)
+      setHistAviso(true)
+      setTimeout(() => setHistAviso(false), 4000)
+    } finally {
+      setDescargando(false)
+    }
+  }
 
   async function eliminar() {
     setEliminando(true)
@@ -246,6 +324,23 @@ function ClienteCard({ cliente, onEliminado }) {
                   ? restantes > 0 ? `${t('clients.remaining')}: ${restantes}` : t('clients.inProgress')
                   : ''}
             </p>
+
+            {/* Descargar historial: disponible siempre, resaltado al Completar
+                (recordatorio antes de eliminar al cliente). */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                onClick={descargarHistorial}
+                disabled={descargando}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold transition disabled:opacity-60 ${
+                  estadoTrat === 'COMPLETADO'
+                    ? 'bg-navy-700 text-white shadow-sm hover:bg-navy-800'
+                    : 'border border-navy-300 bg-white text-navy-700 hover:bg-navy-50'
+                }`}
+              >
+                ⬇ {t('clients.downloadHistory')}{descargando ? '…' : ''}
+              </button>
+              {histAviso && <span className="text-sm font-medium text-emerald-600">{t('clients.historyGenerated')}</span>}
+            </div>
           </Section>
 
           {/* SECCIÓN 3 — Resumen de citas */}

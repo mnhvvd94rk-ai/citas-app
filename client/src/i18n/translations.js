@@ -484,6 +484,8 @@ const translations = {
       clientDeleted: '{name} eliminado correctamente',
       cannotDeleteHasPendingAppointments: 'Este cliente tiene citas pendientes. Cancélalas primero.',
       deleting: 'Eliminando…',
+      downloadHistory: 'Descargar historial',
+      historyGenerated: 'Historial descargado',
       // Importar clientes
       selectFileLanguage: '¿En qué idioma están los encabezados de tu archivo?',
       spanish: 'Español',
@@ -1010,6 +1012,8 @@ const translations = {
       clientDeleted: '{name} deleted successfully',
       cannotDeleteHasPendingAppointments: 'This client has pending appointments. Cancel them first.',
       deleting: 'Deleting…',
+      downloadHistory: 'Download history',
+      historyGenerated: 'History downloaded',
       // Import clients
       selectFileLanguage: 'What language are your file headers in?',
       spanish: 'Español',
@@ -1536,6 +1540,8 @@ const translations = {
       clientDeleted: '{name} supprimé avec succès',
       cannotDeleteHasPendingAppointments: 'Ce client a des rendez-vous en attente. Annulez-les d’abord.',
       deleting: 'Suppression…',
+      downloadHistory: 'Télécharger l’historique',
+      historyGenerated: 'Historique téléchargé',
       // Importer des clients
       selectFileLanguage: 'Dans quelle langue sont les en-têtes de votre fichier ?',
       spanish: 'Español',

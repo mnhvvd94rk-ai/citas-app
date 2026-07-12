@@ -89,7 +89,7 @@ export default function Disponibilidad() {
     setErrorForm(null)
     setCreando(true)
     try {
-      await disponibilidadApi.crear(form)
+      await disponibilidadApi.crear({ ...form, duracionSlotMinutos: duracion })
       await cargar()
     } catch (err) {
       setErrorForm(err)
@@ -258,6 +258,17 @@ export default function Disponibilidad() {
               <TimeSelect ariaLabel={t('availability.end')} value={form.horaFin} onChange={(v) => setForm((prev) => ({ ...prev, horaFin: v }))} />
             </div>
           </div>
+          {/* Duración del bloque (mismo selector que el modo rango). */}
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <DuracionField
+              sel={duracionSel}
+              onChangeSel={setDuracionSel}
+              custom={duracionCustom}
+              onChangeCustom={setDuracionCustom}
+              inputCls={inputCls}
+              t={t}
+            />
+          </div>
           {errorForm && <ErrorMessage error={errorForm} className="mt-3" />}
           <button
             type="submit"
@@ -316,42 +327,14 @@ export default function Disponibilidad() {
               <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.endTime')}</label>
               <TimeSelect ariaLabel={t('availability.endTime')} value={rango.horaFin} onChange={(v) => { setResultado(null); setRango((prev) => ({ ...prev, horaFin: v })) }} />
             </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.slotDuration')}</label>
-              <select
-                value={duracionSel}
-                onChange={(e) => {
-                  setResultado(null)
-                  setDuracionSel(e.target.value)
-                }}
-                className={inputCls}
-              >
-                {DURACIONES.map((m) => (
-                  <option key={m} value={String(m)}>
-                    {m} {t('availability.minutes')}
-                  </option>
-                ))}
-                <option value="custom">{t('availability.custom')}</option>
-              </select>
-            </div>
-            {duracionSel === 'custom' && (
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-navy-700">
-                  {t('availability.custom')} ({t('availability.minutes')})
-                </label>
-                <input
-                  type="number"
-                  min={15}
-                  max={180}
-                  value={duracionCustom}
-                  onChange={(e) => {
-                    setResultado(null)
-                    setDuracionCustom(e.target.value)
-                  }}
-                  className={inputCls}
-                />
-              </div>
-            )}
+            <DuracionField
+              sel={duracionSel}
+              onChangeSel={(v) => { setResultado(null); setDuracionSel(v) }}
+              custom={duracionCustom}
+              onChangeCustom={(v) => { setResultado(null); setDuracionCustom(v) }}
+              inputCls={inputCls}
+              t={t}
+            />
           </div>
 
           {/* Resumen previo a confirmar */}
@@ -498,5 +481,40 @@ export default function Disponibilidad() {
         </div>
       )}
     </div>
+  )
+}
+
+// Selector de "Duración del bloque" compartido por los modos "Un día" y "Rango".
+// Renderiza el dropdown de duraciones + el input personalizado ("custom").
+function DuracionField({ sel, onChangeSel, custom, onChangeCustom, inputCls, t }) {
+  return (
+    <>
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('availability.slotDuration')}</label>
+        <select value={sel} onChange={(e) => onChangeSel(e.target.value)} className={inputCls}>
+          {DURACIONES.map((m) => (
+            <option key={m} value={String(m)}>
+              {m} {t('availability.minutes')}
+            </option>
+          ))}
+          <option value="custom">{t('availability.custom')}</option>
+        </select>
+      </div>
+      {sel === 'custom' && (
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-navy-700">
+            {t('availability.custom')} ({t('availability.minutes')})
+          </label>
+          <input
+            type="number"
+            min={15}
+            max={180}
+            value={custom}
+            onChange={(e) => onChangeCustom(e.target.value)}
+            className={inputCls}
+          />
+        </div>
+      )}
+    </>
   )
 }

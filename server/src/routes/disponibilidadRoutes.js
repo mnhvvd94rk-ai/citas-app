@@ -51,13 +51,22 @@ const crearDisponibilidadSchema = z
     fecha: z.string().regex(FECHA_RE, 'Formato esperado YYYY-MM-DD'),
     horaInicio: z.string().regex(HORA_RE, 'Formato esperado HH:mm'),
     horaFin: z.string().regex(HORA_RE, 'Formato esperado HH:mm'),
+    // Duración del bloque con que el slotEngine trocea esta franja. Opcional por
+    // compatibilidad con clientes previos (default 45), igual que el modo rango.
+    duracionSlotMinutos: z
+      .number()
+      .int()
+      .min(15, 'La duración mínima es 15 minutos')
+      .max(180, 'La duración máxima es 180 minutos')
+      .optional()
+      .default(45),
   })
   .refine((d) => aMinutos(d.horaFin) > aMinutos(d.horaInicio), {
     message: 'horaFin debe ser mayor que horaInicio',
     path: ['horaFin'],
   })
-  .refine((d) => aMinutos(d.horaFin) - aMinutos(d.horaInicio) >= 45, {
-    message: 'El rango debe ser de al menos 45 minutos',
+  .refine((d) => aMinutos(d.horaFin) - aMinutos(d.horaInicio) >= d.duracionSlotMinutos, {
+    message: 'El rango debe ser al menos igual a la duración de un bloque',
     path: ['horaFin'],
   })
 
@@ -100,6 +109,7 @@ router.post('/', async (req, res) => {
       fecha: parseFecha(data.fecha),
       horaInicio: data.horaInicio,
       horaFin: data.horaFin,
+      duracionMinutos: data.duracionSlotMinutos,
     },
   })
   res.status(201).json(disponibilidad)
