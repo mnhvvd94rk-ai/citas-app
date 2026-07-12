@@ -229,7 +229,7 @@ function configurarPush() {
   return pushConfigurado
 }
 
-async function enviarPush({ destinatario, asunto, texto }) {
+async function enviarPush({ destinatario, asunto, texto, url }) {
   if (!configurarPush()) {
     console.warn('[notificationService] Push sin VAPID keys; se marca FALLIDO.')
     return { ok: false, error: 'VAPID keys no configuradas' }
@@ -240,11 +240,13 @@ async function enviarPush({ destinatario, asunto, texto }) {
   try {
     await webpush.sendNotification(
       destinatario.pushSubscription,
-      JSON.stringify({ title: asunto, body: texto }),
+      JSON.stringify({ title: asunto, body: texto, url: url || '/' }),
     )
     return { ok: true }
   } catch (e) {
-    return { ok: false, error: e.message }
+    // statusCode 404/410 = suscripción expirada o dada de baja: el llamador
+    // puede usarlo para limpiarla de la base de datos.
+    return { ok: false, error: e.message, statusCode: e.statusCode }
   }
 }
 
@@ -285,7 +287,7 @@ async function send({ tipo, canal, idioma = 'ES', destinatario, payload }) {
     } else if (canal === 'WHATSAPP') {
       resultado = await enviarWhatsApp({ destinatario, texto })
     } else if (canal === 'PUSH') {
-      resultado = await enviarPush({ destinatario, asunto, texto })
+      resultado = await enviarPush({ destinatario, asunto, texto, url: destinatario.pushUrl })
     } else {
       resultado = { ok: false, error: `Canal desconocido: ${canal}` }
     }
@@ -304,7 +306,7 @@ async function send({ tipo, canal, idioma = 'ES', destinatario, payload }) {
       console.error(
         `[notificationService] Notificación ${notificacion.id} FALLIDA: ${resultado.error}`,
       )
-      return { ok: false, error: resultado.error, notificacionId: notificacion.id }
+      return { ok: false, error: resultado.error, statusCode: resultado.statusCode, notificacionId: notificacion.id }
     }
     return { ok: true, notificacionId: notificacion.id, previewUrl: resultado.previewUrl }
   } catch (err) {

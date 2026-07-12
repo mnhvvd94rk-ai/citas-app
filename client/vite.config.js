@@ -40,6 +40,9 @@ export default defineConfig(({ mode }) => {
           // El SW nuevo toma control de inmediato, sin quedar atorado en caché viejo.
           skipWaiting: true,
           clientsClaim: true,
+          // Inyecta los listeners de Web Push (push / notificationclick) en el SW
+          // generado. push-sw.js vive en public/ y se sirve en la raíz del sitio.
+          importScripts: ['/push-sw.js'],
           // Precache (cache-first) de todo el build estático: JS, CSS, HTML,
           // iconos, SVG e imágenes emitidas por Vite.
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,woff,woff2}'],

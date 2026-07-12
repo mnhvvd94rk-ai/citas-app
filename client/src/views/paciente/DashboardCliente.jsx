@@ -8,6 +8,7 @@ import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import EstadoBadge from '../../components/EstadoBadge.jsx'
 import JoinVideoButton from '../../components/JoinVideoButton.jsx'
+import PushToggle from '../../components/PushToggle.jsx'
 import { hoyISO, soloFecha, formatFechaLarga, formatFechaCorta } from '../../lib/format.js'
 
 const esActiva = (c) => ['PENDIENTE', 'CONFIRMADA'].includes(c.estado)
@@ -131,9 +132,12 @@ export default function DashboardCliente() {
     <div className="min-h-screen bg-gradient-to-b from-white to-slate-50">
       <Navbar />
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <h1 className="text-2xl font-bold tracking-tight text-navy-800">
-          {t('clientDash.welcome')}, {user?.nombre}
-        </h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold tracking-tight text-navy-800">
+            {t('clientDash.welcome')}, {user?.nombre}
+          </h1>
+          <PushToggle />
+        </div>
 
         {aviso && (
           <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">

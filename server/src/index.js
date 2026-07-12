@@ -11,6 +11,7 @@ import notaRouter from './routes/notaRoutes.js'
 import notaCitaRouter from './routes/notaCitaRoutes.js'
 import medicoRouter from './routes/medicoRoutes.js'
 import contactoRouter from './routes/contactoRoutes.js'
+import pushRouter from './routes/pushRoutes.js'
 import { runDailySummary } from './jobs/dailySummary.js'
 import notificacionesJob from './jobs/notificacionesAutomaticas.js'
 
@@ -38,6 +39,7 @@ app.use('/notas', notaRouter)
 app.use('/notas-por-cita', notaCitaRouter)
 app.use('/medicos', medicoRouter)
 app.use('/contacto', contactoRouter)
+app.use('/push', pushRouter)
 
 app.get('/', (req, res) => {
   res.json({ message: 'Citas App API — hola mundo' })

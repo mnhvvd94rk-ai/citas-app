@@ -184,6 +184,13 @@ const translations = {
       save: 'Guardar',
       saving: 'Guardando…',
     },
+    push: {
+      enable: 'Activar notificaciones',
+      enabled: 'Notificaciones activadas',
+      working: 'Un momento…',
+      blocked: 'Notificaciones bloqueadas. Actívalas en los ajustes del navegador.',
+      iosInstall: 'Para activar notificaciones en iPhone, primero instala esta app desde el botón compartir → Añadir a pantalla de inicio.',
+    },
     activate: {
       accountNotActivated: '¿No has activado tu cuenta?',
       activateHereLink: 'Actívala aquí',
@@ -700,6 +707,13 @@ const translations = {
       save: 'Save',
       saving: 'Saving…',
     },
+    push: {
+      enable: 'Enable notifications',
+      enabled: 'Notifications on',
+      working: 'One moment…',
+      blocked: 'Notifications are blocked. Enable them in your browser settings.',
+      iosInstall: 'To enable notifications on iPhone, first install this app from the Share button → Add to Home Screen.',
+    },
     activate: {
       accountNotActivated: "Haven't activated your account?",
       activateHereLink: 'Activate it here',
@@ -1213,6 +1227,13 @@ const translations = {
       placeholder: 'votre-lien',
       save: 'Enregistrer',
       saving: 'Enregistrement…',
+    },
+    push: {
+      enable: 'Activer les notifications',
+      enabled: 'Notifications activées',
+      working: 'Un instant…',
+      blocked: 'Notifications bloquées. Activez-les dans les réglages du navigateur.',
+      iosInstall: 'Pour activer les notifications sur iPhone, installez d’abord cette app via le bouton Partager → Sur l’écran d’accueil.',
     },
     activate: {
       accountNotActivated: 'Vous n’avez pas activé votre compte ?',

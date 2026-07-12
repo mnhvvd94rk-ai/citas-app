@@ -163,4 +163,12 @@ export const contactoApi = {
   enviar: (payload) => request('/contacto', { method: 'POST', body: payload, auth: false }),
 }
 
+// ── Web Push ─────────────────────────────────────────────────────────────────
+export const pushApi = {
+  // `subscription` es el objeto que devuelve pushManager.subscribe().toJSON().
+  subscribe: (subscription) => request('/push/subscribe', { method: 'POST', body: subscription }),
+  unsubscribe: (endpoint) =>
+    request('/push/unsubscribe', { method: 'DELETE', body: { endpoint } }),
+}
+
 export { BASE_URL }

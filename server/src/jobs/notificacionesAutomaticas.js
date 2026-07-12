@@ -82,6 +82,41 @@ export async function ejecutar(ahora = new Date()) {
           if (r.ok) { algunOk = true; enviados++ } else { fallidos++; console.error(`[notificacionesAutomaticas] cita ${cita.id} ${marca.tipo} WHATSAPP falló: ${r.error}`) }
         }
 
+        // 3) PUSH (Web Push) — a las suscripciones del cliente y del profesional.
+        // Canal independiente: un fallo aquí (p.ej. suscripción expirada) no afecta
+        // a Email/WhatsApp. Las suscripciones caducadas (404/410) se eliminan.
+        const pushTargets = [
+          { where: { clienteId: cita.paciente.id }, tipoDestinatario: 'PACIENTE', id: cita.paciente.id, pushUrl: '/paciente/citas' },
+          { where: { profesionalId: cita.medicoId }, tipoDestinatario: 'MEDICO', id: cita.medicoId, pushUrl: '/gestor/agenda' },
+        ]
+        for (const target of pushTargets) {
+          const subs = await prisma.pushSubscription.findMany({ where: target.where })
+          for (const sub of subs) {
+            const r = await notificationService.send({
+              tipo: 'RECORDATORIO_CITA',
+              canal: 'PUSH',
+              idioma,
+              destinatario: {
+                id: target.id,
+                tipoDestinatario: target.tipoDestinatario,
+                pushSubscription: { endpoint: sub.endpoint, keys: sub.keys },
+                pushUrl: target.pushUrl,
+              },
+              payload,
+            })
+            if (r.ok) {
+              algunOk = true
+              enviados++
+            } else {
+              fallidos++
+              console.error(`[notificacionesAutomaticas] cita ${cita.id} ${marca.tipo} PUSH falló: ${r.error}`)
+              if (r.statusCode === 404 || r.statusCode === 410) {
+                await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {})
+              }
+            }
+          }
+        }
+
         if (algunOk) {
           await prisma.notificacionEnviada.create({ data: { citaId: cita.id, tipo: marca.tipo } })
         }

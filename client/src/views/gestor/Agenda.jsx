@@ -6,6 +6,7 @@ import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import EstadoBadge from '../../components/EstadoBadge.jsx'
 import JoinVideoButton from '../../components/JoinVideoButton.jsx'
+import PushToggle from '../../components/PushToggle.jsx'
 import { hoyISO, soloFecha } from '../../lib/format.js'
 
 // Dominio público donde vive el enlace de registro que el profesional comparte.
@@ -116,7 +117,10 @@ export default function Agenda() {
 
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold tracking-tight text-navy-800">{t('agenda.title')}</h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold tracking-tight text-navy-800">{t('agenda.title')}</h1>
+        <PushToggle />
+      </div>
 
       <EnlaceReserva />
 

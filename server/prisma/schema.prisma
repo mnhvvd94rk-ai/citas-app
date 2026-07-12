@@ -83,6 +83,7 @@ model Usuario {
 
   citas              Cita[]
   notas              NotaPaciente[]
+  pushSubscriptions  PushSubscription[]
 
   @@index([profesionalId])
 }
@@ -112,6 +113,27 @@ model Medico {
   citas            Cita[]
   notas            NotaPaciente[]
   clientes         Usuario[]
+  pushSubscriptions PushSubscription[]
+}
+
+/// Suscripción Web Push de un dispositivo/navegador. Un mismo dispositivo puede
+/// pertenecer a un cliente (Usuario) o a un profesional (Medico) según quién
+/// activó las notificaciones desde su panel; por eso ambas relaciones son
+/// opcionales (una suscripción concreta lleva una u otra). `keys` guarda el par
+/// { p256dh, auth } que devuelve el navegador. `endpoint` identifica de forma
+/// única a la suscripción.
+model PushSubscription {
+  id            Int      @id @default(autoincrement())
+  endpoint      String   @unique
+  keys          Json
+  cliente       Usuario? @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  clienteId     Int?
+  profesional   Medico?  @relation(fields: [profesionalId], references: [id], onDelete: Cascade)
+  profesionalId Int?
+  createdAt     DateTime @default(now())
+
+  @@index([clienteId])
+  @@index([profesionalId])
 }
 
 /// Rango de disponibilidad de un médico en un día. El slotEngine lo trocea
