@@ -105,9 +105,23 @@ export default defineConfig(({ mode }) => {
           theme_color: '#1e3a5f',
           background_color: '#ffffff',
           start_url: '/',
-          // Sin capturas por ahora; se añadirán cuando estén listas para
-          // enriquecer la ficha de instalación.
-          screenshots: [],
+          // Capturas reales de la landing (generadas con Playwright headless).
+          screenshots: [
+            {
+              src: '/screenshots/mobile-landing.png',
+              sizes: '390x844',
+              type: 'image/png',
+              form_factor: 'narrow',
+              label: 'Kohtun en móvil',
+            },
+            {
+              src: '/screenshots/desktop-landing.png',
+              sizes: '1920x1080',
+              type: 'image/png',
+              form_factor: 'wide',
+              label: 'Kohtun en escritorio',
+            },
+          ],
           // Accesos directos del icono instalado.
           shortcuts: [
             {

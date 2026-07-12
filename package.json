@@ -12,5 +12,8 @@
     "dev:server": "npm run dev --workspace server",
     "build": "npm run build:client",
     "build:client": "npm run build --workspace client"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
   }
 }
