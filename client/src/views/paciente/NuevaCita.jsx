@@ -38,7 +38,7 @@ export default function NuevaCita() {
     setCargandoMedico(true)
     setErrorMedico(null)
     try {
-      setMedico(await medicosApi.primero())
+      setMedico(await medicosApi.miProfesional())
     } catch (err) {
       setErrorMedico(err)
     } finally {

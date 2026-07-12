@@ -73,14 +73,32 @@ const anularSchema = z.object({
 })
 
 // ── GET /citas/slots-disponibles ─────────────────────────────────────────────
-// Cualquier usuario autenticado (paciente o médico).
+// El profesional se determina SIEMPRE en el servidor a partir del usuario
+// autenticado (nunca del query), para que un cliente solo pueda ver la
+// disponibilidad de su propio profesional:
+//   - PACIENTE → su profesionalId.
+//   - MEDICO   → su propio id.
+// El `medicoId` del query se ignora (defensa: no permite espiar a otro profesional).
 router.get('/slots-disponibles', requireAuth, async (req, res) => {
-  const medicoId = Number(req.query.medicoId)
   const fecha = req.query.fecha
 
-  if (!Number.isInteger(medicoId) || medicoId <= 0) {
-    return res.status(400).json({ error: 'medicoId es obligatorio y debe ser un entero' })
+  let medicoId
+  if (req.user.tipo === 'PACIENTE') {
+    const cliente = await prisma.usuario.findUnique({
+      where: { id: req.user.id },
+      select: { profesionalId: true },
+    })
+    if (!cliente?.profesionalId) {
+      return res.status(404).json({
+        error: 'Tu cuenta no está vinculada a ningún profesional.',
+        code: 'SIN_PROFESIONAL',
+      })
+    }
+    medicoId = cliente.profesionalId
+  } else {
+    medicoId = req.user.id
   }
+
   if (!fecha || !FECHA_RE.test(fecha)) {
     return res.status(400).json({ error: 'fecha es obligatoria (YYYY-MM-DD)' })
   }
@@ -104,6 +122,20 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
   const paciente = await prisma.usuario.findUnique({ where: { id: req.user.id } })
   if (!paciente) return res.status(404).json({ error: 'Paciente no encontrado' })
 
+  // a.2) El profesional se determina por el vínculo del cliente, NO por el body.
+  //      Así un cliente solo puede reservar con su propio profesional aunque
+  //      manipule el medicoId enviado.
+  if (!paciente.profesionalId) {
+    return res.status(400).json({
+      error: 'Tu cuenta no está vinculada a ningún profesional.',
+      code: 'SIN_PROFESIONAL',
+    })
+  }
+  if (data.medicoId !== paciente.profesionalId) {
+    return res.status(403).json({ error: 'No puedes reservar con este profesional.' })
+  }
+  const medicoId = paciente.profesionalId
+
   // b) Paciente NUEVO requiere motivo de consulta.
   if (paciente.estado === 'NUEVO' && !data.motivoConsulta) {
     return res
@@ -114,8 +146,8 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
   // c) Disponibilidades y citas del médico para esa fecha.
   const fechaDate = parseFecha(data.fecha)
   const [disponibilidades, citas] = await Promise.all([
-    prisma.disponibilidad.findMany({ where: { medicoId: data.medicoId, fecha: fechaDate } }),
-    prisma.cita.findMany({ where: { medicoId: data.medicoId, fecha: fechaDate } }),
+    prisma.disponibilidad.findMany({ where: { medicoId, fecha: fechaDate } }),
+    prisma.cita.findMany({ where: { medicoId, fecha: fechaDate } }),
   ])
 
   // d) Slots libres + e) validación de reglas de negocio.
@@ -145,7 +177,7 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
   // h.2) Penalización por cancelación: se copia de la configuración del médico.
   //      Si la cita es doble (2 slots), la anticipación requerida se dobla.
   const medico = await prisma.medico.findUnique({
-    where: { id: data.medicoId },
+    where: { id: medicoId },
     select: { costoCancelacion: true, diasAnticipacionRequierida: true },
   })
   const esDoble = numeroSlots === 2
@@ -157,7 +189,7 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
   let cita = await prisma.cita.create({
     data: {
       pacienteId: paciente.id,
-      medicoId: data.medicoId,
+      medicoId,
       fecha: fechaDate,
       horaInicio,
       horaFin,

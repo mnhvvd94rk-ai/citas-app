@@ -6,16 +6,26 @@ import { slugify } from '../services/slug.js'
 
 const router = Router()
 
-// La app es una agenda personal: hay UN solo profesional. Este endpoint
-// devuelve el primero registrado para que el cliente reserve con él sin tener
-// que elegirlo. Cualquier usuario autenticado (cliente o profesional) puede leerlo.
-router.get('/primero', requireAuth, async (req, res) => {
-  const medico = await prisma.medico.findFirst({
-    orderBy: { id: 'asc' },
+// GET /medicos/mi-profesional — devuelve el profesional al que está vinculado el
+// cliente autenticado (por su profesionalId). Cada cliente reserva SOLO con su
+// profesional; nunca se expone ni se asume "el primero" de la tabla.
+router.get('/mi-profesional', requireAuth, requireRole('PACIENTE'), async (req, res) => {
+  const cliente = await prisma.usuario.findUnique({
+    where: { id: req.user.id },
+    select: { profesionalId: true },
+  })
+  if (!cliente?.profesionalId) {
+    return res.status(404).json({
+      error: 'Tu cuenta no está vinculada a ningún profesional.',
+      code: 'SIN_PROFESIONAL',
+    })
+  }
+  const medico = await prisma.medico.findUnique({
+    where: { id: cliente.profesionalId },
     select: { id: true, nombre: true, especialidad: true, telefono: true, correo: true },
   })
   if (!medico) {
-    return res.status(404).json({ error: 'No hay ningún profesional registrado todavía' })
+    return res.status(404).json({ error: 'Profesional no encontrado' })
   }
   res.json(medico)
 })

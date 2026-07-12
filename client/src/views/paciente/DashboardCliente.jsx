@@ -34,7 +34,7 @@ export default function DashboardCliente() {
     try {
       const [cs, m] = await Promise.all([
         citasApi.misCitas(),
-        medicosApi.primero().catch(() => null),
+        medicosApi.miProfesional().catch(() => null),
       ])
       setCitas(cs)
       setMedico(m)

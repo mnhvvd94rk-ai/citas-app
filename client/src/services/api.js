@@ -95,7 +95,8 @@ export const authApi = {
 
 // ── Profesional ──────────────────────────────────────────────────────────────
 export const medicosApi = {
-  primero: () => request('/medicos/primero'),
+  // Profesional vinculado al cliente autenticado (por su profesionalId).
+  miProfesional: () => request('/medicos/mi-profesional'),
   // Resuelve un enlace público /reservar/:slug al profesional correspondiente.
   porSlug: (slug) => request(`/medicos/slug/${encodeURIComponent(slug)}`, { auth: false }),
   // Edita (una sola vez) el slug del profesional autenticado.
