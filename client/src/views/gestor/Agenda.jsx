@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { citasApi, disponibilidadApi } from '../../services/api.js'
+import { citasApi, disponibilidadApi, medicosApi } from '../../services/api.js'
+import { useAuth } from '../../context/AuthContext.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import EstadoBadge from '../../components/EstadoBadge.jsx'
 import JoinVideoButton from '../../components/JoinVideoButton.jsx'
 import { hoyISO, soloFecha } from '../../lib/format.js'
+
+// Dominio público donde vive el enlace de registro que el profesional comparte.
+const PUBLIC_ORIGIN = 'https://kohtun.com'
 
 const pad = (n) => String(n).padStart(2, '0')
 const ymd = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
@@ -114,6 +118,8 @@ export default function Agenda() {
     <div>
       <h1 className="mb-4 text-2xl font-bold tracking-tight text-navy-800">{t('agenda.title')}</h1>
 
+      <EnlaceReserva />
+
       {error && <ErrorMessage error={error} onRetry={cargar} className="mb-4" />}
 
       <div className="flex flex-col gap-5 lg:flex-row">
@@ -213,6 +219,123 @@ export default function Agenda() {
           formatDay={formatDayLong}
         />
       )}
+    </div>
+  )
+}
+
+// ── Bloque del enlace propio de registro de clientes ─────────────────────────
+// Muestra https://kohtun.com/reservar/<slug> con botón para copiarlo y una
+// edición única del slug (validada en el backend).
+function EnlaceReserva() {
+  const { user, refreshUser } = useAuth()
+  const { t } = useLanguage()
+  const [copiado, setCopiado] = useState(false)
+  const [editando, setEditando] = useState(false)
+  const [valor, setValor] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState(null)
+
+  const slug = user?.slug
+  if (!slug) return null // profesionales previos sin slug: nada que mostrar
+
+  const enlace = `${PUBLIC_ORIGIN}/reservar/${slug}`
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(enlace)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      setError({ message: t('shareLink.copyError') })
+    }
+  }
+
+  function abrirEdicion() {
+    setValor(slug)
+    setError(null)
+    setEditando(true)
+  }
+
+  async function guardar() {
+    setError(null)
+    setGuardando(true)
+    try {
+      await medicosApi.editarSlug(valor.trim())
+      await refreshUser()
+      setEditando(false)
+    } catch (err) {
+      setError(err)
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+      <div className="flex items-start gap-2">
+        <span aria-hidden className="text-lg">🔗</span>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold text-navy-800">{t('shareLink.title')}</h2>
+          <p className="mt-0.5 text-xs text-navy-500">{t('shareLink.desc')}</p>
+
+          {!editando ? (
+            <>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <code className="min-w-0 flex-1 truncate rounded-lg bg-navy-50 px-3 py-2 text-sm text-navy-700">
+                  {enlace}
+                </code>
+                <button
+                  onClick={copiar}
+                  className="shrink-0 rounded-lg bg-navy-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-navy-800"
+                >
+                  {copiado ? t('shareLink.copied') : t('shareLink.copy')}
+                </button>
+              </div>
+              {!user?.slugEditado && (
+                <button
+                  onClick={abrirEdicion}
+                  className="mt-2 text-xs font-medium text-brand-600 hover:underline"
+                >
+                  {t('shareLink.edit')}
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="mt-3">
+              <p className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                {t('shareLink.editOnceWarning')}
+              </p>
+              <div className="flex items-stretch gap-2">
+                <span className="flex items-center rounded-lg bg-navy-50 px-2 text-xs text-navy-400">
+                  {PUBLIC_ORIGIN}/reservar/
+                </span>
+                <input
+                  value={valor}
+                  onChange={(e) => setValor(e.target.value)}
+                  placeholder={t('shareLink.placeholder')}
+                  className="min-w-0 flex-1 rounded-lg border border-navy-200 px-3 py-2 text-sm text-navy-900 focus:border-navy-500 focus:ring-2 focus:ring-navy-100 focus:outline-none"
+                />
+              </div>
+              {error && <ErrorMessage error={error} className="mt-2" />}
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={guardar}
+                  disabled={guardando || !valor.trim()}
+                  className="rounded-lg bg-navy-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-navy-800 disabled:bg-navy-300"
+                >
+                  {guardando ? t('shareLink.saving') : t('shareLink.save')}
+                </button>
+                <button
+                  onClick={() => { setEditando(false); setError(null) }}
+                  className="rounded-lg border border-navy-200 px-4 py-2 text-sm font-medium text-navy-600 hover:bg-navy-50"
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

@@ -105,6 +105,9 @@ router.post('/importar', async (req, res) => {
   let duplicados = 0
   let errores = 0
 
+  // Los clientes importados quedan vinculados al profesional que los importa.
+  const profesionalId = req.user.id
+
   for (const c of parsed.data.clientes) {
     const correo = c.correo ? c.correo.toLowerCase() : `importado-${randomUUID()}@sin-correo.local`
     try {
@@ -118,6 +121,7 @@ router.post('/importar', async (req, res) => {
           passwordHash: null, // sin contraseña: la crea el cliente al activar
           cuentaActivada: false,
           estado: 'NUEVO',
+          profesionalId,
         },
       })
       creados++

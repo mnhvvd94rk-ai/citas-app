@@ -93,9 +93,13 @@ export const authApi = {
     request('/auth/completar-activacion', { method: 'POST', body: { token, password }, auth: false }),
 }
 
-// ── Profesional (agenda personal: hay uno solo) ──────────────────────────────
+// ── Profesional ──────────────────────────────────────────────────────────────
 export const medicosApi = {
   primero: () => request('/medicos/primero'),
+  // Resuelve un enlace público /reservar/:slug al profesional correspondiente.
+  porSlug: (slug) => request(`/medicos/slug/${encodeURIComponent(slug)}`, { auth: false }),
+  // Edita (una sola vez) el slug del profesional autenticado.
+  editarSlug: (slug) => request('/medicos/mi-slug', { method: 'PATCH', body: { slug } }),
 }
 
 // ── Citas ────────────────────────────────────────────────────────────────────

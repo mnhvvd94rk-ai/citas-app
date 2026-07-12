@@ -73,8 +73,18 @@ model Usuario {
   estadoTratamiento       String    @default("ACTIVO") // ACTIVO | COMPLETADO | EN_PAUSA
   tratamientoFinalizadoEn DateTime? // fecha en que se marcó COMPLETADO
 
+  // Profesional al que pertenece este cliente. Cada profesional tiene su propio
+  // espacio aislado con sus propios clientes: el cliente queda vinculado al
+  // registrarse desde el enlace público del profesional (/reservar/:slug) o al
+  // ser importado por él. Nullable por compatibilidad con filas antiguas; los
+  // registros nuevos siempre lo llevan (no se permiten clientes sin profesional).
+  profesional        Medico?        @relation(fields: [profesionalId], references: [id])
+  profesionalId      Int?
+
   citas              Cita[]
   notas              NotaPaciente[]
+
+  @@index([profesionalId])
 }
 
 /// Gestor / médico.
@@ -86,6 +96,14 @@ model Medico {
   correo           String           @unique
   passwordHash     String
 
+  // Identificador público para su enlace de registro de clientes
+  // (https://kohtun.com/reservar/<slug>). Se genera automáticamente a partir
+  // del nombre al registrarse, con sufijo numérico si ya existe. Editable una
+  // sola vez desde el panel; `slugEditado` marca que esa edición ya se usó.
+  // Nullable solo por compatibilidad con filas previas a este campo.
+  slug             String?          @unique
+  slugEditado      Boolean          @default(false)
+
   // Configuración de penalización por cancelación tardía (por defecto):
   costoCancelacion           Float @default(0)
   diasAnticipacionRequierida Int   @default(7)
@@ -93,6 +111,7 @@ model Medico {
   disponibilidades Disponibilidad[]
   citas            Cita[]
   notas            NotaPaciente[]
+  clientes         Usuario[]
 }
 
 /// Rango de disponibilidad de un médico en un día. El slotEngine lo trocea

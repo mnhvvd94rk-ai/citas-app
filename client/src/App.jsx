@@ -54,6 +54,11 @@ export default function App() {
         <Route path="/nuestra-historia" element={<HistoriaPage />} />
         {/* Rutas de cliente: /*-cliente son las canónicas; /*-paciente se
             mantienen como alias para no romper enlaces guardados/compartidos. */}
+        {/* Registro de cliente vinculado a un profesional por su enlace propio.
+            El profesionalId viaja implícito en el slug de la URL. */}
+        <Route path="/reservar/:slug" element={<RegistroPaciente />} />
+        {/* Rutas genéricas (sin slug): ya no permiten crear clientes huérfanos;
+            muestran un aviso pidiendo el enlace del profesional. */}
         <Route path="/registro-cliente" element={<RegistroPaciente />} />
         <Route path="/registro-paciente" element={<RegistroPaciente />} />
         <Route path="/registro-profesional" element={<RegistroProfesional />} />

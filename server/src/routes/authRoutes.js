@@ -10,6 +10,7 @@ import {
 } from '../services/authService.js'
 import { enviarEmailActivacion } from '../services/emailService.js'
 import { requireAuth } from '../middleware/authMiddleware.js'
+import { generarSlugUnico } from '../services/slug.js'
 
 // Base del frontend para construir el enlace de activación.
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://citas-app-client.vercel.app'
@@ -26,6 +27,10 @@ const registroPacienteSchema = z.object({
   password: z.string().min(6),
   fotoIdentidadUrl: z.string().url().optional(),
   firmaUrl: z.string().url().optional(),
+  // Enlace del profesional desde el que llega el cliente (/reservar/:slug).
+  // Obligatorio: un cliente siempre queda vinculado a un profesional; no se
+  // permiten registros "huérfanos" sin profesional asociado.
+  slug: z.string().min(1),
 })
 
 const registroMedicoSchema = z.object({
@@ -73,6 +78,16 @@ router.post('/registro-paciente', async (req, res) => {
   const data = parseOr400(registroPacienteSchema, req.body, res)
   if (!data) return
 
+  // Resuelve el profesional a partir del slug del enlace. Si el slug no existe,
+  // no se crea la cuenta: el cliente necesita el enlace válido de su profesional.
+  const profesional = await prisma.medico.findUnique({ where: { slug: data.slug } })
+  if (!profesional) {
+    return res.status(404).json({
+      error: 'El enlace de registro no es válido. Solicita a tu profesional su enlace de registro.',
+      code: 'SLUG_INVALIDO',
+    })
+  }
+
   try {
     const passwordHash = await hashPassword(data.password)
     const usuario = await prisma.usuario.create({
@@ -86,6 +101,7 @@ router.post('/registro-paciente', async (req, res) => {
         fotoIdentidadUrl: data.fotoIdentidadUrl,
         firmaUrl: data.firmaUrl,
         estado: 'NUEVO',
+        profesionalId: profesional.id,
       },
     })
     const token = signToken({ id: usuario.id, tipo: 'PACIENTE' })
@@ -106,6 +122,12 @@ router.post('/registro-medico', async (req, res) => {
 
   try {
     const passwordHash = await hashPassword(data.password)
+    // Slug único para su enlace público de registro de clientes, derivado del
+    // nombre (con sufijo -2, -3… si ya está ocupado).
+    const slug = await generarSlugUnico(
+      data.nombre,
+      async (s) => (await prisma.medico.count({ where: { slug: s } })) > 0,
+    )
     const medico = await prisma.medico.create({
       data: {
         nombre: data.nombre,
@@ -113,6 +135,7 @@ router.post('/registro-medico', async (req, res) => {
         telefono: data.telefono,
         correo: data.correo,
         passwordHash,
+        slug,
         ...(data.costoCancelacion !== undefined && { costoCancelacion: data.costoCancelacion }),
         ...(data.diasAnticipacionRequierida !== undefined && {
           diasAnticipacionRequierida: data.diasAnticipacionRequierida,

@@ -1,22 +1,53 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { authApi } from '../services/api.js'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { authApi, medicosApi } from '../services/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
 import CameraCapture from '../components/CameraCapture.jsx'
 import SignaturePad from '../components/SignaturePad.jsx'
 import ErrorMessage from '../components/ErrorMessage.jsx'
 import LanguageSelector from '../components/LanguageSelector.jsx'
+import Spinner from '../components/Spinner.jsx'
 
 const N_STEPS = 6
 
 export default function RegistroPaciente() {
   const navigate = useNavigate()
+  const { slug } = useParams() // presente solo en /reservar/:slug
   const { login } = useAuth()
   const { t } = useLanguage()
   const [paso, setPaso] = useState(0)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState(null)
+
+  // Resolución del enlace del profesional. Sin slug no se puede registrar: un
+  // cliente siempre nace vinculado al profesional dueño del enlace.
+  // estadoEnlace: 'sin-enlace' | 'cargando' | 'ok' | 'invalido'
+  const [estadoEnlace, setEstadoEnlace] = useState(slug ? 'cargando' : 'sin-enlace')
+  const [profesional, setProfesional] = useState(null)
+
+  useEffect(() => {
+    if (!slug) {
+      setEstadoEnlace('sin-enlace')
+      return
+    }
+    let cancelado = false
+    setEstadoEnlace('cargando')
+    medicosApi
+      .porSlug(slug)
+      .then((prof) => {
+        if (cancelado) return
+        setProfesional(prof)
+        setEstadoEnlace('ok')
+      })
+      .catch(() => {
+        if (cancelado) return
+        setEstadoEnlace('invalido')
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [slug])
 
   const [foto, setFoto] = useState(null)
   const [firma, setFirma] = useState(null)
@@ -79,6 +110,7 @@ export default function RegistroPaciente() {
         password: cuenta.password,
         fotoIdentidadUrl: foto || undefined,
         firmaUrl: firma || undefined,
+        slug, // vincula el nuevo cliente al profesional dueño del enlace
       }
       const res = await authApi.registroPaciente(payload)
       login(res.token, res)
@@ -93,6 +125,28 @@ export default function RegistroPaciente() {
   const inputCls =
     'w-full rounded-xl border border-navy-200 px-4 py-3 text-navy-900 transition focus:border-navy-500 focus:ring-4 focus:ring-navy-100 focus:outline-none'
 
+  // Sin enlace de profesional (ruta genérica) o enlace inválido/caducado: no se
+  // permite el registro. Se explica que hace falta el enlace propio del profesional.
+  if (estadoEnlace === 'sin-enlace' || estadoEnlace === 'invalido') {
+    const esInvalido = estadoEnlace === 'invalido'
+    return (
+      <AvisoEnlace
+        t={t}
+        titulo={esInvalido ? t('reservar.invalidTitle') : t('reservar.needLinkTitle')}
+        mensaje={esInvalido ? t('reservar.invalidMsg') : t('reservar.needLinkMsg')}
+      />
+    )
+  }
+
+  // Resolviendo el enlace del profesional.
+  if (estadoEnlace === 'cargando') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-navy-50">
+        <Spinner label={t('reservar.checking')} />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-navy-50 pb-24">
       <header className="bg-navy-800 px-4 py-3 text-white">
@@ -104,6 +158,21 @@ export default function RegistroPaciente() {
       </header>
 
       <div className="mx-auto max-w-lg px-4">
+        {profesional && (
+          <div className="mt-5 rounded-2xl bg-white px-5 py-4 text-center shadow-sm ring-1 ring-navy-100">
+            <p className="text-sm text-navy-500">{t('reservar.withPro')}</p>
+            <p className="text-lg font-bold text-navy-800">{profesional.nombre}</p>
+            {profesional.especialidad && (
+              <p className="text-xs text-navy-400">{profesional.especialidad}</p>
+            )}
+            <p className="mt-2 text-xs text-navy-500">
+              {t('reservar.haveAccount')}{' '}
+              <Link to="/login-cliente" className="font-semibold text-brand-600 hover:underline">
+                {t('reservar.login')}
+              </Link>
+            </p>
+          </div>
+        )}
         <div className="my-5">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-navy-100">
             <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${((paso + 1) / N_STEPS) * 100}%` }} />
@@ -220,6 +289,36 @@ export default function RegistroPaciente() {
               {t('register.continue')}
             </button>
           )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Pantalla mostrada cuando no hay un enlace de profesional válido: sin él no se
+// puede crear una cuenta de cliente.
+function AvisoEnlace({ t, titulo, mensaje }) {
+  return (
+    <div className="flex min-h-screen flex-col bg-navy-50 px-6 py-8">
+      <div className="flex items-center justify-between">
+        <Link to="/" className="text-sm font-medium text-navy-500 hover:text-navy-700">
+          ← {t('common.back')}
+        </Link>
+        <LanguageSelector />
+      </div>
+      <div className="flex flex-1 items-center justify-center">
+        <div className="w-full max-w-sm rounded-2xl bg-white p-7 text-center shadow-xl shadow-navy-900/5 ring-1 ring-navy-100">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-2xl">
+            🔗
+          </div>
+          <h1 className="mb-2 text-xl font-bold text-navy-800">{titulo}</h1>
+          <p className="mb-6 text-sm text-navy-500">{mensaje}</p>
+          <p className="text-sm text-navy-500">
+            {t('reservar.haveAccount')}{' '}
+            <Link to="/login-cliente" className="font-semibold text-brand-600 hover:underline">
+              {t('reservar.login')}
+            </Link>
+          </p>
         </div>
       </div>
     </div>
