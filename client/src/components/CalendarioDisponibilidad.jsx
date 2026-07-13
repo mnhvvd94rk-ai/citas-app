@@ -20,23 +20,29 @@ export default function CalendarioDisponibilidad({ value, onSelect }) {
   const [cursor, setCursor] = useState({ y: hoyY, m: hoyM - 1 }) // m 0-indexado
   const [dias, setDias] = useState(() => new Set()) // fechas disponibles del mes
   const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState(false)
+  const [intento, setIntento] = useState(0) // permite reintentar el fetch
 
   const meses = t('calendar.months')
   const semana = t('calendar.weekdays') // lunes-primero
 
   const mesParam = `${cursor.y}-${pad(cursor.m + 1)}`
 
+  // Se re-dispara al cambiar de mes (mesParam) o al reintentar (intento). Mientras
+  // carga se muestra un overlay; si falla, se ofrece reintentar (evita que un
+  // fetch lento/caído deje el mes "sin disponibilidad" en silencio).
   useEffect(() => {
     let cancelado = false
     setCargando(true)
+    setError(false)
+    setDias(new Set()) // limpia resaltados del mes anterior mientras carga
     citasApi
       .diasDisponibles(mesParam)
       .then((res) => {
-        if (cancelado) return
-        setDias(new Set(res?.dias || []))
+        if (!cancelado) setDias(new Set(res?.dias || []))
       })
       .catch(() => {
-        if (!cancelado) setDias(new Set())
+        if (!cancelado) setError(true)
       })
       .finally(() => {
         if (!cancelado) setCargando(false)
@@ -44,7 +50,7 @@ export default function CalendarioDisponibilidad({ value, onSelect }) {
     return () => {
       cancelado = true
     }
-  }, [mesParam])
+  }, [mesParam, intento])
 
   // Celdas del mes con offset lunes-primero.
   const celdas = useMemo(() => {
@@ -56,7 +62,6 @@ export default function CalendarioDisponibilidad({ value, onSelect }) {
   }, [cursor])
 
   // No se permite retroceder a meses completamente pasados.
-  const esMesActual = cursor.y === hoyY && cursor.m === hoyM - 1
   const puedeRetroceder = cursor.y > hoyY || (cursor.y === hoyY && cursor.m > hoyM - 1)
 
   function cambiarMes(delta) {
@@ -103,8 +108,9 @@ export default function CalendarioDisponibilidad({ value, onSelect }) {
         ))}
       </div>
 
-      {/* Rejilla del mes */}
-      <div className="grid grid-cols-7 gap-1">
+      {/* Rejilla del mes (con overlay de carga y estado de error) */}
+      <div className="relative">
+      <div className={`grid grid-cols-7 gap-1 transition-opacity ${cargando ? 'opacity-40' : ''}`}>
         {celdas.map((d, i) => {
           if (d === null) return <div key={`e${i}`} className="aspect-square" />
           const iso = ymd(cursor.y, cursor.m, d)
@@ -142,6 +148,28 @@ export default function CalendarioDisponibilidad({ value, onSelect }) {
         })}
       </div>
 
+        {/* Overlay de carga: spinner sutil mientras se consulta el mes. */}
+        {cargando && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="h-6 w-6 animate-spin rounded-full border-2 border-navy-200 border-t-navy-600" />
+          </div>
+        )}
+
+        {/* Estado de error: no se pudo cargar; permite reintentar. */}
+        {error && !cargando && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/85 px-2 text-center">
+            <p className="text-sm text-navy-500">{t('newAppt.calLoadError')}</p>
+            <button
+              type="button"
+              onClick={() => setIntento((n) => n + 1)}
+              className="rounded-lg bg-navy-700 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-navy-800"
+            >
+              {t('common.retry')}
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Leyenda */}
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-navy-500 sm:text-xs">
         <span className="flex items-center gap-1.5">
@@ -152,7 +180,6 @@ export default function CalendarioDisponibilidad({ value, onSelect }) {
           <span className="h-3 w-3 rounded bg-white ring-1 ring-navy-200" />
           {t('newAppt.legendUnavailable')}
         </span>
-        {cargando && <span className="text-navy-400">{t('newAppt.searching')}</span>}
       </div>
     </div>
   )
