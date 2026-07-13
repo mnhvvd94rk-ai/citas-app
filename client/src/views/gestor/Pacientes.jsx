@@ -5,7 +5,7 @@ import { useLanguage } from '../../context/LanguageContext.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import ImportarClientesModal from '../../components/ImportarClientesModal.jsx'
-import { formatFechaCorta, soloFecha, hoyISO } from '../../lib/format.js'
+import { formatFechaCorta, formatFechaHora, soloFecha, hoyISO } from '../../lib/format.js'
 
 /** Nombre de archivo seguro: sin acentos, minúsculas, con guiones. */
 function slugArchivo(texto) {
@@ -22,7 +22,7 @@ function construirHistorialTxt({ cliente, notas, profesionalNombre }) {
   const nombre = `${cliente.nombre} ${cliente.apellido || ''}`.trim()
   const notasOrden = [...(notas || [])].sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
   const lineasNotas = notasOrden.length
-    ? notasOrden.map((n) => `[${formatFechaCorta(n.fecha)}] ${n.texto}`).join('\n')
+    ? notasOrden.map((n) => `[${formatFechaHora(n.fecha)}] ${n.texto}`).join('\n')
     : 'Sin notas registradas.'
 
   return [
@@ -487,7 +487,7 @@ function NotasInline({ cliente, historial }) {
           {notas.map((n) => (
             <li key={n.id} className="rounded-xl bg-navy-50 p-3 text-sm ring-1 ring-navy-100">
               <p className="mb-1 text-xs font-medium text-navy-400">
-                {formatFechaCorta(n.fecha)} · {String(n.fecha).slice(11, 16)}
+                {formatFechaHora(n.fecha)}
                 {n.citaId && fechaDeCita[n.citaId]
                   ? ` · ${t('clients.noteOfApptFrom')} ${formatFechaCorta(fechaDeCita[n.citaId])}`
                   : ''}

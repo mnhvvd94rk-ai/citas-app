@@ -1,5 +1,6 @@
 import { createContext, useContext, useCallback, useEffect, useState } from 'react'
 import translations, { DEFAULT_LANG, LANGS } from '../i18n/translations.js'
+import { setFormatLang } from '../lib/format.js'
 
 const LanguageContext = createContext(null)
 const STORAGE_KEY = 'kohtun_lang'
@@ -14,6 +15,11 @@ export function LanguageProvider({ children }) {
     const saved = localStorage.getItem(STORAGE_KEY)
     return LANGS.some((l) => l.code === saved) ? saved : DEFAULT_LANG
   })
+
+  // Mantiene el formateo de fechas (lib/format.js) en el mismo idioma que la UI.
+  // Se hace en el cuerpo (no solo en efecto) para que ya esté aplicado en el
+  // primer render y no aparezca la fecha en español un instante.
+  setFormatLang(lang)
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, lang)
