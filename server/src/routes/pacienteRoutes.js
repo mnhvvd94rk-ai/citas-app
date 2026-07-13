@@ -89,6 +89,10 @@ const importarSchema = z.object({
         apellido: z.string().trim().optional(),
         telefono: z.string().trim().optional(),
         correo: z.string().trim().optional(),
+        // Idioma preferido de cada cliente (del selector de lote o de una columna
+        // del archivo). El profesional lo decide en la importación; ya no cae en
+        // un default silencioso.
+        idiomaPreferido: z.enum(['ES', 'EN', 'FR']).optional(),
       }),
     )
     .min(1)
@@ -125,6 +129,7 @@ router.post('/importar', async (req, res) => {
           cuentaActivada: false,
           estado: 'NUEVO',
           profesionalId,
+          idiomaPreferido: c.idiomaPreferido || 'ES',
         },
       })
       creados++

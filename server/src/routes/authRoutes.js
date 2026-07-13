@@ -39,6 +39,8 @@ const registroPacienteSchema = z.object({
   // Obligatorio: un cliente siempre queda vinculado a un profesional; no se
   // permiten registros "huérfanos" sin profesional asociado.
   slug: z.string().min(1),
+  // Idioma preferido según el selector de la página al registrarse (no default fijo).
+  idiomaPreferido: z.enum(['ES', 'EN', 'FR']).optional(),
 })
 
 const registroMedicoSchema = z.object({
@@ -138,6 +140,7 @@ router.post('/registro-paciente', async (req, res) => {
         firmaUrl: data.firmaUrl,
         estado: 'NUEVO',
         profesionalId: profesional.id,
+        idiomaPreferido: data.idiomaPreferido || 'ES',
       },
     })
     const token = signToken({ id: usuario.id, tipo: 'PACIENTE' })

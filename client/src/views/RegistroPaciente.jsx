@@ -15,7 +15,7 @@ export default function RegistroPaciente() {
   const navigate = useNavigate()
   const { slug } = useParams() // presente solo en /reservar/:slug
   const { login } = useAuth()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [paso, setPaso] = useState(0)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState(null)
@@ -130,6 +130,7 @@ export default function RegistroPaciente() {
         fotoIdentidadUrl: foto || undefined,
         firmaUrl: firma || undefined,
         slug, // vincula el nuevo cliente al profesional dueño del enlace
+        idiomaPreferido: lang.toUpperCase(), // idioma elegido en pantalla al registrarse
       }
       const res = await authApi.registroPaciente(payload)
       login(res.token, res)

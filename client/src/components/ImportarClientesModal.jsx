@@ -5,7 +5,11 @@ import Spinner from './Spinner.jsx'
 import ErrorMessage from './ErrorMessage.jsx'
 
 // Campos destino a los que el profesional mapea las columnas del archivo.
-const CAMPOS = ['nombre', 'apellido', 'telefono', 'correo']
+// `idioma` es opcional: si el archivo trae una columna de idioma por cliente.
+const CAMPOS = ['nombre', 'apellido', 'telefono', 'correo', 'idioma']
+
+// Variantes de encabezado para la columna de idioma (en cualquier idioma).
+const IDIOMA_HEADERS = ['idioma', 'language', 'langue', 'lang']
 
 // Diccionarios EXACTOS por idioma (encabezados normalizados → campo destino).
 // No hay fuzzy matching: el encabezado normalizado debe coincidir literalmente
@@ -16,19 +20,35 @@ const DICCIONARIOS = {
     apellido: ['apellido'],
     telefono: ['telefono'],
     correo: ['correo', 'email'],
+    idioma: IDIOMA_HEADERS,
   },
   EN: {
     nombre: ['first name', 'name'],
     apellido: ['last name', 'surname'],
     telefono: ['phone', 'telephone'],
     correo: ['email'],
+    idioma: IDIOMA_HEADERS,
   },
   FR: {
     nombre: ['prenom'],
     apellido: ['nom'],
     telefono: ['telephone'],
     correo: ['email', 'e-mail'],
+    idioma: IDIOMA_HEADERS,
   },
+}
+
+// Normaliza el VALOR de una celda de idioma a ES/EN/FR (o null si no se reconoce).
+function parseIdioma(v) {
+  const n = String(v ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+  if (['es', 'esp', 'espanol', 'spanish', 'espagnol'].includes(n)) return 'ES'
+  if (['en', 'eng', 'ingles', 'english', 'anglais'].includes(n)) return 'EN'
+  if (['fr', 'fra', 'frances', 'francais', 'french'].includes(n)) return 'FR'
+  return null
 }
 
 const IDIOMAS = [
@@ -51,7 +71,7 @@ function norm(s) {
 // Sugiere el mapeo campo→índice de columna con el diccionario exacto del idioma.
 // Para "OTRO" devuelve todo vacío (mapeo manual).
 function sugerirMapeo(headers, idioma) {
-  const vacio = { nombre: '', apellido: '', telefono: '', correo: '' }
+  const vacio = { nombre: '', apellido: '', telefono: '', correo: '', idioma: '' }
   const dict = DICCIONARIOS[idioma]
   if (!dict) return vacio
   const normHeaders = headers.map(norm)
@@ -88,7 +108,8 @@ export default function ImportarClientesModal({ onClose, onImported }) {
   const [paso, setPaso] = useState('upload') // upload | lang | preview | result
   const [datos, setDatos] = useState(null) // { headers, rows }
   const [idioma, setIdioma] = useState(null)
-  const [mapeo, setMapeo] = useState({ nombre: '', apellido: '', telefono: '', correo: '' })
+  const [mapeo, setMapeo] = useState({ nombre: '', apellido: '', telefono: '', correo: '', idioma: '' })
+  const [idiomaLote, setIdiomaLote] = useState('') // idioma preferido del lote (obligatorio)
   const [error, setError] = useState(null)
   const [importando, setImportando] = useState(false)
   const [resultado, setResultado] = useState(null)
@@ -121,7 +142,7 @@ export default function ImportarClientesModal({ onClose, onImported }) {
   }
 
   async function confirmar() {
-    if (mapeo.nombre === '') return
+    if (mapeo.nombre === '' || !idiomaLote) return
     setImportando(true)
     setError(null)
     try {
@@ -130,11 +151,15 @@ export default function ImportarClientesModal({ onClose, onImported }) {
         const valor = (campo) => (mapeo[campo] === '' ? '' : String(row[mapeo[campo]] ?? '').trim())
         const nombre = valor('nombre')
         if (!nombre) continue // el nombre es el mínimo obligatorio
+        // Idioma: si hay columna de idioma y su valor se reconoce, se usa por
+        // fila; si no, se aplica el idioma de lote elegido por el profesional.
+        const idiomaFila = mapeo.idioma !== '' ? parseIdioma(row[mapeo.idioma]) : null
         clientes.push({
           nombre,
           apellido: valor('apellido'),
           telefono: valor('telefono'),
           correo: valor('correo'),
+          idiomaPreferido: idiomaFila || idiomaLote,
         })
       }
       if (clientes.length === 0) {
@@ -272,13 +297,42 @@ export default function ImportarClientesModal({ onClose, onImported }) {
               </p>
             )}
 
+            {/* Idioma preferido de este lote (obligatorio). Si hay columna de
+                idioma mapeada, se usa por fila y este valor es el respaldo. */}
+            <div className="mt-4 rounded-xl border border-navy-100 bg-navy-50/50 p-3">
+              <p className="mb-1 text-sm font-semibold text-navy-700">
+                {t('clients.import.batchLanguage')} <span className="text-red-500">*</span>
+              </p>
+              <p className="mb-2 text-xs text-navy-500">
+                {mapeo.idioma !== ''
+                  ? t('clients.import.batchLanguageColumnNote')
+                  : t('clients.import.batchLanguageHint')}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[['ES', 'spanish'], ['EN', 'english'], ['FR', 'french']].map(([code, key]) => (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => setIdiomaLote(code)}
+                    className={`rounded-lg border-2 px-4 py-2 text-sm font-semibold transition ${
+                      idiomaLote === code
+                        ? 'border-brand-500 bg-brand-50 text-brand-700'
+                        : 'border-navy-200 text-navy-600 hover:border-brand-300'
+                    }`}
+                  >
+                    {t('clients.' + key)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="mt-5 flex items-center justify-between">
               <button onClick={() => setPaso('lang')} className="text-sm font-semibold text-navy-500 hover:text-navy-800">
                 ← {t('clients.import.back')}
               </button>
               <button
                 onClick={confirmar}
-                disabled={nombreSinMapear || importando}
+                disabled={nombreSinMapear || !idiomaLote || importando}
                 className="rounded-lg bg-navy-700 px-5 py-2 text-sm font-semibold text-white transition hover:bg-navy-800 disabled:bg-navy-300"
               >
                 {importando ? t('clients.import.importing') : t('clients.import.confirm')}
