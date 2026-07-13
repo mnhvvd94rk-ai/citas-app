@@ -6,6 +6,9 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 export const TOKEN_KEY = 'citas_token'
+// Último enlace de profesional visitado (/reservar/:slug). Se usa para redirigir
+// ahí cuando la sesión expira, en vez de a un login genérico suelto.
+export const LAST_SLUG_KEY = 'kohtun_last_slug'
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
@@ -43,6 +46,8 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
     res = await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
+      // Incluye la cookie httpOnly de dispositivo (login semi-automático).
+      credentials: 'include',
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch {
@@ -64,6 +69,20 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
   }
 
   if (!res.ok) {
+    // 401 en una llamada autenticada = sesión inválida o expirada. Limpia el
+    // token muerto y redirige limpiamente al enlace del profesional (o al inicio),
+    // para que un token caducado nunca rompa el render dejando la pantalla en
+    // blanco. (403 NO cierra sesión: es autorización de negocio, no auth.)
+    if (res.status === 401 && auth) {
+      setToken(null)
+      if (typeof window !== 'undefined') {
+        const slug = localStorage.getItem(LAST_SLUG_KEY)
+        const destino = slug ? `/reservar/${slug}` : '/'
+        if (window.location.pathname !== destino) {
+          window.location.assign(destino)
+        }
+      }
+    }
     const message =
       (data && typeof data === 'object' && data.error) ||
       (typeof data === 'string' && data) ||
@@ -82,6 +101,16 @@ export const authApi = {
     request('/auth/registro-medico', { method: 'POST', body: payload, auth: false }),
   loginPaciente: (correo, password) =>
     request('/auth/login-paciente', { method: 'POST', body: { correo, password }, auth: false }),
+  // Login real de cliente en el contexto de su profesional (por slug).
+  clienteLogin: (slug, identificador, password) =>
+    request('/auth/cliente-login', { method: 'POST', body: { slug, identificador, password }, auth: false }),
+  // Token de dispositivo (login semi-automático).
+  dispositivoEstado: (slug) =>
+    request('/auth/dispositivo/estado', { method: 'POST', body: { slug }, auth: false }),
+  dispositivoCanjear: (slug) =>
+    request('/auth/dispositivo/canjear', { method: 'POST', body: { slug }, auth: false }),
+  dispositivoRevocar: () =>
+    request('/auth/dispositivo/revocar', { method: 'POST', auth: false }),
   loginMedico: (correo, password) =>
     request('/auth/login-medico', { method: 'POST', body: { correo, password }, auth: false }),
   me: () => request('/auth/me'),

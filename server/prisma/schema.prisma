@@ -84,6 +84,7 @@ model Usuario {
   citas              Cita[]
   notas              NotaPaciente[]
   pushSubscriptions  PushSubscription[]
+  dispositivos       DispositivoCliente[]
 
   @@index([profesionalId])
 }
@@ -117,6 +118,27 @@ model Medico {
   notas            NotaPaciente[]
   clientes         Usuario[]
   pushSubscriptions PushSubscription[]
+  dispositivos     DispositivoCliente[]
+}
+
+/// Token de dispositivo (refresh token opaco) para el login semi-automático de
+/// un cliente desde el enlace de SU profesional (/reservar/:slug). Guarda solo el
+/// HASH del token (nunca el valor en claro), asociado a la pareja
+/// (clienteId, profesionalId). Se canjea por un JWT de sesión sin pedir
+/// credenciales; se revoca al pulsar "No soy yo".
+model DispositivoCliente {
+  id            Int      @id @default(autoincrement())
+  tokenHash     String   @unique
+  cliente       Usuario  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  clienteId     Int
+  profesional   Medico   @relation(fields: [profesionalId], references: [id], onDelete: Cascade)
+  profesionalId Int
+  expiraEn      DateTime
+  createdAt     DateTime @default(now())
+  ultimoUsoEn   DateTime @default(now())
+
+  @@index([clienteId])
+  @@index([profesionalId])
 }
 
 /// Suscripción Web Push de un dispositivo/navegador. Un mismo dispositivo puede

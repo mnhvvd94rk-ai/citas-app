@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { authApi, medicosApi } from '../services/api.js'
+import { authApi, medicosApi, LAST_SLUG_KEY } from '../services/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
 import CameraCapture from '../components/CameraCapture.jsx'
@@ -26,6 +26,13 @@ export default function RegistroPaciente() {
   const [estadoEnlace, setEstadoEnlace] = useState(slug ? 'cargando' : 'sin-enlace')
   const [profesional, setProfesional] = useState(null)
 
+  // vista: 'registro' (multi-paso) | 'login' (email/tel + contraseña) | 'auto'
+  // (semi-automático "Hola de nuevo"). saludo = nombre del cliente recordado.
+  const [vista, setVista] = useState('registro')
+  const [saludo, setSaludo] = useState('')
+  const [accion, setAccion] = useState(false) // procesando continuar/login
+  const [credencial, setCredencial] = useState({ identificador: '', password: '' })
+
   useEffect(() => {
     if (!slug) {
       setEstadoEnlace('sin-enlace')
@@ -35,10 +42,22 @@ export default function RegistroPaciente() {
     setEstadoEnlace('cargando')
     medicosApi
       .porSlug(slug)
-      .then((prof) => {
+      .then(async (prof) => {
         if (cancelado) return
         setProfesional(prof)
         setEstadoEnlace('ok')
+        // Recuerda el enlace para redirigir aquí si expira la sesión (Tarea 1).
+        try { localStorage.setItem(LAST_SLUG_KEY, slug) } catch { /* noop */ }
+        // ¿Este dispositivo ya tiene sesión recordada con este profesional?
+        try {
+          const est = await authApi.dispositivoEstado(slug)
+          if (!cancelado && est?.ok) {
+            setSaludo(est.cliente?.nombre || '')
+            setVista('auto')
+          }
+        } catch {
+          /* sin sesión recordada: se queda en 'registro' */
+        }
       })
       .catch(() => {
         if (cancelado) return
@@ -122,6 +141,53 @@ export default function RegistroPaciente() {
     }
   }
 
+  // Login semi-automático: canjea el token de dispositivo por un JWT fresco.
+  async function continuar() {
+    setError(null)
+    setAccion(true)
+    try {
+      const res = await authApi.dispositivoCanjear(slug)
+      login(res.token, res)
+      navigate('/paciente/citas', { replace: true })
+    } catch (err) {
+      // El token murió entre el saludo y el clic: cae al login manual.
+      setError(err)
+      setVista('login')
+    } finally {
+      setAccion(false)
+    }
+  }
+
+  // "No soy yo": revoca el token de dispositivo y muestra el login manual.
+  async function noSoyYo() {
+    setError(null)
+    setAccion(true)
+    try {
+      await authApi.dispositivoRevocar()
+    } catch {
+      /* noop */
+    }
+    setSaludo('')
+    setVista('login')
+    setAccion(false)
+  }
+
+  // Login real (email o teléfono + contraseña) en el contexto del profesional.
+  async function loginManual(e) {
+    e.preventDefault()
+    setError(null)
+    setAccion(true)
+    try {
+      const res = await authApi.clienteLogin(slug, credencial.identificador.trim(), credencial.password)
+      login(res.token, res)
+      navigate('/paciente/citas', { replace: true })
+    } catch (err) {
+      setError(err)
+    } finally {
+      setAccion(false)
+    }
+  }
+
   const inputCls =
     'w-full rounded-xl border border-navy-200 px-4 py-3 text-navy-900 transition focus:border-navy-500 focus:ring-4 focus:ring-navy-100 focus:outline-none'
 
@@ -147,6 +213,73 @@ export default function RegistroPaciente() {
     )
   }
 
+  // Login semi-automático: este dispositivo ya tiene sesión recordada.
+  if (vista === 'auto') {
+    return (
+      <div className="flex min-h-screen flex-col bg-navy-50 px-6 py-8">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="text-sm font-medium text-navy-500 hover:text-navy-700">← {t('common.back')}</Link>
+          <LanguageSelector />
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-7 text-center shadow-xl shadow-navy-900/5 ring-1 ring-navy-100">
+            {profesional && <p className="text-sm text-navy-500">{profesional.nombre}</p>}
+            <h1 className="mt-2 text-xl font-bold text-navy-800">{t('reservar.welcomeBack', { name: saludo })}</h1>
+            {error && <ErrorMessage error={error} className="mt-4" />}
+            <button
+              onClick={continuar}
+              disabled={accion}
+              className="mt-6 w-full rounded-xl bg-navy-700 py-3.5 font-semibold text-white shadow-lg shadow-navy-900/20 transition hover:bg-navy-800 disabled:bg-navy-300"
+            >
+              {accion ? t('common.entering') : t('reservar.continueSession')}
+            </button>
+            <button onClick={noSoyYo} disabled={accion} className="mt-3 text-sm font-medium text-navy-500 hover:text-brand-600">
+              {t('reservar.notMe')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Login manual con email/teléfono + contraseña, dentro del profesional.
+  if (vista === 'login') {
+    return (
+      <div className="flex min-h-screen flex-col bg-navy-50 px-6 py-8">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="text-sm font-medium text-navy-500 hover:text-navy-700">← {t('common.back')}</Link>
+          <LanguageSelector />
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-7 shadow-xl shadow-navy-900/5 ring-1 ring-navy-100">
+            {profesional && <p className="mb-1 text-center text-sm text-navy-500">{t('reservar.withPro')} {profesional.nombre}</p>}
+            <h1 className="mb-6 text-center text-2xl font-bold tracking-tight text-navy-800">{t('loginClient.title')}</h1>
+            {error && <ErrorMessage error={error} className="mb-4" />}
+            <form onSubmit={loginManual} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('reservar.identifier')}</label>
+                <input value={credencial.identificador} onChange={(e) => setCredencial((p) => ({ ...p, identificador: e.target.value }))} className={inputCls} placeholder={t('reservar.identifierPlaceholder')} />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('common.password')}</label>
+                <input type="password" value={credencial.password} onChange={(e) => setCredencial((p) => ({ ...p, password: e.target.value }))} className={inputCls} placeholder="••••••••" />
+              </div>
+              <button type="submit" disabled={accion} className="w-full rounded-xl bg-navy-700 py-3.5 font-semibold text-white shadow-lg shadow-navy-900/20 transition hover:bg-navy-800 disabled:bg-navy-300">
+                {accion ? t('common.entering') : t('common.enter')}
+              </button>
+            </form>
+            <p className="mt-6 text-center text-sm text-navy-500">
+              {t('loginClient.noAccount')}{' '}
+              <button onClick={() => { setError(null); setVista('registro') }} className="font-semibold text-navy-700 hover:text-brand-600">
+                {t('reservar.imNew')}
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-navy-50 pb-24">
       <header className="bg-navy-800 px-4 py-3 text-white">
@@ -167,9 +300,9 @@ export default function RegistroPaciente() {
             )}
             <p className="mt-2 text-xs text-navy-500">
               {t('reservar.haveAccount')}{' '}
-              <Link to="/login-cliente" className="font-semibold text-brand-600 hover:underline">
+              <button onClick={() => { setError(null); setVista('login') }} className="font-semibold text-brand-600 hover:underline">
                 {t('reservar.login')}
-              </Link>
+              </button>
             </p>
           </div>
         )}

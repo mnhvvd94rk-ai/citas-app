@@ -11,6 +11,14 @@ import {
 import { enviarEmailActivacion } from '../services/emailService.js'
 import { requireAuth } from '../middleware/authMiddleware.js'
 import { generarSlugUnico } from '../services/slug.js'
+import {
+  DEVICE_COOKIE,
+  DEVICE_TTL_DIAS,
+  generarTokenDispositivo,
+  hashToken,
+  leerCookieDispositivo,
+  opcionesCookie,
+} from '../services/deviceToken.js'
 
 // Base del frontend para construir el enlace de activación.
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://citas-app-client.vercel.app'
@@ -72,6 +80,34 @@ function sinPassword(row) {
   return rest
 }
 
+/** Crea un token de dispositivo para (cliente, profesional) y lo pone en cookie. */
+async function emitirDispositivo(res, clienteId, profesionalId) {
+  const { token, tokenHash } = generarTokenDispositivo()
+  const expiraEn = new Date(Date.now() + DEVICE_TTL_DIAS * 24 * 60 * 60 * 1000)
+  await prisma.dispositivoCliente.create({ data: { tokenHash, clienteId, profesionalId, expiraEn } })
+  res.cookie(DEVICE_COOKIE, token, opcionesCookie())
+}
+
+/**
+ * Valida la cookie de dispositivo contra el profesional del `slug`.
+ * Devuelve el registro DispositivoCliente (con cliente) si es válido y vigente,
+ * o null. No lanza.
+ */
+async function validarDispositivo(req, slug) {
+  const token = leerCookieDispositivo(req)
+  if (!token || !slug) return null
+  const medico = await prisma.medico.findUnique({ where: { slug }, select: { id: true } })
+  if (!medico) return null
+  const disp = await prisma.dispositivoCliente.findUnique({
+    where: { tokenHash: hashToken(token) },
+    include: { cliente: { select: { id: true, nombre: true, apellido: true, cuentaActivada: true } } },
+  })
+  if (!disp) return null
+  if (disp.profesionalId !== medico.id) return null // token de otro profesional
+  if (disp.expiraEn < new Date()) return null // caducado
+  return disp
+}
+
 // ── Rutas ──────────────────────────────────────────────────────────────────
 // POST /auth/registro-paciente
 router.post('/registro-paciente', async (req, res) => {
@@ -105,6 +141,8 @@ router.post('/registro-paciente', async (req, res) => {
       },
     })
     const token = signToken({ id: usuario.id, tipo: 'PACIENTE' })
+    // Token de dispositivo para el login semi-automático futuro en este navegador.
+    await emitirDispositivo(res, usuario.id, profesional.id)
     res.status(201).json({ token, usuario: sinPassword(usuario) })
   } catch (err) {
     if (err.code === 'P2002') {
@@ -174,6 +212,94 @@ router.post('/login-paciente', async (req, res) => {
   }
   const token = signToken({ id: usuario.id, tipo: 'PACIENTE' })
   res.json({ token, usuario: sinPassword(usuario) })
+})
+
+// ── Login real de cliente EN EL CONTEXTO de su profesional (por slug) ─────────
+// El identificador es email o teléfono; la cuenta se busca dentro del profesional
+// del enlace (las cuentas son exclusivas por profesional). Emite JWT + cookie de
+// dispositivo para el login semi-automático futuro.
+const clienteLoginSchema = z.object({
+  slug: z.string().min(1),
+  identificador: z.string().min(1),
+  password: z.string().min(1),
+})
+
+router.post('/cliente-login', async (req, res) => {
+  const data = parseOr400(clienteLoginSchema, req.body, res)
+  if (!data) return
+
+  const medico = await prisma.medico.findUnique({ where: { slug: data.slug }, select: { id: true } })
+  if (!medico) {
+    return res.status(404).json({ error: 'El enlace no es válido.', code: 'SLUG_INVALIDO' })
+  }
+
+  const ident = data.identificador.trim()
+  const usuario = await prisma.usuario.findFirst({
+    where: {
+      profesionalId: medico.id,
+      OR: [{ correo: ident }, { correo: ident.toLowerCase() }, { telefono: ident }],
+    },
+  })
+  if (!usuario) return res.status(401).json({ error: 'Credenciales inválidas' })
+  if (!usuario.cuentaActivada) {
+    return res.status(403).json({
+      error: 'Esta cuenta aún no está activada. Revisa tu correo o solicita activarla.',
+      code: 'CUENTA_NO_ACTIVADA',
+    })
+  }
+  if (!usuario.passwordHash || !(await verifyPassword(data.password, usuario.passwordHash))) {
+    return res.status(401).json({ error: 'Credenciales inválidas' })
+  }
+
+  const token = signToken({ id: usuario.id, tipo: 'PACIENTE' })
+  await emitirDispositivo(res, usuario.id, medico.id)
+  res.json({ token, usuario: sinPassword(usuario) })
+})
+
+// ── Token de dispositivo (login semi-automático) ──────────────────────────────
+const dispositivoSlugSchema = z.object({ slug: z.string().min(1) })
+
+// POST /auth/dispositivo/estado — ¿este navegador ya tiene sesión recordada con
+// el profesional del slug? Devuelve el nombre del cliente para el saludo.
+router.post('/dispositivo/estado', async (req, res) => {
+  const data = parseOr400(dispositivoSlugSchema, req.body, res)
+  if (!data) return
+  const disp = await validarDispositivo(req, data.slug)
+  if (!disp || !disp.cliente) return res.json({ ok: false })
+  res.json({ ok: true, cliente: { id: disp.cliente.id, nombre: disp.cliente.nombre } })
+})
+
+// POST /auth/dispositivo/canjear — cambia el token de dispositivo por un JWT de
+// sesión fresco (un clic, sin credenciales).
+router.post('/dispositivo/canjear', async (req, res) => {
+  const data = parseOr400(dispositivoSlugSchema, req.body, res)
+  if (!data) return
+  const disp = await validarDispositivo(req, data.slug)
+  if (!disp) {
+    return res.status(401).json({ error: 'Dispositivo no reconocido.', code: 'DISPOSITIVO_INVALIDO' })
+  }
+  await prisma.dispositivoCliente.update({ where: { id: disp.id }, data: { ultimoUsoEn: new Date() } })
+  const usuario = await prisma.usuario.findUnique({ where: { id: disp.clienteId } })
+  if (!usuario) return res.status(404).json({ error: 'Cuenta no encontrada.' })
+  const token = signToken({ id: usuario.id, tipo: 'PACIENTE' })
+  res.json({ token, usuario: sinPassword(usuario) })
+})
+
+// POST /auth/dispositivo/revocar — "No soy yo": elimina el token de dispositivo y
+// borra la cookie. El logout normal NO llama a esto (mantiene el semi-login).
+router.post('/dispositivo/revocar', async (req, res) => {
+  const token = leerCookieDispositivo(req)
+  if (token) {
+    await prisma.dispositivoCliente.deleteMany({ where: { tokenHash: hashToken(token) } })
+  }
+  const prod = process.env.NODE_ENV === 'production'
+  res.clearCookie(DEVICE_COOKIE, {
+    path: '/',
+    httpOnly: true,
+    secure: prod,
+    sameSite: prod ? 'none' : 'lax',
+  })
+  res.json({ ok: true })
 })
 
 // POST /auth/activar-cuenta  — solicita el email con el enlace de activación.

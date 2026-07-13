@@ -1,43 +1,17 @@
-import { useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { authApi } from '../services/api.js'
-import { useAuth } from '../context/AuthContext.jsx'
+import { Link } from 'react-router-dom'
 import { useLanguage } from '../context/LanguageContext.jsx'
-import ErrorMessage from '../components/ErrorMessage.jsx'
 import LanguageSelector from '../components/LanguageSelector.jsx'
 
-// Login del cliente.
+// Ruta /login-cliente (y su alias /login-paciente).
+//
+// El login real de cliente ocurre DENTRO del enlace de su profesional
+// (/reservar/:slug), porque las cuentas son exclusivas por profesional y no es
+// un marketplace: un login genérico no puede saber a qué profesional pertenece
+// la cuenta (más aún si el identificador es un teléfono, que no es único global).
+// Por eso esta pantalla no pide credenciales: solo explica que hay que usar el
+// enlace del profesional.
 export default function LoginPaciente() {
-  const navigate = useNavigate()
-  const [params] = useSearchParams()
-  const { login } = useAuth()
   const { t } = useLanguage()
-  const recienActivada = params.get('activated') === '1'
-  const [correo, setCorreo] = useState('')
-  const [password, setPassword] = useState('')
-  const [cargando, setCargando] = useState(false)
-  const [error, setError] = useState(null)
-  const [noActivada, setNoActivada] = useState(false)
-
-  async function onSubmit(e) {
-    e.preventDefault()
-    setError(null)
-    setNoActivada(false)
-    setCargando(true)
-    try {
-      const res = await authApi.loginPaciente(correo, password)
-      login(res.token, res)
-      navigate('/paciente/citas', { replace: true })
-    } catch (err) {
-      setError(err)
-      if (err.code === 'CUENTA_NO_ACTIVADA') setNoActivada(true)
-    } finally {
-      setCargando(false)
-    }
-  }
-
-  const inputCls =
-    'w-full rounded-xl border border-navy-200 px-4 py-3 text-navy-900 transition focus:border-navy-500 focus:ring-4 focus:ring-navy-100 focus:outline-none'
 
   return (
     <div className="flex min-h-screen flex-col bg-navy-50 px-6 py-8">
@@ -49,57 +23,18 @@ export default function LoginPaciente() {
       </div>
 
       <div className="flex flex-1 items-center justify-center">
-        <div className="w-full max-w-sm">
-          <div className="rounded-2xl bg-white p-7 shadow-xl shadow-navy-900/5 ring-1 ring-navy-100">
-            <h1 className="mb-6 text-center text-2xl font-bold tracking-tight text-navy-800">
-              {t('loginClient.title')}
-            </h1>
-
-            {recienActivada && !error && (
-              <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-center text-sm text-emerald-700">
-                {t('activate.activationSuccess')}
-              </p>
-            )}
-
-            {error && <ErrorMessage error={error} className="mb-4" />}
-
-            {noActivada && (
-              <p className="mb-4 rounded-xl bg-brand-50 px-4 py-3 text-center text-sm text-navy-700">
-                {t('activate.accountNotActivated')}{' '}
-                <Link
-                  to={`/activar-cuenta${correo ? `?email=${encodeURIComponent(correo)}` : ''}`}
-                  className="font-semibold text-brand-600 hover:text-brand-700 underline"
-                >
-                  {t('activate.activateHereLink')}
-                </Link>
-              </p>
-            )}
-
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('common.email')}</label>
-                <input type="email" required value={correo} onChange={(e) => setCorreo(e.target.value)} className={inputCls} placeholder="tu@correo.com" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('common.password')}</label>
-                <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className={inputCls} placeholder="••••••••" />
-              </div>
-              <button
-                type="submit"
-                disabled={cargando}
-                className="w-full rounded-xl bg-navy-700 py-3.5 font-semibold text-white shadow-lg shadow-navy-900/20 transition hover:bg-navy-800 disabled:bg-navy-300"
-              >
-                {cargando ? t('common.entering') : t('common.enter')}
-              </button>
-            </form>
-
-            <p className="mt-6 text-center text-sm text-navy-500">
-              {t('loginClient.noAccount')}{' '}
-              <Link to="/registro-cliente" className="font-semibold text-navy-700 hover:text-brand-600">
-                {t('loginClient.register')}
-              </Link>
-            </p>
+        <div className="w-full max-w-sm rounded-2xl bg-white p-7 text-center shadow-xl shadow-navy-900/5 ring-1 ring-navy-100">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-2xl">
+            🔗
           </div>
+          <h1 className="mb-2 text-xl font-bold text-navy-800">{t('loginClient.needLinkTitle')}</h1>
+          <p className="mb-6 text-sm text-navy-500">{t('loginClient.needLinkMsg')}</p>
+          <Link
+            to="/"
+            className="inline-block w-full rounded-xl bg-navy-700 py-3 font-semibold text-white transition hover:bg-navy-800"
+          >
+            {t('common.back')}
+          </Link>
         </div>
       </div>
     </div>
