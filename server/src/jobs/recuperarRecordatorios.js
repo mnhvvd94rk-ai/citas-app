@@ -140,4 +140,72 @@ export async function recuperar({ dryRun = true } = {}) {
   return { total: elegibles.length, enviados, detalle }
 }
 
-export default { listarElegibles, recuperar }
+// Recuperación DIRIGIDA solo a estas 3 clientas confirmadas (idioma FR revisado
+// con la profesional): Sephora Birle (86), Héloïse Crabbe (91), Natacha Gallo (92).
+// El resto de clientas con citas elegibles NO se incluyen a propósito (su idioma
+// no está confirmado; el profesional las revisa aparte).
+const CLIENTES_OBJETIVO = [86, 91, 92]
+
+/**
+ * Recuperación dirigida para el endpoint admin de un solo uso: envía el aviso
+ * tardío al CLIENTE y a su PROFESIONAL por email + WhatsApp, cada uno en su
+ * idioma, y devuelve el resultado REAL de entrega por canal y destinatario.
+ * Marca cada cita como recuperada (idempotencia por cita).
+ */
+export async function recuperarAdmin() {
+  const ahora = new Date()
+  const elegibles = (await listarElegibles(ahora)).filter(({ cita }) =>
+    CLIENTES_OBJETIVO.includes(cita.pacienteId),
+  )
+  const detalle = []
+
+  const fmt = (r) =>
+    r.skipped ? 'sin-canal' : r.delivered ? 'ENTREGADO' : `FALLIDO: ${r.error || 'sin entrega confirmada'}`
+
+  for (const { cita } of elegibles) {
+    const p = cita.paciente
+    const idiomaCli = p?.idiomaPreferido || 'ES'
+    const medico = await prisma.medico.findUnique({
+      where: { id: cita.medicoId },
+      select: { id: true, nombre: true, correo: true, telefono: true, idiomaPreferido: true },
+    })
+    const idiomaPro = medico?.idiomaPreferido || 'ES'
+    const nombreCli = `${p?.nombre || ''} ${p?.apellido || ''}`.trim()
+    const enlaceVideo = cita.tipoCita === 'VIDEOCONFERENCIA' ? cita.enlaceVideoconferencia : null
+
+    // CLIENTE: "…su cita es el {fecha} a las {hora} con {profesional=medico}".
+    const destCli = { id: p.id, tipoDestinatario: 'PACIENTE', correo: p.correo, telefono: p.telefono }
+    const payCli = { marca: 'recordatorio', fecha: fechaLegible(cita.fecha, idiomaCli), hora: cita.horaInicio, profesional: medico?.nombre || '', citaId: cita.id, enlaceVideoconferencia: enlaceVideo }
+    const cliEmail = p?.correo
+      ? await notificationService.send({ tipo: 'RECORDATORIO_CITA', canal: 'EMAIL', idioma: idiomaCli, destinatario: destCli, payload: payCli })
+      : { skipped: true }
+    const cliWa = p?.telefono
+      ? await notificationService.send({ tipo: 'RECORDATORIO_CITA', canal: 'WHATSAPP', idioma: idiomaCli, destinatario: destCli, payload: payCli })
+      : { skipped: true }
+
+    // PROFESIONAL: mismo estilo, pero "con {profesional=cliente}" (la otra parte).
+    const destPro = { id: medico?.id, tipoDestinatario: 'MEDICO', correo: medico?.correo, telefono: medico?.telefono }
+    const payPro = { marca: 'recordatorio', fecha: fechaLegible(cita.fecha, idiomaPro), hora: cita.horaInicio, profesional: nombreCli, citaId: cita.id, enlaceVideoconferencia: enlaceVideo }
+    const proEmail = medico?.correo
+      ? await notificationService.send({ tipo: 'RECORDATORIO_CITA', canal: 'EMAIL', idioma: idiomaPro, destinatario: destPro, payload: payPro })
+      : { skipped: true }
+    const proWa = medico?.telefono
+      ? await notificationService.send({ tipo: 'RECORDATORIO_CITA', canal: 'WHATSAPP', idioma: idiomaPro, destinatario: destPro, payload: payPro })
+      : { skipped: true }
+
+    // Idempotencia por cita (evita re-envío en una segunda pasada).
+    await prisma.notificacionEnviada.create({ data: { citaId: cita.id, tipo: 'recordatorio' } }).catch(() => {})
+
+    detalle.push({
+      citaId: cita.id,
+      fecha: cita.fecha.toISOString().slice(0, 10),
+      hora: cita.horaInicio,
+      cliente: { nombre: nombreCli, correo: p?.correo || null, telefono: p?.telefono || null, idioma: idiomaCli, email: fmt(cliEmail), whatsapp: fmt(cliWa) },
+      profesional: { nombre: medico?.nombre, correo: medico?.correo || null, telefono: medico?.telefono || null, idioma: idiomaPro, email: fmt(proEmail), whatsapp: fmt(proWa) },
+    })
+  }
+
+  return { total: elegibles.length, detalle }
+}
+
+export default { listarElegibles, recuperar, recuperarAdmin }
