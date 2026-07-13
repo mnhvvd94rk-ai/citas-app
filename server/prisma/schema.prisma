@@ -105,6 +105,9 @@ model Medico {
   slug             String?          @unique
   slugEditado      Boolean          @default(false)
 
+  // Idioma preferido para sus notificaciones (recordatorios al profesional).
+  idiomaPreferido  String           @default("ES") // ES | EN | FR
+
   // Configuración de penalización por cancelación tardía (por defecto):
   costoCancelacion           Float @default(0)
   diasAnticipacionRequierida Int   @default(7)

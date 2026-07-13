@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
+import { authApi } from '../services/api.js'
 import LanguageSelector from './LanguageSelector.jsx'
 import Logo from './Logo.jsx'
 
@@ -9,9 +10,18 @@ import Logo from './Logo.jsx'
 // (colapsable en móvil) + contenido principal.
 export default function GestorLayout() {
   const { user, logout } = useAuth()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const navigate = useNavigate()
   const [menuAbierto, setMenuAbierto] = useState(false)
+
+  // El idioma del selector es también el idioma preferido del profesional para
+  // sus notificaciones: al cambiarlo, se guarda en su cuenta (igual que el cliente).
+  const langRef = useRef(lang)
+  useEffect(() => {
+    if (langRef.current === lang) return // sin cambio (o montaje inicial)
+    langRef.current = lang
+    authApi.actualizarIdioma(lang.toUpperCase()).catch(() => {})
+  }, [lang])
 
   const nav = [
     { to: '/gestor/agenda', label: t('tabs.agenda'), icon: '📅' },

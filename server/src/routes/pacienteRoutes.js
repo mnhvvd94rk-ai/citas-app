@@ -23,6 +23,7 @@ const PACIENTE_SELECT = {
   edadManual: true,
   estadoTratamiento: true,
   tratamientoFinalizadoEn: true,
+  idiomaPreferido: true,
 }
 
 const ESTADOS_TRATAMIENTO = ['ACTIVO', 'COMPLETADO', 'EN_PAUSA']
@@ -146,10 +147,15 @@ const patchSchema = z
   .object({
     edadManual: z.number().int().min(0).max(150).nullable().optional(),
     estadoTratamiento: z.enum(ESTADOS_TRATAMIENTO).optional(),
+    idiomaPreferido: z.enum(['ES', 'EN', 'FR']).optional(),
   })
-  .refine((d) => d.edadManual !== undefined || d.estadoTratamiento !== undefined, {
-    message: 'Nada que actualizar',
-  })
+  .refine(
+    (d) =>
+      d.edadManual !== undefined ||
+      d.estadoTratamiento !== undefined ||
+      d.idiomaPreferido !== undefined,
+    { message: 'Nada que actualizar' },
+  )
 
 router.patch('/:id', async (req, res) => {
   const id = Number(req.params.id)
@@ -172,6 +178,7 @@ router.patch('/:id', async (req, res) => {
 
   const data = {}
   if (parsed.data.edadManual !== undefined) data.edadManual = parsed.data.edadManual
+  if (parsed.data.idiomaPreferido !== undefined) data.idiomaPreferido = parsed.data.idiomaPreferido
   if (parsed.data.estadoTratamiento !== undefined) {
     data.estadoTratamiento = parsed.data.estadoTratamiento
     // Marca/limpia la fecha de finalización al pasar a/desde COMPLETADO.
@@ -190,6 +197,7 @@ router.patch('/:id', async (req, res) => {
       edadManual: true,
       estadoTratamiento: true,
       tratamientoFinalizadoEn: true,
+      idiomaPreferido: true,
     },
   })
   res.json({ ...actualizado, edad: actualizado.edadManual ?? null })

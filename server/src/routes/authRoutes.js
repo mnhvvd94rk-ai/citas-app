@@ -266,16 +266,22 @@ router.get('/me', requireAuth, async (req, res) => {
   return res.status(400).json({ error: 'Tipo de usuario desconocido' })
 })
 
-// PATCH /auth/me — el cliente guarda su idioma preferido (para notificaciones).
+// PATCH /auth/me — guarda el idioma preferido (para notificaciones). Lo usan
+// tanto el cliente (Usuario) como el profesional (Medico).
 const patchMeSchema = z.object({ idiomaPreferido: z.enum(['ES', 'EN', 'FR']) })
 
 router.patch('/me', requireAuth, async (req, res) => {
   const { id, tipo } = req.user
-  if (tipo !== 'PACIENTE') {
-    return res.status(400).json({ error: 'Solo los clientes guardan idioma preferido' })
-  }
   const data = parseOr400(patchMeSchema, req.body, res)
   if (!data) return
+
+  if (tipo === 'MEDICO') {
+    const medico = await prisma.medico.update({
+      where: { id },
+      data: { idiomaPreferido: data.idiomaPreferido },
+    })
+    return res.json({ tipo, medico: sinPassword(medico) })
+  }
 
   const usuario = await prisma.usuario.update({
     where: { id },

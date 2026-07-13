@@ -491,6 +491,7 @@ const translations = {
       deleting: 'Eliminando…',
       downloadHistory: 'Descargar historial',
       historyGenerated: 'Historial descargado',
+      notificationLanguage: 'Idioma de notificaciones',
       // Importar clientes
       selectFileLanguage: '¿En qué idioma están los encabezados de tu archivo?',
       spanish: 'Español',
@@ -1024,6 +1025,7 @@ const translations = {
       deleting: 'Deleting…',
       downloadHistory: 'Download history',
       historyGenerated: 'History downloaded',
+      notificationLanguage: 'Notification language',
       // Import clients
       selectFileLanguage: 'What language are your file headers in?',
       spanish: 'Español',
@@ -1557,6 +1559,7 @@ const translations = {
       deleting: 'Suppression…',
       downloadHistory: 'Télécharger l’historique',
       historyGenerated: 'Historique téléchargé',
+      notificationLanguage: 'Langue des notifications',
       // Importer des clients
       selectFileLanguage: 'Dans quelle langue sont les en-têtes de votre fichier ?',
       spanish: 'Español',

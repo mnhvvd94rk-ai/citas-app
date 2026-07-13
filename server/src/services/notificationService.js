@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer'
+import sgMail from '@sendgrid/mail'
 import webpush from 'web-push'
 import { prisma } from './db.js'
 
@@ -14,16 +15,20 @@ const REMINDER_MESSAGES = {
     '48h': () => ({ asunto: 'Recordatorio: tu cita en 48 horas', texto: '📅 Recordatorio: Tu cita en 48 horas. Cancélala antes de esta fecha si necesitas.' }),
     '24h': (p) => ({ asunto: 'Recordatorio: tu cita mañana', texto: `📅 ¡Mañana es tu cita! A las ${p.hora} con ${p.profesional}.` }),
     '3h': () => ({ asunto: 'Tu cita comienza en 3 horas', texto: '⏰ Tu cita comienza en 3 horas. Llega 10 minutos antes.' }),
+    // Recordatorio tardío/plano (Regla A): indica fecha y hora, sin fingir "faltan X".
+    recordatorio: (p) => ({ asunto: 'Recordatorio de tu cita', texto: `📅 Recordatorio: tu cita es el ${p.fecha} a las ${p.hora} con ${p.profesional}.` }),
   },
   EN: {
     '48h': () => ({ asunto: 'Reminder: your appointment in 48 hours', texto: '📅 Reminder: Your appointment in 48 hours. Cancel before this date if needed.' }),
     '24h': (p) => ({ asunto: 'Reminder: your appointment tomorrow', texto: `📅 Your appointment is tomorrow! At ${p.hora} with ${p.profesional}.` }),
     '3h': () => ({ asunto: 'Your appointment starts in 3 hours', texto: '⏰ Your appointment starts in 3 hours. Arrive 10 minutes early.' }),
+    recordatorio: (p) => ({ asunto: 'Appointment reminder', texto: `📅 Reminder: your appointment is on ${p.fecha} at ${p.hora} with ${p.profesional}.` }),
   },
   FR: {
     '48h': () => ({ asunto: 'Rappel : votre rendez-vous dans 48 heures', texto: '📅 Rappel: Votre rendez-vous dans 48 heures. Annulez avant cette date si nécessaire.' }),
     '24h': (p) => ({ asunto: 'Rappel : votre rendez-vous demain', texto: `📅 Votre rendez-vous est demain! À ${p.hora} avec ${p.profesional}.` }),
     '3h': () => ({ asunto: 'Votre rendez-vous commence dans 3 heures', texto: '⏰ Votre rendez-vous commence dans 3 heures. Arrivez 10 minutes plus tôt.' }),
+    recordatorio: (p) => ({ asunto: 'Rappel de votre rendez-vous', texto: `📅 Rappel : votre rendez-vous est le ${p.fecha} à ${p.hora} avec ${p.profesional}.` }),
   },
 }
 
@@ -84,60 +89,77 @@ function construirMensaje(tipo, payload = {}, idioma = 'ES') {
   return { asunto: `Notificación: ${tipo}`, texto, html: `<pre>${texto}</pre>` }
 }
 
-// ── Transporte de email (cacheado) ───────────────────────────────────────────
-let transportCache = null
+// ── Email por SendGrid ────────────────────────────────────────────────────────
+// IMPORTANTE: los canales devuelven `delivered` = hubo ENTREGA REAL confirmada.
+// Solo `delivered: true` cuenta como enviado en la auditoría (notificacionEnviada)
+// y como estado ENVIADO. Ethereal (solo dev) procesa pero NUNCA es delivered, para
+// no marcar como enviado un correo que en realidad no llegó a nadie real.
+let sendgridListo = null
 
-async function getEmailTransport() {
-  if (transportCache) return transportCache
-
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env
-  if (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS) {
-    transportCache = {
-      isEthereal: false,
-      transporter: nodemailer.createTransport({
-        host: SMTP_HOST,
-        port: Number(SMTP_PORT),
-        secure: Number(SMTP_PORT) === 465,
-        auth: { user: SMTP_USER, pass: SMTP_PASS },
-      }),
-    }
-    return transportCache
+function configurarSendgrid() {
+  if (sendgridListo !== null) return sendgridListo
+  const { SENDGRID_API_KEY } = process.env
+  if (!SENDGRID_API_KEY) {
+    sendgridListo = false
+    return false
   }
+  sgMail.setApiKey(SENDGRID_API_KEY)
+  sendgridListo = true
+  return true
+}
 
-  // Sin SMTP configurado → cuenta de prueba Ethereal (solo dev).
+// Transporte Ethereal SOLO para previsualizar en desarrollo local (nunca en prod).
+let etherealCache = null
+async function getEtherealTransport() {
+  if (etherealCache) return etherealCache
   const testAccount = await nodemailer.createTestAccount()
-  transportCache = {
-    isEthereal: true,
-    transporter: nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: { user: testAccount.user, pass: testAccount.pass },
-    }),
-  }
-  console.log('[notificationService] SMTP no configurado; usando Ethereal:', testAccount.user)
-  return transportCache
+  etherealCache = nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    secure: false,
+    auth: { user: testAccount.user, pass: testAccount.pass },
+  })
+  console.log('[notificationService] (dev) Ethereal para previsualizar:', testAccount.user)
+  return etherealCache
 }
 
 // ── Implementaciones por canal ───────────────────────────────────────────────
 async function enviarEmail({ destinatario, asunto, texto, html }) {
-  if (!destinatario?.correo) return { ok: false, error: 'Destinatario sin correo' }
+  if (!destinatario?.correo) return { ok: false, delivered: false, error: 'Destinatario sin correo' }
 
-  const { transporter, isEthereal } = await getEmailTransport()
-  const info = await transporter.sendMail({
-    from: '"Citas App" <no-reply@citas.app>',
-    to: destinatario.correo,
-    subject: asunto,
-    text: texto,
-    html,
-  })
-
-  const result = { ok: true }
-  if (isEthereal) {
-    result.previewUrl = nodemailer.getTestMessageUrl(info)
-    console.log('[notificationService] Vista previa (Ethereal):', result.previewUrl)
+  const from = process.env.SENDGRID_FROM_EMAIL
+  // Ruta real: SendGrid (el mismo que usa contacto/activación en producción).
+  if (configurarSendgrid() && from) {
+    try {
+      await sgMail.send({ to: destinatario.correo, from, subject: asunto, text: texto, html })
+      return { ok: true, delivered: true }
+    } catch (err) {
+      const detalle = err?.response?.body?.errors?.[0]?.message || err.message
+      return { ok: false, delivered: false, error: `SendGrid: ${detalle}` }
+    }
   }
-  return result
+
+  // Sin SendGrid configurado:
+  // - En producción NO se envía nada (evita falsos positivos y colas ciegas).
+  if (process.env.NODE_ENV === 'production') {
+    return { ok: false, delivered: false, error: 'Email no configurado (falta SendGrid)' }
+  }
+  // - En desarrollo, Ethereal solo para previsualizar; delivered:false a propósito.
+  try {
+    const transporter = await getEtherealTransport()
+    const info = await transporter.sendMail({
+      from: from || '"Kohtun" <no-reply@kohtun.com>',
+      to: destinatario.correo,
+      subject: asunto,
+      text: texto,
+      html,
+    })
+    const previewUrl = nodemailer.getTestMessageUrl(info)
+    console.log('[notificationService] (dev) Vista previa Ethereal:', previewUrl)
+    return { ok: true, delivered: false, previewUrl }
+  } catch (e) {
+    return { ok: false, delivered: false, error: e.message }
+  }
 }
 
 function enviarSMS({ destinatario, texto }) {
@@ -145,7 +167,7 @@ function enviarSMS({ destinatario, texto }) {
   console.log(
     `[notificationService][SMS mock] -> ${destinatario?.telefono || '(sin teléfono)'}: ${texto}`,
   )
-  return { ok: true }
+  return { ok: true, delivered: false } // mock: nunca es entrega real
 }
 
 // ── WhatsApp vía Meta Cloud API ──────────────────────────────────────────────
@@ -162,12 +184,12 @@ function enviarSMS({ destinatario, texto }) {
 // Best-effort: nunca lanza; devuelve { ok:false, error } si algo falla, de modo
 // que un fallo de WhatsApp NO impide el envío del email (son send() separados).
 async function enviarWhatsApp({ destinatario, texto }) {
-  if (!destinatario?.telefono) return { ok: false, error: 'Destinatario sin teléfono' }
+  if (!destinatario?.telefono) return { ok: false, delivered: false, error: 'Destinatario sin teléfono' }
 
   const { WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN } = process.env
   if (!WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN) {
     console.warn('[notificationService][WhatsApp] Sin credenciales configuradas; se omite el envío.')
-    return { ok: false, error: 'WhatsApp no configurado (faltan credenciales)' }
+    return { ok: false, delivered: false, error: 'WhatsApp no configurado (faltan credenciales)' }
   }
 
   // Meta exige el número en formato internacional SIN "+", espacios ni guiones.
@@ -196,16 +218,16 @@ async function enviarWhatsApp({ destinatario, texto }) {
       // expirado, etc.). Se loguea y se devuelve fallo SIN lanzar.
       const apiError = data?.error?.message || `HTTP ${res.status}`
       console.error(`[notificationService][WhatsApp] ❌ Fallo a ${to}: ${apiError}`)
-      return { ok: false, error: `WhatsApp API: ${apiError}` }
+      return { ok: false, delivered: false, error: `WhatsApp API: ${apiError}` }
     }
 
     const msgId = data?.messages?.[0]?.id || '(sin id)'
     console.log(`[notificationService][WhatsApp] ✅ Enviado a ${to} (message id: ${msgId})`)
-    return { ok: true }
+    return { ok: true, delivered: true }
   } catch (err) {
     // Fallo de red / DNS / timeout: nunca interrumpe el resto de notificaciones.
     console.error(`[notificationService][WhatsApp] ❌ Error de red a ${to}: ${err.message}`)
-    return { ok: false, error: `WhatsApp red: ${err.message}` }
+    return { ok: false, delivered: false, error: `WhatsApp red: ${err.message}` }
   }
 }
 
@@ -232,21 +254,21 @@ function configurarPush() {
 async function enviarPush({ destinatario, asunto, texto, url }) {
   if (!configurarPush()) {
     console.warn('[notificationService] Push sin VAPID keys; se marca FALLIDO.')
-    return { ok: false, error: 'VAPID keys no configuradas' }
+    return { ok: false, delivered: false, error: 'VAPID keys no configuradas' }
   }
   if (!destinatario?.pushSubscription) {
-    return { ok: false, error: 'Destinatario sin pushSubscription' }
+    return { ok: false, delivered: false, error: 'Destinatario sin pushSubscription' }
   }
   try {
     await webpush.sendNotification(
       destinatario.pushSubscription,
       JSON.stringify({ title: asunto, body: texto, url: url || '/' }),
     )
-    return { ok: true }
+    return { ok: true, delivered: true }
   } catch (e) {
     // statusCode 404/410 = suscripción expirada o dada de baja: el llamador
     // puede usarlo para limpiarla de la base de datos.
-    return { ok: false, error: e.message, statusCode: e.statusCode }
+    return { ok: false, delivered: false, error: e.message, statusCode: e.statusCode }
   }
 }
 
@@ -292,23 +314,33 @@ async function send({ tipo, canal, idioma = 'ES', destinatario, payload }) {
       resultado = { ok: false, error: `Canal desconocido: ${canal}` }
     }
 
-    // f) Actualiza estado del registro.
+    // f) Actualiza estado del registro. SOLO se marca ENVIADO si hubo ENTREGA
+    //    REAL confirmada (delivered); una respuesta ok pero no entregada (p.ej.
+    //    Ethereal en dev) queda FALLIDO para no ocultar que no llegó.
+    const entregado = resultado.delivered === true
     await prisma.notificacion.update({
       where: { id: notificacion.id },
       data: {
-        estadoEnvio: resultado.ok ? 'ENVIADO' : 'FALLIDO',
-        fechaEnvio: resultado.ok ? new Date() : null,
+        estadoEnvio: entregado ? 'ENVIADO' : 'FALLIDO',
+        fechaEnvio: entregado ? new Date() : null,
       },
     })
 
     // g) Sin excepciones al llamador.
-    if (!resultado.ok) {
+    if (!entregado) {
       console.error(
-        `[notificationService] Notificación ${notificacion.id} FALLIDA: ${resultado.error}`,
+        `[notificationService] Notificación ${notificacion.id} NO entregada (${canal}): ${resultado.error || 'sin entrega confirmada'}`,
       )
-      return { ok: false, error: resultado.error, statusCode: resultado.statusCode, notificacionId: notificacion.id }
+      return {
+        ok: resultado.ok === true,
+        delivered: false,
+        error: resultado.error,
+        statusCode: resultado.statusCode,
+        previewUrl: resultado.previewUrl,
+        notificacionId: notificacion.id,
+      }
     }
-    return { ok: true, notificacionId: notificacion.id, previewUrl: resultado.previewUrl }
+    return { ok: true, delivered: true, notificacionId: notificacion.id, previewUrl: resultado.previewUrl }
   } catch (err) {
     // Cualquier error inesperado (incl. fallo al crear/actualizar el registro).
     console.error('[notificationService] Error inesperado:', err)

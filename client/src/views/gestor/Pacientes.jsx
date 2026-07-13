@@ -181,6 +181,8 @@ function ClienteCard({ cliente, onEliminado }) {
   const [guardandoTrat, setGuardandoTrat] = useState(false)
   const [editandoEdad, setEditandoEdad] = useState(false)
   const [inputEdad, setInputEdad] = useState(cliente.edad ?? '')
+  const [idiomaCli, setIdiomaCli] = useState(cliente.idiomaPreferido || 'ES')
+  const [guardandoIdioma, setGuardandoIdioma] = useState(false)
 
   const historial = cliente.historial || []
   const hoy = hoyISO()
@@ -211,6 +213,19 @@ function ClienteCard({ cliente, onEliminado }) {
       /* noop */
     } finally {
       setEditandoEdad(false)
+    }
+  }
+
+  async function cambiarIdioma(nuevo) {
+    const previo = idiomaCli
+    setIdiomaCli(nuevo)
+    setGuardandoIdioma(true)
+    try {
+      await pacientesApi.actualizar(cliente.id, { idiomaPreferido: nuevo })
+    } catch {
+      setIdiomaCli(previo) // revierte si falla
+    } finally {
+      setGuardandoIdioma(false)
     }
   }
 
@@ -301,6 +316,20 @@ function ClienteCard({ cliente, onEliminado }) {
                 <dd className="font-medium text-navy-700">{t('clients.since')}: {cliente.primeraCita ? formatFechaCorta(cliente.primeraCita) : t('clients.noAppts')}</dd>
               </div>
             </dl>
+            {/* Idioma preferido del cliente (para sus notificaciones). */}
+            <div className="mt-3 flex items-center gap-2 border-t border-navy-100 pt-3">
+              <label className="text-xs text-navy-400">{t('clients.notificationLanguage')}:</label>
+              <select
+                value={idiomaCli}
+                onChange={(e) => cambiarIdioma(e.target.value)}
+                disabled={guardandoIdioma}
+                className="rounded-lg border border-navy-200 px-2 py-1 text-sm text-navy-700 focus:outline-none disabled:opacity-60"
+              >
+                <option value="ES">Español</option>
+                <option value="EN">English</option>
+                <option value="FR">Français</option>
+              </select>
+            </div>
           </Section>
 
           {/* SECCIÓN 2 — Estado del tratamiento */}
