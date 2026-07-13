@@ -136,6 +136,8 @@ export const medicosApi = {
 export const citasApi = {
   slotsDisponibles: (medicoId, fecha) =>
     request(`/citas/slots-disponibles?medicoId=${medicoId}&fecha=${fecha}`),
+  // Días del mes (YYYY-MM) con al menos un slot libre, para pintar el calendario.
+  diasDisponibles: (mes) => request(`/citas/dias-disponibles?mes=${mes}`),
   reservar: (payload) => request('/citas/reservar', { method: 'POST', body: payload }),
   // El profesional agenda manualmente una cita para uno de sus clientes.
   crearManual: (payload) => request('/citas/crear-manual', { method: 'POST', body: payload }),

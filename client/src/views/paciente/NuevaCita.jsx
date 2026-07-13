@@ -6,7 +6,8 @@ import { useLanguage } from '../../context/LanguageContext.jsx'
 import Navbar from '../../components/Navbar.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
-import { hoyISO, formatFechaLarga } from '../../lib/format.js'
+import CalendarioDisponibilidad from '../../components/CalendarioDisponibilidad.jsx'
+import { formatFechaLarga } from '../../lib/format.js'
 
 const slotKey = (s) => `${s.horaInicio}-${s.horaFin}`
 
@@ -21,7 +22,7 @@ export default function NuevaCita() {
   const [cargandoMedico, setCargandoMedico] = useState(true)
   const [errorMedico, setErrorMedico] = useState(null)
 
-  const [fecha, setFecha] = useState(hoyISO())
+  const [fecha, setFecha] = useState('') // sin día pre-seleccionado; lo elige en el calendario
   const [motivo, setMotivo] = useState('')
   const [slots, setSlots] = useState([])
   const [seleccion, setSeleccion] = useState([])
@@ -65,9 +66,9 @@ export default function NuevaCita() {
     }
   }
 
-  // Carga slots cuando ya se conoce el profesional y la fecha.
+  // Carga slots cuando ya se conoce el profesional y hay un día elegido.
   useEffect(() => {
-    if (medico?.id) cargarSlots(medico.id, fecha)
+    if (medico?.id && fecha) cargarSlots(medico.id, fecha)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [medico, fecha])
 
@@ -204,7 +205,7 @@ export default function NuevaCita() {
 
             <div className="mt-5">
               <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('newAppt.date')}</label>
-              <input type="date" value={fecha} min={hoyISO()} onChange={(e) => setFecha(e.target.value)} className={inputCls} />
+              <CalendarioDisponibilidad value={fecha} onSelect={(f) => setFecha(f)} />
             </div>
 
             {!esNuevo && (
@@ -224,7 +225,11 @@ export default function NuevaCita() {
 
             <div className="mt-6">
               <h2 className="mb-2 text-sm font-semibold text-navy-700">{t('newAppt.slots')}</h2>
-              {cargandoSlots ? (
+              {!fecha ? (
+                <div className="rounded-xl border border-dashed border-navy-200 bg-white py-10 text-center text-navy-500">
+                  {t('newAppt.pickDay')}
+                </div>
+              ) : cargandoSlots ? (
                 <Spinner label={t('newAppt.searching')} />
               ) : errorSlots ? (
                 <ErrorMessage error={errorSlots} onRetry={() => cargarSlots(medico.id, fecha)} />

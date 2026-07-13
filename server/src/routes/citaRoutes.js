@@ -79,32 +79,34 @@ const anularSchema = z.object({
   notaAnulacion: z.string().min(1, 'notaAnulacion es obligatoria'),
 })
 
-// ── GET /citas/slots-disponibles ─────────────────────────────────────────────
-// El profesional se determina SIEMPRE en el servidor a partir del usuario
-// autenticado (nunca del query), para que un cliente solo pueda ver la
-// disponibilidad de su propio profesional:
-//   - PACIENTE → su profesionalId.
-//   - MEDICO   → su propio id.
-// El `medicoId` del query se ignora (defensa: no permite espiar a otro profesional).
-router.get('/slots-disponibles', requireAuth, async (req, res) => {
-  const fecha = req.query.fecha
-
-  let medicoId
+// Determina el profesional cuyo horario puede consultar el usuario autenticado.
+// PACIENTE → su profesionalId; MEDICO → su id. Nunca se confía en el query, para
+// que un cliente solo vea la disponibilidad de SU profesional (aislamiento).
+// Si el cliente no está vinculado, responde 404 y devuelve null.
+async function resolverMedicoId(req, res) {
   if (req.user.tipo === 'PACIENTE') {
     const cliente = await prisma.usuario.findUnique({
       where: { id: req.user.id },
       select: { profesionalId: true },
     })
     if (!cliente?.profesionalId) {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Tu cuenta no está vinculada a ningún profesional.',
         code: 'SIN_PROFESIONAL',
       })
+      return null
     }
-    medicoId = cliente.profesionalId
-  } else {
-    medicoId = req.user.id
+    return cliente.profesionalId
   }
+  return req.user.id
+}
+
+// ── GET /citas/slots-disponibles ─────────────────────────────────────────────
+// Horarios libres de un día concreto (el `medicoId` del query se ignora).
+router.get('/slots-disponibles', requireAuth, async (req, res) => {
+  const fecha = req.query.fecha
+  const medicoId = await resolverMedicoId(req, res)
+  if (medicoId === null) return
 
   if (!fecha || !FECHA_RE.test(fecha)) {
     return res.status(400).json({ error: 'fecha es obligatoria (YYYY-MM-DD)' })
@@ -118,6 +120,53 @@ router.get('/slots-disponibles', requireAuth, async (req, res) => {
 
   const libres = slotsDisponibles(disponibilidades, citas, fechaDate)
   res.json({ medicoId, fecha, slots: libres })
+})
+
+// ── GET /citas/dias-disponibles?mes=YYYY-MM ──────────────────────────────────
+// Resumen ligero para pintar el calendario: qué días del mes tienen al menos un
+// slot libre (lista de fechas), no todos los horarios. Mismo aislamiento por
+// profesional que slots-disponibles. Excluye días ya pasados.
+const MES_RE = /^\d{4}-\d{2}$/
+
+router.get('/dias-disponibles', requireAuth, async (req, res) => {
+  const mes = req.query.mes
+  if (!mes || !MES_RE.test(mes)) {
+    return res.status(400).json({ error: 'mes es obligatorio (YYYY-MM)' })
+  }
+  const medicoId = await resolverMedicoId(req, res)
+  if (medicoId === null) return
+
+  const [anio, m] = mes.split('-').map(Number)
+  const primero = parseFecha(`${mes}-01`)
+  const ultimoDiaNum = new Date(Date.UTC(anio, m, 0)).getUTCDate() // último día del mes
+  const ultimo = parseFecha(`${mes}-${String(ultimoDiaNum).padStart(2, '0')}`)
+
+  const [disponibilidades, citas] = await Promise.all([
+    prisma.disponibilidad.findMany({ where: { medicoId, fecha: { gte: primero, lte: ultimo } } }),
+    prisma.cita.findMany({ where: { medicoId, fecha: { gte: primero, lte: ultimo } } }),
+  ])
+
+  // Agrupa por día (YYYY-MM-DD).
+  const dispPorDia = {}
+  for (const d of disponibilidades) {
+    const k = d.fecha.toISOString().slice(0, 10)
+    ;(dispPorDia[k] ||= []).push(d)
+  }
+  const citasPorDia = {}
+  for (const c of citas) {
+    const k = c.fecha.toISOString().slice(0, 10)
+    ;(citasPorDia[k] ||= []).push(c)
+  }
+
+  const hoy = new Date().toISOString().slice(0, 10)
+  const dias = []
+  for (const k of Object.keys(dispPorDia)) {
+    if (k < hoy) continue // los días pasados no se ofrecen
+    const libres = slotsDisponibles(dispPorDia[k], citasPorDia[k] || [], parseFecha(k))
+    if (libres.length > 0) dias.push(k)
+  }
+  dias.sort()
+  res.json({ mes, dias })
 })
 
 // ── POST /citas/reservar ─────────────────────────────────────────────────────
