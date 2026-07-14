@@ -22,7 +22,7 @@ router.get('/mi-profesional', requireAuth, requireRole('PACIENTE'), async (req, 
   }
   const medico = await prisma.medico.findUnique({
     where: { id: cliente.profesionalId },
-    select: { id: true, nombre: true, especialidad: true, telefono: true, correo: true },
+    select: { id: true, nombre: true, especialidad: true, telefono: true, correo: true, fotoPerfilUrl: true },
   })
   if (!medico) {
     return res.status(404).json({ error: 'Profesional no encontrado' })
@@ -95,6 +95,34 @@ router.patch('/mi-slug', requireAuth, requireRole('MEDICO'), async (req, res) =>
     where: { id: actual.id },
     data: { slug: nuevoSlug, slugEditado: true },
     select: { id: true, slug: true, slugEditado: true },
+  })
+  res.json(actualizado)
+})
+
+// PATCH /medicos/mi-foto  (profesional autenticado) — sube o quita su foto de
+// perfil (opcional). La imagen llega como data URL (base64), igual que la foto de
+// identidad del cliente. `fotoPerfilUrl: null` la elimina y vuelve al avatar genérico.
+const fotoSchema = z.object({
+  // Acepta data URL de imagen o null. Límite defensivo de tamaño (~3MB en base64).
+  fotoPerfilUrl: z
+    .string()
+    .regex(/^data:image\/(png|jpe?g|webp);base64,/, 'Formato de imagen no válido')
+    .max(4_000_000)
+    .nullable(),
+})
+
+router.patch('/mi-foto', requireAuth, requireRole('MEDICO'), async (req, res) => {
+  const parsed = fotoSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: 'Datos inválidos',
+      detalles: parsed.error.issues.map((i) => ({ campo: i.path.join('.'), mensaje: i.message })),
+    })
+  }
+  const actualizado = await prisma.medico.update({
+    where: { id: req.user.id },
+    data: { fotoPerfilUrl: parsed.data.fotoPerfilUrl },
+    select: { id: true, fotoPerfilUrl: true },
   })
   res.json(actualizado)
 })
