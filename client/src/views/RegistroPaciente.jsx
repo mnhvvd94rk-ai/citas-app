@@ -84,7 +84,9 @@ export default function RegistroPaciente() {
   function validarPaso() {
     switch (paso) {
       case 0:
-        return foto ? null : t('register.errNeedPhoto')
+        // Foto de identidad OPCIONAL: no bloquea el avance. Si en el futuro el
+        // profesional quiere exigirla, se decidirá de su lado, no aquí.
+        return null
       case 1:
         if (!datos.nombre.trim()) return t('register.errName')
         if (!datos.apellido.trim()) return t('register.errLastName')
@@ -92,7 +94,8 @@ export default function RegistroPaciente() {
         if (!datos.telefono.trim()) return t('register.errPhone')
         return null
       case 2:
-        return firma ? null : t('register.errNeedSign')
+        // Firma OPCIONAL: no bloquea el avance (misma lógica que la foto).
+        return null
       case 3:
         if (!/^\S+@\S+\.\S+$/.test(cuenta.correo)) return t('register.errEmail')
         if (cuenta.password.length < 6) return t('register.errPwLen')
@@ -260,11 +263,11 @@ export default function RegistroPaciente() {
             <form onSubmit={loginManual} className="space-y-4">
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('reservar.identifier')}</label>
-                <input value={credencial.identificador} onChange={(e) => setCredencial((p) => ({ ...p, identificador: e.target.value }))} className={inputCls} placeholder={t('reservar.identifierPlaceholder')} />
+                <input name="username" autoComplete="username" value={credencial.identificador} onChange={(e) => setCredencial((p) => ({ ...p, identificador: e.target.value }))} className={inputCls} placeholder={t('reservar.identifierPlaceholder')} />
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('common.password')}</label>
-                <input type="password" value={credencial.password} onChange={(e) => setCredencial((p) => ({ ...p, password: e.target.value }))} className={inputCls} placeholder="••••••••" />
+                <input type="password" name="password" autoComplete="current-password" value={credencial.password} onChange={(e) => setCredencial((p) => ({ ...p, password: e.target.value }))} className={inputCls} placeholder="••••••••" />
               </div>
               <button type="submit" disabled={accion} className="w-full rounded-xl bg-navy-700 py-3.5 font-semibold text-white shadow-lg shadow-navy-900/20 transition hover:bg-navy-800 disabled:bg-navy-300">
                 {accion ? t('common.entering') : t('common.enter')}
@@ -358,15 +361,15 @@ export default function RegistroPaciente() {
               <h2 className="text-lg font-bold text-navy-800">{t('register.accountTitle')}</h2>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('common.email')}</label>
-                <input name="correo" type="email" value={cuenta.correo} onChange={setCampo(setCuenta)} className={inputCls} placeholder="tu@correo.com" />
+                <input name="correo" type="email" autoComplete="username" value={cuenta.correo} onChange={setCampo(setCuenta)} className={inputCls} placeholder="tu@correo.com" />
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('common.password')}</label>
-                <input name="password" type="password" value={cuenta.password} onChange={setCampo(setCuenta)} className={inputCls} placeholder={t('register.pwPlaceholder')} />
+                <input name="password" type="password" autoComplete="new-password" value={cuenta.password} onChange={setCampo(setCuenta)} className={inputCls} placeholder={t('register.pwPlaceholder')} />
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('register.confirmPassword')}</label>
-                <input name="confirmar" type="password" value={cuenta.confirmar} onChange={setCampo(setCuenta)} className={inputCls} placeholder={t('register.pwConfirmPlaceholder')} />
+                <input name="confirmar" type="password" autoComplete="new-password" value={cuenta.confirmar} onChange={setCampo(setCuenta)} className={inputCls} placeholder={t('register.pwConfirmPlaceholder')} />
               </div>
             </div>
           )}
