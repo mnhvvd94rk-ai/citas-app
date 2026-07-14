@@ -8,6 +8,7 @@ import SignaturePad from '../components/SignaturePad.jsx'
 import ErrorMessage from '../components/ErrorMessage.jsx'
 import LanguageSelector from '../components/LanguageSelector.jsx'
 import Spinner from '../components/Spinner.jsx'
+import EntrarConCodigo from '../components/EntrarConCodigo.jsx'
 
 const N_STEPS = 6
 
@@ -446,13 +447,11 @@ function AvisoEnlace({ t, titulo, mensaje }) {
             🔗
           </div>
           <h1 className="mb-2 text-xl font-bold text-navy-800">{titulo}</h1>
-          <p className="mb-6 text-sm text-navy-500">{mensaje}</p>
-          <p className="text-sm text-navy-500">
-            {t('reservar.haveAccount')}{' '}
-            <Link to="/login-cliente" className="font-semibold text-brand-600 hover:underline">
-              {t('reservar.login')}
-            </Link>
-          </p>
+          <p className="text-sm text-navy-500">{mensaje}</p>
+
+          {/* Salida real: si el cliente tiene a mano el código de su profesional,
+              lo escribe aquí y continúa, en vez de quedarse sin poder avanzar. */}
+          <EntrarConCodigo />
         </div>
       </div>
     </div>

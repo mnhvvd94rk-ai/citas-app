@@ -134,13 +134,22 @@ export default function LandingPage() {
         <div className="relative mx-auto max-w-3xl px-6 py-24 text-center sm:py-28">
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">{t('landingPublic.heroHeadline')}</h1>
           <p className="mx-auto mt-5 max-w-xl text-lg text-white/80">{t('landingPublic.heroSub')}</p>
-          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <button onClick={() => navigate('/registro-cliente')} className="w-full max-w-xs rounded-xl bg-brand-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:-translate-y-0.5 hover:bg-brand-600 sm:w-auto">
-              {t('landingPublic.startFree')}
-            </button>
-            <button onClick={() => navigate('/login-medico')} className="w-full max-w-xs rounded-xl bg-white/95 px-8 py-4 text-lg font-bold text-navy-800 shadow-lg transition hover:-translate-y-0.5 hover:bg-white sm:w-auto">
-              {t('landing.proAccess')}
-            </button>
+          {/* Dos accesos claramente separados por audiencia: clientes (registro)
+              y profesionales (login), cada uno con su subtítulo, para que nadie
+              confunda a quién va dirigido cada botón. */}
+          <div className="mt-9 flex flex-col items-stretch justify-center gap-5 sm:flex-row sm:items-start">
+            <div className="flex flex-col items-center gap-2">
+              <button onClick={() => navigate('/registro-cliente')} className="w-full max-w-xs rounded-xl bg-brand-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:-translate-y-0.5 hover:bg-brand-600 sm:w-auto">
+                {t('landingPublic.startFree')}
+              </button>
+              <span className="text-xs font-medium uppercase tracking-wide text-white/60">{t('landingPublic.navClients')}</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <button onClick={() => navigate('/login-medico')} className="w-full max-w-xs rounded-xl bg-white/95 px-8 py-4 text-lg font-bold text-navy-800 shadow-lg transition hover:-translate-y-0.5 hover:bg-white sm:w-auto">
+                {t('landing.proAccess')}
+              </button>
+              <span className="text-xs font-medium uppercase tracking-wide text-white/60">{t('landingPublic.navPros')}</span>
+            </div>
           </div>
         </div>
       </section>

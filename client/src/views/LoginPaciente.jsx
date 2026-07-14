@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../context/LanguageContext.jsx'
 import LanguageSelector from '../components/LanguageSelector.jsx'
+import EntrarConCodigo from '../components/EntrarConCodigo.jsx'
 
 // Ruta /login-cliente (y su alias /login-paciente).
 //
@@ -28,13 +29,11 @@ export default function LoginPaciente() {
             🔗
           </div>
           <h1 className="mb-2 text-xl font-bold text-navy-800">{t('loginClient.needLinkTitle')}</h1>
-          <p className="mb-6 text-sm text-navy-500">{t('loginClient.needLinkMsg')}</p>
-          <Link
-            to="/"
-            className="inline-block w-full rounded-xl bg-navy-700 py-3 font-semibold text-white transition hover:bg-navy-800"
-          >
-            {t('common.back')}
-          </Link>
+          <p className="text-sm text-navy-500">{t('loginClient.needLinkMsg')}</p>
+
+          {/* Salida real: si el cliente tiene el código de su profesional, lo
+              escribe aquí y continúa hacia el enlace, en vez de quedarse atascado. */}
+          <EntrarConCodigo />
         </div>
       </div>
     </div>
