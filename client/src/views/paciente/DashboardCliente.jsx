@@ -9,6 +9,7 @@ import ErrorMessage from '../../components/ErrorMessage.jsx'
 import EstadoBadge from '../../components/EstadoBadge.jsx'
 import JoinVideoButton from '../../components/JoinVideoButton.jsx'
 import AvatarProfesional from '../../components/AvatarProfesional.jsx'
+import SelectorProfesionales from '../../components/SelectorProfesionales.jsx'
 import PushToggle from '../../components/PushToggle.jsx'
 import { hoyISO, soloFecha, formatFechaLarga, formatFechaCorta } from '../../lib/format.js'
 
@@ -139,6 +140,8 @@ export default function DashboardCliente() {
           </h1>
           <PushToggle />
         </div>
+
+        <SelectorProfesionales />
 
         {aviso && (
           <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">

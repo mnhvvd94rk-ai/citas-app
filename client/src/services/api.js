@@ -142,6 +142,15 @@ export const medicosApi = {
   actualizarFoto: (fotoPerfilUrl) => request('/medicos/mi-foto', { method: 'PATCH', body: { fotoPerfilUrl } }),
 }
 
+// ── Cliente (cuentas por profesional) ────────────────────────────────────────
+export const clientesApi = {
+  // Profesionales asociados al mismo identificador (correo/teléfono) del cliente.
+  misProfesionales: () => request('/clientes/mis-profesionales'),
+  // Cambia la sesión a la cuenta del profesional indicado, sin pedir contraseña.
+  cambiarProfesional: (profesionalId) =>
+    request('/clientes/cambiar-profesional', { method: 'POST', body: { profesionalId } }),
+}
+
 // ── Citas ────────────────────────────────────────────────────────────────────
 export const citasApi = {
   slotsDisponibles: (medicoId, fecha) =>

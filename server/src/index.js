@@ -7,6 +7,7 @@ import authRouter from './routes/authRoutes.js'
 import disponibilidadRouter from './routes/disponibilidadRoutes.js'
 import citaRouter from './routes/citaRoutes.js'
 import pacienteRouter from './routes/pacienteRoutes.js'
+import clienteRouter from './routes/clienteRoutes.js'
 import notaRouter from './routes/notaRoutes.js'
 import notaCitaRouter from './routes/notaCitaRoutes.js'
 import medicoRouter from './routes/medicoRoutes.js'
@@ -38,6 +39,7 @@ app.use('/auth', authRouter)
 app.use('/disponibilidad', disponibilidadRouter)
 app.use('/citas', citaRouter)
 app.use('/pacientes', pacienteRouter)
+app.use('/clientes', clienteRouter)
 app.use('/notas', notaRouter)
 app.use('/notas-por-cita', notaCitaRouter)
 app.use('/medicos', medicoRouter)

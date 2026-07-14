@@ -366,6 +366,7 @@ const translations = {
     },
     clientDash: {
       welcome: 'Bienvenido',
+      switchPro: 'Cambiar de profesional',
       yourNextAppt: 'Tu próxima cita',
       noUpcoming: 'No tienes citas próximas',
       cancel: 'Cancelar',
@@ -936,6 +937,7 @@ const translations = {
     },
     clientDash: {
       welcome: 'Welcome',
+      switchPro: 'Switch professional',
       yourNextAppt: 'Your next appointment',
       noUpcoming: 'You have no upcoming appointments',
       cancel: 'Cancel',
@@ -1504,6 +1506,7 @@ const translations = {
     },
     clientDash: {
       welcome: 'Bienvenue',
+      switchPro: 'Changer de professionnel',
       yourNextAppt: 'Votre prochain rendez-vous',
       noUpcoming: "Vous n'avez aucun rendez-vous à venir",
       cancel: 'Annuler',
