@@ -138,6 +138,8 @@ export const medicosApi = {
   porSlug: (slug) => request(`/medicos/slug/${encodeURIComponent(slug)}`, { auth: false }),
   // Edita (una sola vez) el slug del profesional autenticado.
   editarSlug: (slug) => request('/medicos/mi-slug', { method: 'PATCH', body: { slug } }),
+  // Sube (data URL) o quita (null) la foto de perfil del profesional autenticado.
+  actualizarFoto: (fotoPerfilUrl) => request('/medicos/mi-foto', { method: 'PATCH', body: { fotoPerfilUrl } }),
 }
 
 // ── Citas ────────────────────────────────────────────────────────────────────

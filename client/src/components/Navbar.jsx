@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
 import LanguageSelector from './LanguageSelector.jsx'
 import Logo from './Logo.jsx'
+import AvatarProfesional from './AvatarProfesional.jsx'
 
 // Barra superior premium. Marca + selector de idioma + cerrar sesión.
 export default function Navbar() {
@@ -31,6 +32,9 @@ export default function Navbar() {
           <LanguageSelector variant="dark" />
           {isAuthenticated && (
             <>
+              {tipo === 'MEDICO' && (
+                <AvatarProfesional src={user.fotoPerfilUrl} nombre={user.nombre} className="h-8 w-8 rounded-full text-xs" />
+              )}
               <span className="hidden max-w-[9rem] truncate text-sm text-white/70 sm:inline">{nombre}</span>
               <button
                 onClick={handleLogout}

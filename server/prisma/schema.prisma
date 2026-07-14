@@ -109,6 +109,10 @@ model Medico {
   // Idioma preferido para sus notificaciones (recordatorios al profesional).
   idiomaPreferido  String           @default("ES") // ES | EN | FR
 
+  // Foto de perfil (opcional). Data URL / URL de imagen. Si es null, el frontend
+  // usa el avatar genérico (inicial del nombre) como hasta ahora.
+  fotoPerfilUrl    String?
+
   // Configuración de penalización por cancelación tardía (por defecto):
   costoCancelacion           Float @default(0)
   diasAnticipacionRequierida Int   @default(7)

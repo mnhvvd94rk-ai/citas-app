@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { citasApi, disponibilidadApi, medicosApi, pacientesApi } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
+import FotoPerfilCard from '../../components/FotoPerfilCard.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import EstadoBadge from '../../components/EstadoBadge.jsx'
@@ -134,6 +135,7 @@ export default function Agenda() {
         </div>
       </div>
 
+      <FotoPerfilCard />
       <EnlaceReserva />
 
       {avisoCita && (

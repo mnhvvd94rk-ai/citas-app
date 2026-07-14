@@ -201,6 +201,15 @@ const translations = {
       save: 'Guardar',
       saving: 'Guardando…',
     },
+    profilePhoto: {
+      title: 'Foto de perfil',
+      desc: 'Opcional. La verán tus clientes en su panel.',
+      upload: 'Subir foto',
+      change: 'Cambiar foto',
+      remove: 'Quitar',
+      saving: 'Guardando…',
+      error: 'No se pudo guardar la foto. Intenta con otra imagen.',
+    },
     push: {
       enable: 'Activar notificaciones',
       enabled: 'Notificaciones activadas',
@@ -762,6 +771,15 @@ const translations = {
       save: 'Save',
       saving: 'Saving…',
     },
+    profilePhoto: {
+      title: 'Profile photo',
+      desc: 'Optional. Your clients will see it in their dashboard.',
+      upload: 'Upload photo',
+      change: 'Change photo',
+      remove: 'Remove',
+      saving: 'Saving…',
+      error: 'Couldn’t save the photo. Try a different image.',
+    },
     push: {
       enable: 'Enable notifications',
       enabled: 'Notifications on',
@@ -1320,6 +1338,15 @@ const translations = {
       placeholder: 'votre-lien',
       save: 'Enregistrer',
       saving: 'Enregistrement…',
+    },
+    profilePhoto: {
+      title: 'Photo de profil',
+      desc: 'Facultatif. Vos clients la verront dans leur espace.',
+      upload: 'Ajouter une photo',
+      change: 'Changer la photo',
+      remove: 'Retirer',
+      saving: 'Enregistrement…',
+      error: 'Impossible d’enregistrer la photo. Essayez une autre image.',
     },
     push: {
       enable: 'Activer les notifications',

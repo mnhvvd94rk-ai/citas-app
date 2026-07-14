@@ -8,6 +8,7 @@ import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import EstadoBadge from '../../components/EstadoBadge.jsx'
 import JoinVideoButton from '../../components/JoinVideoButton.jsx'
+import AvatarProfesional from '../../components/AvatarProfesional.jsx'
 import PushToggle from '../../components/PushToggle.jsx'
 import { hoyISO, soloFecha, formatFechaLarga, formatFechaCorta } from '../../lib/format.js'
 
@@ -250,9 +251,7 @@ export default function DashboardCliente() {
                 <h2 className="mb-3 font-bold text-navy-800">{t('clientDash.professionalInfo')}</h2>
                 {medico ? (
                   <div className="flex flex-col items-center text-center">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-navy-700 text-2xl font-bold text-brand-400">
-                      {(medico.nombre?.[0] || '·').toUpperCase()}
-                    </div>
+                    <AvatarProfesional src={medico.fotoPerfilUrl} nombre={medico.nombre} className="h-20 w-20 rounded-2xl text-2xl" />
                     <p className="mt-3 font-semibold text-navy-800">{medico.nombre}</p>
                     {medico.especialidad && <p className="text-sm text-navy-500">{medico.especialidad}</p>}
                     {medico.correo && (
