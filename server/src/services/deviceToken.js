@@ -44,11 +44,23 @@ export function leerCookieDispositivo(req) {
 /** Opciones de la cookie. Cross-site en prod (SameSite=None; Secure). */
 export function opcionesCookie() {
   const prod = process.env.NODE_ENV === 'production'
-  return {
+  const opts = {
     httpOnly: true,
     secure: prod,
     sameSite: prod ? 'none' : 'lax',
     maxAge: DEVICE_TTL_DIAS * 24 * 60 * 60 * 1000,
     path: '/',
   }
+  // ⚙️ Cambio preparado, INACTIVO por defecto — Cookie first-party bajo .kohtun.com
+  //   Cuando api.kohtun.com esté verificado en Render y sirviendo el backend,
+  //   definir COOKIE_DOMAIN=.kohtun.com (con el punto inicial) para que la cookie
+  //   sea válida tanto en kohtun.com como en api.kohtun.com → deja de ser
+  //   third-party y funciona también en Safari/iOS (ver nota ⚠️ arriba).
+  //   Mientras el backend siga respondiendo solo desde ikatun-server.onrender.com,
+  //   NO definir esta variable: un Domain=.kohtun.com sobre onrender.com haría que
+  //   el navegador rechazara la cookie (host no coincide con el dominio).
+  if (process.env.COOKIE_DOMAIN) {
+    opts.domain = process.env.COOKIE_DOMAIN
+  }
+  return opts
 }

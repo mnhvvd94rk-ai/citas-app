@@ -23,7 +23,10 @@ const allowedOrigins = [
   "http://localhost:5173",
   "https://citas-app-client.vercel.app",
   "https://kohtun.com",
-  "https://www.kohtun.com"
+  "https://www.kohtun.com",
+  // Dominio custom del backend (en verificación en Render). Se añade como origen
+  // permitido por si alguna petición/redirección sale desde el propio api.kohtun.com.
+  "https://api.kohtun.com"
 ];
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 // Límite amplio: el registro de paciente envía foto de identidad y firma como
