@@ -104,6 +104,14 @@ export const authApi = {
   // Login real de cliente en el contexto de su profesional (por slug).
   clienteLogin: (slug, identificador, password) =>
     request('/auth/cliente-login', { method: 'POST', body: { slug, identificador, password }, auth: false }),
+  // Login de cliente por credenciales SIN código: email/teléfono + contraseña.
+  // Puede devolver { multiple: true, opciones } si el identificador coincide con
+  // cuentas de varios profesionales (teléfono no es único).
+  clienteLoginGlobal: (identificador, password) =>
+    request('/auth/cliente-login-global', { method: 'POST', body: { identificador, password }, auth: false }),
+  // Segundo paso: el cliente eligió una de las cuentas coincidentes.
+  clienteLoginElegir: (usuarioId, identificador, password) =>
+    request('/auth/cliente-login-elegir', { method: 'POST', body: { usuarioId, identificador, password }, auth: false }),
   // Token de dispositivo (login semi-automático).
   dispositivoEstado: (slug) =>
     request('/auth/dispositivo/estado', { method: 'POST', body: { slug }, auth: false }),

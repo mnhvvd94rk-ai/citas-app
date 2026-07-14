@@ -259,6 +259,98 @@ router.post('/cliente-login', async (req, res) => {
   res.json({ token, usuario: sinPassword(usuario) })
 })
 
+// ── Login de cliente por credenciales SIN código/enlace ───────────────────────
+// El cliente ya tiene email/teléfono + contraseña propios: puede entrar sin el
+// enlace de su profesional. El correo es único global (0/1 coincidencia), pero el
+// teléfono NO: un mismo teléfono puede existir bajo varios profesionales, así que
+// si hay más de una cuenta válida se devuelve la lista para elegir (sin token).
+const clienteLoginGlobalSchema = z.object({
+  identificador: z.string().min(1),
+  password: z.string().min(1),
+})
+
+// Enmascara el contacto para la pantalla de elección, sin revelar el dato entero:
+// correo -> "pe•••@gmail.com"; si no hay correo, teléfono -> "•••789".
+function pistaContacto(u) {
+  if (u.correo) {
+    const [nombre, dominio] = String(u.correo).split('@')
+    const ini = nombre.length <= 2 ? nombre.slice(0, 1) : nombre.slice(0, 2)
+    return `${ini}•••@${dominio || ''}`
+  }
+  if (u.telefono) return '•••' + String(u.telefono).slice(-3)
+  return ''
+}
+
+// Emite sesión (JWT + cookie de dispositivo) para un cliente ya verificado.
+async function emitirSesionCliente(res, u) {
+  const token = signToken({ id: u.id, tipo: 'PACIENTE' })
+  // Solo hay cookie de dispositivo si el cliente está vinculado a un profesional
+  // (los registros legacy podrían no tenerlo; la sesión JWT funciona igual).
+  if (u.profesionalId) await emitirDispositivo(res, u.id, u.profesionalId)
+  res.json({ token, usuario: sinPassword(u) })
+}
+
+// POST /auth/cliente-login-global
+router.post('/cliente-login-global', async (req, res) => {
+  const data = parseOr400(clienteLoginGlobalSchema, req.body, res)
+  if (!data) return
+  const ident = data.identificador.trim()
+  const candidatos = await prisma.usuario.findMany({
+    where: { OR: [{ correo: ident }, { correo: ident.toLowerCase() }, { telefono: ident }] },
+    include: { profesional: { select: { id: true, nombre: true } } },
+  })
+  // Solo cuentan las cuentas cuya contraseña coincide (no se filtra por existencia
+  // de cuenta antes de validar la contraseña, para no permitir enumeración).
+  const validos = []
+  for (const u of candidatos) {
+    if (u.passwordHash && (await verifyPassword(data.password, u.passwordHash))) validos.push(u)
+  }
+  if (validos.length === 0) return res.status(401).json({ error: 'Credenciales inválidas' })
+  const activos = validos.filter((u) => u.cuentaActivada)
+  if (activos.length === 0) {
+    return res.status(403).json({
+      error: 'Esta cuenta aún no está activada. Revisa tu correo o solicita activarla.',
+      code: 'CUENTA_NO_ACTIVADA',
+    })
+  }
+  if (activos.length === 1) return emitirSesionCliente(res, activos[0])
+  // Varias cuentas válidas (mismo teléfono en distintos profesionales): elegir.
+  return res.json({
+    multiple: true,
+    opciones: activos.map((u) => ({
+      id: u.id,
+      profesionalNombre: u.profesional?.nombre || '—',
+      pista: pistaContacto(u),
+    })),
+  })
+})
+
+// POST /auth/cliente-login-elegir — segundo paso de la desambiguación: el cliente
+// eligió una cuenta concreta. Se re-verifica la contraseña por seguridad (la lista
+// se devolvió sin sesión).
+const clienteLoginElegirSchema = z.object({
+  usuarioId: z.number().int(),
+  identificador: z.string().min(1),
+  password: z.string().min(1),
+})
+router.post('/cliente-login-elegir', async (req, res) => {
+  const data = parseOr400(clienteLoginElegirSchema, req.body, res)
+  if (!data) return
+  const ident = data.identificador.trim()
+  const u = await prisma.usuario.findUnique({ where: { id: data.usuarioId } })
+  const coincide = u && (u.correo === ident || u.correo === ident.toLowerCase() || u.telefono === ident)
+  if (!u || !coincide || !u.passwordHash || !(await verifyPassword(data.password, u.passwordHash))) {
+    return res.status(401).json({ error: 'Credenciales inválidas' })
+  }
+  if (!u.cuentaActivada) {
+    return res.status(403).json({
+      error: 'Esta cuenta aún no está activada. Revisa tu correo o solicita activarla.',
+      code: 'CUENTA_NO_ACTIVADA',
+    })
+  }
+  return emitirSesionCliente(res, u)
+})
+
 // ── Token de dispositivo (login semi-automático) ──────────────────────────────
 const dispositivoSlugSchema = z.object({ slug: z.string().min(1) })
 

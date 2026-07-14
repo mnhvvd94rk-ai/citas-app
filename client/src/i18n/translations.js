@@ -163,6 +163,9 @@ const translations = {
       register: 'Regístrate',
       needLinkTitle: 'Entra con el enlace de tu profesional',
       needLinkMsg: 'Cada cuenta es exclusiva de tu profesional. Para entrar, abre el enlace de registro que te compartió (kohtun.com/reservar/…). Si no lo tienes, pídeselo directamente.',
+      credSubtitle: 'Entra con tu email o teléfono y tu contraseña.',
+      chooseTitle: 'Elige tu cuenta',
+      chooseMsg: 'Encontramos varias cuentas con esos datos. ¿Con qué profesional quieres entrar?',
     },
     reservar: {
       withPro: 'Reservas con',
@@ -721,6 +724,9 @@ const translations = {
       register: 'Sign up',
       needLinkTitle: 'Sign in with your professional’s link',
       needLinkMsg: 'Each account belongs to your professional. To sign in, open the registration link they shared with you (kohtun.com/reservar/…). If you don’t have it, ask them directly.',
+      credSubtitle: 'Sign in with your email or phone and your password.',
+      chooseTitle: 'Choose your account',
+      chooseMsg: 'We found several accounts with those details. Which professional do you want to sign in with?',
     },
     reservar: {
       withPro: 'Booking with',
@@ -1277,6 +1283,9 @@ const translations = {
       register: "S'inscrire",
       needLinkTitle: 'Connectez-vous avec le lien de votre professionnel',
       needLinkMsg: 'Chaque compte est propre à votre professionnel. Pour vous connecter, ouvrez le lien d’inscription qu’il vous a partagé (kohtun.com/reservar/…). Si vous ne l’avez pas, demandez-le-lui directement.',
+      credSubtitle: 'Connectez-vous avec votre e-mail ou téléphone et votre mot de passe.',
+      chooseTitle: 'Choisissez votre compte',
+      chooseMsg: 'Nous avons trouvé plusieurs comptes avec ces informations. Avec quel professionnel voulez-vous vous connecter ?',
     },
     reservar: {
       withPro: 'Réservation avec',
