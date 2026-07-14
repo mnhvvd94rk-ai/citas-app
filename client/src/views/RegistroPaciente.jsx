@@ -9,6 +9,7 @@ import ErrorMessage from '../components/ErrorMessage.jsx'
 import LanguageSelector from '../components/LanguageSelector.jsx'
 import Spinner from '../components/Spinner.jsx'
 import EntrarConCodigo from '../components/EntrarConCodigo.jsx'
+import PhoneInput from '../components/PhoneInput.jsx'
 
 const N_STEPS = 6
 
@@ -342,7 +343,11 @@ export default function RegistroPaciente() {
               ].map((f) => (
                 <div key={f.name}>
                   <label className="mb-1.5 block text-sm font-medium text-navy-700">{f.label}</label>
-                  <input name={f.name} type={f.type || 'text'} value={datos[f.name]} onChange={setCampo(setDatos)} className={inputCls} />
+                  {f.name === 'telefono' ? (
+                    <PhoneInput value={datos.telefono} onChange={(v) => setDatos((p) => ({ ...p, telefono: v }))} inputClassName={inputCls} />
+                  ) : (
+                    <input name={f.name} type={f.type || 'text'} value={datos[f.name]} onChange={setCampo(setDatos)} className={inputCls} />
+                  )}
                 </div>
               ))}
             </div>

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
 import ErrorMessage from '../components/ErrorMessage.jsx'
 import LanguageSelector from '../components/LanguageSelector.jsx'
+import PhoneInput from '../components/PhoneInput.jsx'
 
 // Registro self-serve del profesional. POST /auth/registro-medico → auto-login.
 export default function RegistroProfesional() {
@@ -120,7 +121,7 @@ export default function RegistroProfesional() {
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('registerPro.phone')}</label>
-                  <input name="telefono" type="tel" value={form.telefono} onChange={setCampo} className={inputCls} />
+                  <PhoneInput value={form.telefono} onChange={(v) => setForm((f) => ({ ...f, telefono: v }))} inputClassName={inputCls} />
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
