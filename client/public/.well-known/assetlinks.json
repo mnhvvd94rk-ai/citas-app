@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.kohtun.twa",
+        "sha256_cert_fingerprints": ["08:15:C0:F9:8D:A7:D7:47:78:BD:BD:F2:AE:3B:D7:66:4A:4E:F5:87:20:00:74:02:C6:8B:34:E4:F7:55:20:EB"]
+      }
+    }]
