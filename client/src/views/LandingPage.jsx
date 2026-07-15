@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
-import { Zap, Bell, CalendarCheck, LogIn } from 'lucide-react'
+import { Zap, Bell, CalendarCheck } from 'lucide-react'
 import LanguageSelector from '../components/LanguageSelector.jsx'
 import Logo from '../components/Logo.jsx'
 import Footer from '../components/Footer.jsx'
@@ -109,9 +109,9 @@ export default function LandingPage() {
             <button
               onClick={() => navigate('/login-cliente')}
               aria-label={t('landingPublic.login')}
-              className="flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-semibold text-navy-700 transition hover:text-brand-600 sm:px-3 sm:py-2 sm:text-sm"
+              className="whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-semibold text-navy-700 transition hover:text-brand-600 sm:px-3 sm:py-2 sm:text-sm"
             >
-              <LogIn className="h-4 w-4 shrink-0 sm:hidden" aria-hidden="true" />
+              <span className="sm:hidden">{t('landingPublic.loginShort')}</span>
               <span className="hidden sm:inline">{t('landingPublic.login')}</span>
             </button>
             <button onClick={() => navigate('/registro-cliente')} className="whitespace-nowrap rounded-lg bg-brand-500 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-600 sm:px-4 sm:py-2 sm:text-sm">

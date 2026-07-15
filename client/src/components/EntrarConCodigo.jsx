@@ -2,28 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { medicosApi } from '../services/api.js'
 import { useLanguage } from '../context/LanguageContext.jsx'
+import { normalizarCodigo } from '../lib/slug.js'
 import ErrorMessage from './ErrorMessage.jsx'
-
-// Normaliza el código escrito a mano al mismo formato que el backend guarda como
-// slug (minúsculas, sin acentos, guiones). Es idempotente sobre un slug ya válido,
-// así que tolera que el cliente escriba "Nombre Profesional" o "nombre-profesional".
-// También acepta que peguen el enlace completo (…/reservar/<slug>): en ese caso se
-// queda solo con la parte del slug.
-function normalizarCodigo(texto) {
-  let s = String(texto || '').trim()
-  // ¿Pegaron la URL completa del enlace? Quédate con lo que va después de
-  // "/reservar/" y hasta la siguiente barra, query (?) o ancla (#).
-  const marca = s.toLowerCase().indexOf('/reservar/')
-  if (marca !== -1) {
-    s = s.slice(marca + '/reservar/'.length).split(/[/?#]/)[0]
-  }
-  return s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // quita acentos/tildes
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
 
 // Salida para el cliente que llegó a /login-cliente o /registro-cliente sin el
 // enlace de su profesional: en vez de un callejón sin salida, puede escribir el

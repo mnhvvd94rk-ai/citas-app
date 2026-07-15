@@ -246,7 +246,9 @@ router.post('/login-paciente', async (req, res) => {
   const data = parseOr400(loginSchema, req.body, res)
   if (!data) return
 
-  const usuario = await prisma.usuario.findUnique({ where: { correo: data.correo } })
+  // El correo ya no es único global (es único por profesional): puede haber varias
+  // cuentas de la misma persona. findFirst basta para el login por correo directo.
+  const usuario = await prisma.usuario.findFirst({ where: { correo: data.correo } })
   if (!usuario) {
     return res.status(401).json({ error: 'Credenciales inválidas' })
   }
@@ -454,7 +456,11 @@ router.post('/activar-cuenta', async (req, res) => {
   if (!data) return
 
   const correo = data.correo.toLowerCase()
-  const usuario = await prisma.usuario.findUnique({ where: { correo } })
+  // El correo es único por profesional (ya no global): puede haber varias cuentas.
+  // Para la activación interesa una que aún no esté activada.
+  const usuario =
+    (await prisma.usuario.findFirst({ where: { correo, cuentaActivada: false } })) ||
+    (await prisma.usuario.findFirst({ where: { correo } }))
 
   // Solo enviamos si existe y aún no está activada. En cualquier otro caso
   // devolvemos el mismo 200 para no filtrar qué correos están registrados.

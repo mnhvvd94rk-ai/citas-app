@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { randomUUID } from 'crypto'
 import { z } from 'zod'
 import { prisma } from '../services/db.js'
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js'
@@ -27,20 +28,30 @@ async function emitirDispositivo(res, clienteId, profesionalId) {
   res.cookie(DEVICE_COOKIE, token, opcionesCookie())
 }
 
-// Todas las cuentas de cliente que comparten el MISMO identificador (correo o
-// teléfono) que la cuenta autenticada. El correo es único global (solo se coincide
-// a sí misma), así que el caso multi-cuenta lo dispara el teléfono compartido.
-// Reutiliza la misma idea que la desambiguación del login por credenciales.
+// Todas las cuentas de cliente que pertenecen a la MISMA persona que la cuenta
+// autenticada. El vínculo principal es EXPLÍCITO: la identidad raíz (id de la
+// cuenta raíz) enlaza a todas sus cuentas por profesional (ver `identidadRaizId`).
+// Se añade una compatibilidad por correo/teléfono para las cuentas antiguas que se
+// crearon antes del vínculo explícito (multi-cuenta por mismo teléfono). El correo
+// ahora es único POR profesional, así que un mismo correo real identifica de forma
+// fiable a la misma persona en varios profesionales.
 async function cuentasHermanas(userId) {
   const yo = await prisma.usuario.findUnique({
     where: { id: userId },
-    select: { correo: true, telefono: true },
+    select: { id: true, correo: true, telefono: true, identidadRaizId: true },
   })
   if (!yo) return []
+  const raiz = yo.identidadRaizId ?? yo.id
   return prisma.usuario.findMany({
     where: {
       cuentaActivada: true,
-      OR: [{ correo: yo.correo }, { telefono: yo.telefono }],
+      OR: [
+        { id: raiz }, // la cuenta raíz
+        { identidadRaizId: raiz }, // cuentas vinculadas explícitamente a la raíz
+        // Compatibilidad con cuentas antiguas (sin vínculo explícito):
+        { correo: yo.correo },
+        { telefono: yo.telefono },
+      ],
     },
     select: { id: true, profesionalId: true, profesional: { select: { nombre: true, slug: true } } },
     orderBy: { id: 'asc' },
@@ -81,6 +92,70 @@ router.post('/cambiar-profesional', requireAuth, requireRole('PACIENTE'), async 
   const token = signToken({ id: usuario.id, tipo: 'PACIENTE' })
   await emitirDispositivo(res, usuario.id, usuario.profesionalId)
   res.json({ token, usuario: sinPassword(usuario) })
+})
+
+// POST /clientes/agregar-profesional — el cliente YA AUTENTICADO se conecta con un
+// nuevo profesional a partir de su código/enlace (slug), sin volver a rellenar el
+// formulario ni pedir contraseña. Crea una nueva cuenta bajo ese profesional
+// copiando su identidad (nombre/apellido/teléfono y su correo REAL, que ahora es
+// único por profesional) y la vincula EXPLÍCITAMENTE a su identidad raíz. Sin foto
+// ni firma (opcionales). Si ya está conectado con ese profesional, no duplica nada.
+const agregarSchema = z.object({ codigo: z.string().min(1) })
+router.post('/agregar-profesional', requireAuth, requireRole('PACIENTE'), async (req, res) => {
+  const parsed = agregarSchema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos' })
+  // El frontend ya normaliza el código/enlace al slug; aquí solo se afina.
+  const slug = parsed.data.codigo.trim().toLowerCase()
+
+  const profesional = await prisma.medico.findUnique({ where: { slug } })
+  if (!profesional) {
+    return res.status(404).json({
+      error: 'No encontramos ningún profesional con ese código o enlace.',
+      code: 'SLUG_INVALIDO',
+    })
+  }
+
+  const yo = await prisma.usuario.findUnique({ where: { id: req.user.id } })
+  if (!yo) return res.status(404).json({ error: 'Cuenta no encontrada' })
+
+  // ¿Ya tiene una cuenta con ese profesional? (por identidad explícita o legacy)
+  const cuentas = await cuentasHermanas(req.user.id)
+  if (cuentas.some((c) => c.profesionalId === profesional.id)) {
+    return res.json({ yaConectado: true, profesional: { id: profesional.id, nombre: profesional.nombre } })
+  }
+
+  // Identidad raíz a la que se vincula la nueva cuenta (la propia si es la raíz).
+  const raiz = yo.identidadRaizId ?? yo.id
+  try {
+    const nuevo = await prisma.usuario.create({
+      data: {
+        nombre: yo.nombre,
+        apellido: yo.apellido,
+        // Documento marcador: no se re-pide al agregar (como en la importación).
+        documentoIdentidad: `LINK-${randomUUID()}`,
+        telefono: yo.telefono,
+        correo: yo.correo, // correo REAL: único por profesional → recordatorios OK
+        passwordHash: yo.passwordHash, // misma contraseña sirve para todas sus cuentas
+        estado: 'NUEVO',
+        cuentaActivada: true,
+        profesionalId: profesional.id,
+        idiomaPreferido: yo.idiomaPreferido,
+        identidadRaizId: raiz, // vínculo explícito con su identidad
+      },
+    })
+    return res.status(201).json({
+      creado: true,
+      clienteId: nuevo.id,
+      profesional: { id: profesional.id, nombre: profesional.nombre },
+    })
+  } catch (err) {
+    // Carrera: otra petición ya creó la cuenta (correo, profesional). No es error.
+    if (err.code === 'P2002') {
+      return res.json({ yaConectado: true, profesional: { id: profesional.id, nombre: profesional.nombre } })
+    }
+    console.error('[agregar-profesional]', err)
+    return res.status(500).json({ error: 'No se pudo agregar el profesional. Inténtalo de nuevo.' })
+  }
 })
 
 export default router

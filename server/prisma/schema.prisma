@@ -56,7 +56,13 @@ model Usuario {
   fotoIdentidadUrl   String?
   firmaUrl           String?
   telefono           String
-  correo             String         @unique
+  // El correo ya NO es único global: un mismo cliente (misma persona) puede tener
+  // una cuenta por profesional con su correo real, para que los recordatorios por
+  // email funcionen en todas sus relaciones. La unicidad es por profesional
+  // (ver @@unique([correo, profesionalId]) más abajo). El rechazo de "mismo correo
+  // en el registro público con otro profesional" se hace a nivel de aplicación
+  // (ver /auth/registro-paciente).
+  correo             String
   // Nullable: los clientes importados nacen sin contraseña; la crean ellos al
   // activar su cuenta (ver `cuentaActivada`).
   passwordHash       String?
@@ -81,12 +87,23 @@ model Usuario {
   profesional        Medico?        @relation(fields: [profesionalId], references: [id])
   profesionalId      Int?
 
+  // Vínculo explícito entre las cuentas de una misma persona con distintos
+  // profesionales. La cuenta "raíz" (la primera) tiene identidadRaizId = null; las
+  // cuentas añadidas después con "Agregar profesional" apuntan a la raíz. Así el
+  // selector de "mis profesionales" agrupa por identidad explícita y no por
+  // coincidencia casual de teléfono/correo.
+  identidadRaiz      Usuario?       @relation("IdentidadCliente", fields: [identidadRaizId], references: [id])
+  identidadRaizId    Int?
+  cuentasVinculadas  Usuario[]      @relation("IdentidadCliente")
+
   citas              Cita[]
   notas              NotaPaciente[]
   pushSubscriptions  PushSubscription[]
   dispositivos       DispositivoCliente[]
 
+  @@unique([correo, profesionalId])
   @@index([profesionalId])
+  @@index([identidadRaizId])
 }
 
 /// Gestor / médico.

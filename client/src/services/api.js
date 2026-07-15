@@ -149,6 +149,10 @@ export const clientesApi = {
   // Cambia la sesión a la cuenta del profesional indicado, sin pedir contraseña.
   cambiarProfesional: (profesionalId) =>
     request('/clientes/cambiar-profesional', { method: 'POST', body: { profesionalId } }),
+  // El cliente autenticado se conecta con un nuevo profesional por su código/enlace
+  // (slug ya normalizado). Puede devolver { creado } o { yaConectado }.
+  agregarProfesional: (codigo) =>
+    request('/clientes/agregar-profesional', { method: 'POST', body: { codigo } }),
 }
 
 // ── Citas ────────────────────────────────────────────────────────────────────
