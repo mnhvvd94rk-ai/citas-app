@@ -126,6 +126,44 @@ router.post('/registro-paciente', async (req, res) => {
     })
   }
 
+  // Detección temprana de colisiones para dar un mensaje claro (en vez del 409
+  // genérico de Prisma). El correo y el documento son ÚNICOS a nivel global; el
+  // teléfono NO: un mismo teléfono puede existir bajo varios profesionales (así
+  // es como un cliente se registra con un segundo profesional: mismo teléfono,
+  // correo distinto). Por eso el teléfono nunca bloquea el registro.
+  const correo = data.correo.trim()
+  const [porCorreo, porDocumento, porTelefono] = await Promise.all([
+    prisma.usuario.findFirst({ where: { OR: [{ correo }, { correo: correo.toLowerCase() }] } }),
+    prisma.usuario.findFirst({ where: { documentoIdentidad: data.documentoIdentidad } }),
+    // ¿El teléfono ya pertenece a una cuenta con la que se puede iniciar sesión?
+    prisma.usuario.findFirst({
+      where: { telefono: data.telefono, cuentaActivada: true, passwordHash: { not: null } },
+    }),
+  ])
+
+  if (porCorreo) {
+    // El correo es único global: no se puede reutilizar para otro profesional. Si
+    // además el teléfono coincide con una cuenta existente (o la propia cuenta del
+    // correo está activada), el cliente puede iniciar sesión y usar el selector de
+    // profesionales en vez de crear otra cuenta.
+    const puedeIniciarSesion =
+      Boolean(porTelefono) || Boolean(porCorreo.cuentaActivada && porCorreo.passwordHash)
+    return res.status(409).json({
+      code: 'CORREO_YA_REGISTRADO',
+      puedeIniciarSesion,
+      error:
+        'Ya existe una cuenta con este correo. Si quieres registrarte con un profesional distinto, usa un correo diferente. Si tu número de teléfono coincide con una cuenta existente, inicia sesión con tus credenciales para ver el selector de profesionales.',
+    })
+  }
+
+  if (porDocumento) {
+    return res.status(409).json({
+      code: 'DOCUMENTO_YA_REGISTRADO',
+      error:
+        'Ya existe una cuenta con este documento de identidad. Si ya tienes cuenta, inicia sesión con tus credenciales; si crees que es un error, contacta a tu profesional.',
+    })
+  }
+
   try {
     const passwordHash = await hashPassword(data.password)
     const usuario = await prisma.usuario.create({
@@ -148,8 +186,17 @@ router.post('/registro-paciente', async (req, res) => {
     await emitirDispositivo(res, usuario.id, profesional.id)
     res.status(201).json({ token, usuario: sinPassword(usuario) })
   } catch (err) {
+    // Red de seguridad ante carreras (dos registros simultáneos con el mismo dato).
     if (err.code === 'P2002') {
-      return res.status(409).json({ error: 'Correo o documento ya registrado' })
+      const campo = Array.isArray(err.meta?.target) ? err.meta.target.join(',') : String(err.meta?.target || '')
+      if (campo.includes('correo')) {
+        return res.status(409).json({
+          code: 'CORREO_YA_REGISTRADO',
+          error:
+            'Ya existe una cuenta con este correo. Si quieres registrarte con un profesional distinto, usa un correo diferente. Si tu número de teléfono coincide con una cuenta existente, inicia sesión con tus credenciales para ver el selector de profesionales.',
+        })
+      }
+      return res.status(409).json({ code: 'DOCUMENTO_YA_REGISTRADO', error: 'Correo o documento ya registrado' })
     }
     console.error(err)
     res.status(500).json({ error: 'Error interno al registrar paciente' })

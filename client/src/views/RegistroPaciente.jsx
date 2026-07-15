@@ -321,7 +321,7 @@ export default function RegistroPaciente() {
           </p>
         </div>
 
-        {error && <ErrorMessage error={error} className="mb-4" />}
+        <ErrorRegistro error={error} t={t} onLogin={() => navigate('/login-cliente')} className="mb-4" />
 
         <div className="rounded-2xl bg-white p-6 shadow-xl shadow-navy-900/5 ring-1 ring-navy-100">
           {paso === 0 && (
@@ -464,6 +464,30 @@ function AvisoEnlace({ t, titulo, mensaje }) {
       </div>
     </div>
   )
+}
+
+// Error del registro. Para las colisiones de datos únicos (correo/documento) muestra
+// un mensaje claro y traducido + un acceso directo a "Iniciar sesión" (login global
+// con selector de profesionales), en vez del texto crudo del backend. El resto de
+// errores caen al ErrorMessage estándar.
+function ErrorRegistro({ error, t, onLogin, className = '' }) {
+  if (!error) return null
+  const code = error.code
+  if (code === 'CORREO_YA_REGISTRADO' || code === 'DOCUMENTO_YA_REGISTRADO') {
+    const mensaje = code === 'CORREO_YA_REGISTRADO' ? t('register.emailExists') : t('register.docExists')
+    return (
+      <div role="alert" className={`rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 ${className}`}>
+        <p>{mensaje}</p>
+        <button
+          onClick={onLogin}
+          className="mt-2 rounded-lg bg-navy-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-navy-800"
+        >
+          {t('register.goLogin')}
+        </button>
+      </div>
+    )
+  }
+  return <ErrorMessage error={error} className={className} />
 }
 
 function Resumen({ label, valor, className = '' }) {
