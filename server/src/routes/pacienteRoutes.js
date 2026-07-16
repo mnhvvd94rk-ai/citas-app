@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { randomUUID } from 'node:crypto'
 import { prisma } from '../services/db.js'
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js'
+import { tr } from '../i18n/messages.js'
 
 const router = Router()
 
@@ -103,7 +104,7 @@ router.post('/importar', async (req, res) => {
   const parsed = importarSchema.safeParse(req.body)
   if (!parsed.success) {
     return res.status(400).json({
-      error: 'Datos inválidos',
+      error: tr(req.lang, 'error.datosInvalidos'),
       detalles: parsed.error.issues.map((i) => ({ campo: i.path.join('.'), mensaje: i.message })),
     })
   }
@@ -164,21 +165,21 @@ const patchSchema = z
 
 router.patch('/:id', async (req, res) => {
   const id = Number(req.params.id)
-  if (!Number.isInteger(id)) return res.status(400).json({ error: 'id inválido' })
+  if (!Number.isInteger(id)) return res.status(400).json({ error: tr(req.lang, 'error.idInvalido') })
 
   const parsed = patchSchema.safeParse(req.body)
   if (!parsed.success) {
     return res.status(400).json({
-      error: 'Datos inválidos',
+      error: tr(req.lang, 'error.datosInvalidos'),
       detalles: parsed.error.issues.map((i) => ({ campo: i.path.join('.'), mensaje: i.message })),
     })
   }
 
   const actual = await prisma.usuario.findUnique({ where: { id } })
-  if (!actual) return res.status(404).json({ error: 'Cliente no encontrado' })
+  if (!actual) return res.status(404).json({ error: tr(req.lang, 'error.clienteNoEncontrado') })
   // Solo el profesional dueño puede modificar a este cliente.
   if (actual.profesionalId !== req.user.id) {
-    return res.status(403).json({ error: 'Este cliente no te pertenece' })
+    return res.status(403).json({ error: tr(req.lang, 'error.clienteAjeno') })
   }
 
   const data = {}
@@ -217,17 +218,17 @@ router.patch('/:id', async (req, res) => {
 //   bloqueo previo evita borrar clientes con compromisos futuros.
 router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id)
-  if (!Number.isInteger(id)) return res.status(400).json({ error: 'id inválido' })
+  if (!Number.isInteger(id)) return res.status(400).json({ error: tr(req.lang, 'error.idInvalido') })
 
   const cliente = await prisma.usuario.findUnique({
     where: { id },
     select: { id: true, nombre: true, apellido: true, profesionalId: true },
   })
-  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' })
+  if (!cliente) return res.status(404).json({ error: tr(req.lang, 'error.clienteNoEncontrado') })
 
   // Solo el profesional dueño de este cliente puede eliminarlo.
   if (cliente.profesionalId !== req.user.id) {
-    return res.status(403).json({ error: 'Este cliente no te pertenece' })
+    return res.status(403).json({ error: tr(req.lang, 'error.clienteAjeno') })
   }
 
   // Bloqueo si tiene citas activas (pendientes o confirmadas).
@@ -236,7 +237,7 @@ router.delete('/:id', async (req, res) => {
   })
   if (citasActivas > 0) {
     return res.status(409).json({
-      error: 'Este cliente tiene citas pendientes. Cancélalas primero.',
+      error: tr(req.lang, 'error.clienteConCitas'),
       code: 'CLIENTE_CON_CITAS_PENDIENTES',
     })
   }

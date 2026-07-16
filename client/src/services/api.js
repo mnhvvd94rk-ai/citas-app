@@ -38,6 +38,13 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
   const headers = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
 
+  // Idioma activo de la UI → el backend traduce sus mensajes de error a este idioma
+  // (ver langMiddleware / i18n de mensajes). No rompe si falta: el backend cae a ES.
+  try {
+    const lang = localStorage.getItem('kohtun_lang')
+    if (lang) headers['X-Lang'] = lang
+  } catch { /* localStorage no disponible: el backend usa su idioma por defecto */ }
+
   const token = getToken()
   if (auth && token) headers['Authorization'] = `Bearer ${token}`
 
@@ -140,6 +147,9 @@ export const medicosApi = {
   editarSlug: (slug) => request('/medicos/mi-slug', { method: 'PATCH', body: { slug } }),
   // Sube (data URL) o quita (null) la foto de perfil del profesional autenticado.
   actualizarFoto: (fotoPerfilUrl) => request('/medicos/mi-foto', { method: 'PATCH', body: { fotoPerfilUrl } }),
+  // Actualiza datos de perfil del profesional visibles para el cliente
+  // (teléfono, dirección, bio). Solo se envían los campos presentes.
+  actualizarPerfil: (campos) => request('/medicos/mi-perfil', { method: 'PATCH', body: campos }),
 }
 
 // ── Cliente (cuentas por profesional) ────────────────────────────────────────

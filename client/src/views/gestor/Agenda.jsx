@@ -3,6 +3,7 @@ import { citasApi, disponibilidadApi, medicosApi, pacientesApi } from '../../ser
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 import FotoPerfilCard from '../../components/FotoPerfilCard.jsx'
+import PerfilProfesionalCard from '../../components/PerfilProfesionalCard.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import EstadoBadge from '../../components/EstadoBadge.jsx'
@@ -136,6 +137,7 @@ export default function Agenda() {
       </div>
 
       <FotoPerfilCard />
+      <PerfilProfesionalCard />
       <EnlaceReserva />
 
       {avisoCita && (

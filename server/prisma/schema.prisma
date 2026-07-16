@@ -130,6 +130,14 @@ model Medico {
   // usa el avatar genérico (inicial del nombre) como hasta ahora.
   fotoPerfilUrl    String?
 
+  // Datos de perfil editables por el profesional y visibles para el cliente en su
+  // dashboard. Todos opcionales (nullable) para no romper filas previas.
+  // `direccion`: ubicación/consultorio en texto libre (calle, ciudad, país en una
+  // línea; el nivel de detalle lo escribe el profesional). `bio`: descripción corta
+  // del servicio. (El teléfono ya existe arriba, ahora también editable.)
+  direccion        String?
+  bio              String?
+
   // Configuración de penalización por cancelación tardía (por defecto):
   costoCancelacion           Float @default(0)
   diasAnticipacionRequierida Int   @default(7)

@@ -15,6 +15,7 @@ import contactoRouter from './routes/contactoRoutes.js'
 import pushRouter from './routes/pushRoutes.js'
 import { runDailySummary } from './jobs/dailySummary.js'
 import notificacionesJob from './jobs/notificacionesAutomaticas.js'
+import { idiomaRequest } from './middleware/langMiddleware.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -33,6 +34,8 @@ app.use(cors({ origin: allowedOrigins, credentials: true }));
 // Límite amplio: el registro de paciente envía foto de identidad y firma como
 // data URLs (base64) en el body.
 app.use(express.json({ limit: '20mb' }))
+// Resuelve el idioma del solicitante (req.lang) para traducir los mensajes de error.
+app.use(idiomaRequest)
 
 app.use('/health', healthRouter)
 app.use('/auth', authRouter)

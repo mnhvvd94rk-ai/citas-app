@@ -48,6 +48,8 @@ export async function runDailySummary() {
     const resultado = await notificationService.send({
       tipo: 'RESUMEN_DIARIO',
       canal: 'EMAIL',
+      // El resumen lo recibe el PROFESIONAL: se envía en su idioma preferido.
+      idioma: medico.idiomaPreferido || 'ES',
       destinatario: {
         id: medico.id,
         tipoDestinatario: 'MEDICO',

@@ -4,6 +4,7 @@ import { prisma } from '../services/db.js'
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js'
 import { slotsDisponibles, validarReserva } from '../services/slotEngine.js'
 import notificationService from '../services/notificationService.js'
+import { tr } from '../i18n/messages.js'
 
 const router = Router()
 
@@ -30,11 +31,11 @@ function aHora(min) {
 }
 
 /** Valida `body` contra `schema`; si falla, responde 400 y devuelve null. */
-function parseOr400(schema, body, res) {
-  const result = schema.safeParse(body)
+function parseOr400(schema, req, res) {
+  const result = schema.safeParse(req.body)
   if (!result.success) {
     res.status(400).json({
-      error: 'Datos inválidos',
+      error: tr(req.lang, 'error.datosInvalidos'),
       detalles: result.error.issues.map((i) => ({
         campo: i.path.join('.'),
         mensaje: i.message,
@@ -91,7 +92,7 @@ async function resolverMedicoId(req, res) {
     })
     if (!cliente?.profesionalId) {
       res.status(404).json({
-        error: 'Tu cuenta no está vinculada a ningún profesional.',
+        error: tr(req.lang, 'error.sinProfesional'),
         code: 'SIN_PROFESIONAL',
       })
       return null
@@ -109,7 +110,7 @@ router.get('/slots-disponibles', requireAuth, async (req, res) => {
   if (medicoId === null) return
 
   if (!fecha || !FECHA_RE.test(fecha)) {
-    return res.status(400).json({ error: 'fecha es obligatoria (YYYY-MM-DD)' })
+    return res.status(400).json({ error: tr(req.lang, 'error.fechaObligatoria') })
   }
 
   const fechaDate = parseFecha(fecha)
@@ -131,7 +132,7 @@ const MES_RE = /^\d{4}-\d{2}$/
 router.get('/dias-disponibles', requireAuth, async (req, res) => {
   const mes = req.query.mes
   if (!mes || !MES_RE.test(mes)) {
-    return res.status(400).json({ error: 'mes es obligatorio (YYYY-MM)' })
+    return res.status(400).json({ error: tr(req.lang, 'error.mesObligatorio') })
   }
   const medicoId = await resolverMedicoId(req, res)
   if (medicoId === null) return
@@ -171,24 +172,24 @@ router.get('/dias-disponibles', requireAuth, async (req, res) => {
 
 // ── POST /citas/reservar ─────────────────────────────────────────────────────
 router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) => {
-  const data = parseOr400(reservarSchema, req.body, res)
+  const data = parseOr400(reservarSchema, req, res)
   if (!data) return
 
   // a) Estado del paciente: se lee de la BD, no del body.
   const paciente = await prisma.usuario.findUnique({ where: { id: req.user.id } })
-  if (!paciente) return res.status(404).json({ error: 'Paciente no encontrado' })
+  if (!paciente) return res.status(404).json({ error: tr(req.lang, 'error.pacienteNoEncontrado') })
 
   // a.2) El profesional se determina por el vínculo del cliente, NO por el body.
   //      Así un cliente solo puede reservar con su propio profesional aunque
   //      manipule el medicoId enviado.
   if (!paciente.profesionalId) {
     return res.status(400).json({
-      error: 'Tu cuenta no está vinculada a ningún profesional.',
+      error: tr(req.lang, 'error.sinProfesional'),
       code: 'SIN_PROFESIONAL',
     })
   }
   if (data.medicoId !== paciente.profesionalId) {
-    return res.status(403).json({ error: 'No puedes reservar con este profesional.' })
+    return res.status(403).json({ error: tr(req.lang, 'error.noReservarProfesional') })
   }
   const medicoId = paciente.profesionalId
 
@@ -196,7 +197,7 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
   if (paciente.estado === 'NUEVO' && !data.motivoConsulta) {
     return res
       .status(400)
-      .json({ error: 'Un paciente nuevo debe indicar el motivo de consulta' })
+      .json({ error: tr(req.lang, 'error.motivoRequerido') })
   }
 
   // c) Disponibilidades y citas del médico para esa fecha.
@@ -290,7 +291,7 @@ const crearManualSchema = z.object({
 })
 
 router.post('/crear-manual', requireAuth, requireRole('MEDICO'), async (req, res) => {
-  const data = parseOr400(crearManualSchema, req.body, res)
+  const data = parseOr400(crearManualSchema, req, res)
   if (!data) return
 
   const medicoId = req.user.id
@@ -300,9 +301,9 @@ router.post('/crear-manual', requireAuth, requireRole('MEDICO'), async (req, res
     where: { id: data.clienteId },
     select: { id: true, profesionalId: true },
   })
-  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' })
+  if (!cliente) return res.status(404).json({ error: tr(req.lang, 'error.clienteNoEncontrado') })
   if (cliente.profesionalId !== medicoId) {
-    return res.status(403).json({ error: 'Este cliente no te pertenece' })
+    return res.status(403).json({ error: tr(req.lang, 'error.clienteAjeno') })
   }
 
   // b) Calcula el fin del bloque con la duración elegida. Rechaza si se pasa
@@ -310,7 +311,7 @@ router.post('/crear-manual', requireAuth, requireRole('MEDICO'), async (req, res
   const inicioMin = aMinutos(data.horaInicio)
   const finMin = inicioMin + data.duracionMinutos
   if (finMin > 24 * 60) {
-    return res.status(400).json({ error: 'La hora es demasiado tarde para esa duración.' })
+    return res.status(400).json({ error: tr(req.lang, 'error.horaTardia') })
   }
   const horaFin = aHora(finMin)
 
@@ -325,7 +326,7 @@ router.post('/crear-manual', requireAuth, requireRole('MEDICO'), async (req, res
   )
   if (solapa) {
     return res.status(409).json({
-      error: 'Ese horario se solapa con otra cita existente.',
+      error: tr(req.lang, 'error.horarioSolapado'),
       code: 'HORARIO_OCUPADO',
     })
   }
@@ -369,16 +370,16 @@ router.post('/crear-manual', requireAuth, requireRole('MEDICO'), async (req, res
 async function cargarCitaDelPaciente(req, res) {
   const id = Number(req.params.id)
   if (!Number.isInteger(id)) {
-    res.status(400).json({ error: 'id inválido' })
+    res.status(400).json({ error: tr(req.lang, 'error.idInvalido') })
     return null
   }
   const cita = await prisma.cita.findUnique({ where: { id } })
   if (!cita) {
-    res.status(404).json({ error: 'Cita no encontrada' })
+    res.status(404).json({ error: tr(req.lang, 'error.citaNoEncontrada') })
     return null
   }
   if (cita.pacienteId !== req.user.id) {
-    res.status(403).json({ error: 'Esta cita no te pertenece' })
+    res.status(403).json({ error: tr(req.lang, 'error.citaAjena') })
     return null
   }
   return cita
@@ -390,7 +391,7 @@ router.patch('/:id/cancelar', requireAuth, requireRole('PACIENTE'), async (req, 
   if (!cita) return
   if (!['PENDIENTE', 'CONFIRMADA'].includes(cita.estado)) {
     return res.status(409).json({
-      error: `Solo puedes cancelar citas PENDIENTE o CONFIRMADA (estado actual: ${cita.estado})`,
+      error: tr(req.lang, 'error.soloCancelar', { estado: cita.estado }),
     })
   }
 
@@ -473,16 +474,16 @@ router.get('/agenda', requireAuth, requireRole('MEDICO'), async (req, res) => {
 async function cargarCitaPropia(req, res) {
   const id = Number(req.params.id)
   if (!Number.isInteger(id)) {
-    res.status(400).json({ error: 'id inválido' })
+    res.status(400).json({ error: tr(req.lang, 'error.idInvalido') })
     return null
   }
   const cita = await prisma.cita.findUnique({ where: { id } })
   if (!cita) {
-    res.status(404).json({ error: 'Cita no encontrada' })
+    res.status(404).json({ error: tr(req.lang, 'error.citaNoEncontrada') })
     return null
   }
   if (cita.medicoId !== req.user.id) {
-    res.status(403).json({ error: 'Esta cita no te pertenece' })
+    res.status(403).json({ error: tr(req.lang, 'error.citaAjena') })
     return null
   }
   return cita
@@ -509,7 +510,7 @@ router.patch('/:id/aprobar', requireAuth, requireRole('MEDICO'), async (req, res
   if (cita.estado !== 'PENDIENTE') {
     return res
       .status(409)
-      .json({ error: `Solo se pueden aprobar citas PENDIENTE (estado actual: ${cita.estado})` })
+      .json({ error: tr(req.lang, 'error.soloAprobar', { estado: cita.estado }) })
   }
 
   const actualizada = await prisma.cita.update({
@@ -521,7 +522,7 @@ router.patch('/:id/aprobar', requireAuth, requireRole('MEDICO'), async (req, res
 
 // ── PATCH /citas/:id/anular ──────────────────────────────────────────────────
 router.patch('/:id/anular', requireAuth, requireRole('MEDICO'), async (req, res) => {
-  const data = parseOr400(anularSchema, req.body, res)
+  const data = parseOr400(anularSchema, req, res)
   if (!data) return
 
   const cita = await cargarCitaPropia(req, res)
@@ -529,7 +530,7 @@ router.patch('/:id/anular', requireAuth, requireRole('MEDICO'), async (req, res)
 
   if (!['PENDIENTE', 'CONFIRMADA'].includes(cita.estado)) {
     return res.status(409).json({
-      error: `Solo se pueden anular citas PENDIENTE o CONFIRMADA (estado actual: ${cita.estado})`,
+      error: tr(req.lang, 'error.soloAnular', { estado: cita.estado }),
     })
   }
 
@@ -538,14 +539,16 @@ router.patch('/:id/anular', requireAuth, requireRole('MEDICO'), async (req, res)
     data: { estado: 'ANULADA', notaAnulacion: data.notaAnulacion },
   })
 
-  // Notificación best-effort al paciente (no bloquea la anulación).
+  // Notificación best-effort al paciente (no bloquea la anulación). Se envía en el
+  // idioma preferido del CLIENTE (es quien la recibe), no en el del profesional.
   const paciente = await prisma.usuario.findUnique({
     where: { id: actualizada.pacienteId },
-    select: { id: true, correo: true, telefono: true },
+    select: { id: true, correo: true, telefono: true, idiomaPreferido: true },
   })
   const noti = await notificationService.send({
     tipo: 'ANULACION',
     canal: 'EMAIL',
+    idioma: paciente.idiomaPreferido || 'ES',
     destinatario: {
       id: paciente.id,
       tipoDestinatario: 'PACIENTE',
@@ -571,7 +574,7 @@ router.patch('/:id/completar', requireAuth, requireRole('MEDICO'), async (req, r
 
   if (cita.estado !== 'CONFIRMADA') {
     return res.status(409).json({
-      error: `Solo se pueden completar citas CONFIRMADA (estado actual: ${cita.estado})`,
+      error: tr(req.lang, 'error.soloCompletar', { estado: cita.estado }),
     })
   }
 

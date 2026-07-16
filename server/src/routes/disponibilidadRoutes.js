@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../services/db.js'
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js'
 import { generarSlots, slotsDisponibles } from '../services/slotEngine.js'
+import { tr } from '../i18n/messages.js'
 
 const router = Router()
 
@@ -30,11 +31,11 @@ function fechaISO(date) {
 }
 
 /** Valida `body` contra `schema`; si falla, responde 400 y devuelve null. */
-function parseOr400(schema, body, res) {
-  const result = schema.safeParse(body)
+function parseOr400(schema, req, res) {
+  const result = schema.safeParse(req.body)
   if (!result.success) {
     res.status(400).json({
-      error: 'Datos inválidos',
+      error: tr(req.lang, 'error.datosInvalidos'),
       detalles: result.error.issues.map((i) => ({
         campo: i.path.join('.'),
         mensaje: i.message,
@@ -100,7 +101,7 @@ const crearRangoSchema = z
 
 // ── POST /disponibilidad ─────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
-  const data = parseOr400(crearDisponibilidadSchema, req.body, res)
+  const data = parseOr400(crearDisponibilidadSchema, req, res)
   if (!data) return
 
   const disponibilidad = await prisma.disponibilidad.create({
@@ -120,7 +121,7 @@ router.post('/', async (req, res) => {
 // `diasSemana`, troceando el horario en bloques de `duracionSlotMinutos`.
 // Evita duplicados: no vuelve a crear un bloque día/hora que ya exista.
 router.post('/rango', async (req, res) => {
-  const data = parseOr400(crearRangoSchema, req.body, res)
+  const data = parseOr400(crearRangoSchema, req, res)
   if (!data) return
 
   const inicio = parseFecha(data.fechaInicio)
@@ -201,15 +202,15 @@ router.get('/', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id)
   if (!Number.isInteger(id)) {
-    return res.status(400).json({ error: 'id inválido' })
+    return res.status(400).json({ error: tr(req.lang, 'error.idInvalido') })
   }
 
   const disponibilidad = await prisma.disponibilidad.findUnique({ where: { id } })
   if (!disponibilidad) {
-    return res.status(404).json({ error: 'Disponibilidad no encontrada' })
+    return res.status(404).json({ error: tr(req.lang, 'error.dispNoEncontrada') })
   }
   if (disponibilidad.medicoId !== req.user.id) {
-    return res.status(403).json({ error: 'Esta disponibilidad no te pertenece' })
+    return res.status(403).json({ error: tr(req.lang, 'error.dispAjena') })
   }
 
   // Citas activas del médico en esa fecha.
@@ -224,7 +225,7 @@ router.delete('/:id', async (req, res) => {
 
   if (ocupados > 0) {
     return res.status(409).json({
-      error: `No se puede eliminar: hay ${ocupados} slot(s) con citas activas (PENDIENTE o CONFIRMADA) dentro de este rango.`,
+      error: tr(req.lang, "error.dispConCitas", { ocupados }),
     })
   }
 

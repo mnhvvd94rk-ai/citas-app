@@ -267,6 +267,17 @@ export default function DashboardCliente() {
                         {medico.telefono}
                       </a>
                     )}
+                    {medico.direccion && (
+                      <p className="mt-2 flex items-start gap-1 text-sm text-navy-600">
+                        <span aria-hidden="true">📍</span>
+                        <span>{medico.direccion}</span>
+                      </p>
+                    )}
+                    {medico.bio && (
+                      <p className="mt-3 whitespace-pre-line border-t border-slate-100 pt-3 text-left text-sm text-navy-500">
+                        {medico.bio}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <p className="py-6 text-center text-sm text-navy-400">—</p>

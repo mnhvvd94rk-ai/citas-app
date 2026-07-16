@@ -39,32 +39,62 @@ const VIDEO_LINE = {
   FR: (enlace) => `\n\n💻 Votre rendez-vous est en visioconférence. Rejoignez ici : ${enlace}`,
 }
 
-// ── Construcción del mensaje según el tipo (y el idioma para recordatorios) ───
-function construirMensaje(tipo, payload = {}, idioma = 'ES') {
+// Anulación de cita (la ve el CLIENTE) — en su idioma. `hola`/`reservar` son fijas;
+// `cuerpo(p)` usa fecha ISO (neutral) y hora, y `motivo(nota)` la razón opcional.
+const ANULACION_MESSAGES = {
+  ES: {
+    asunto: 'Tu cita ha sido anulada',
+    hola: 'Hola,',
+    cuerpo: (p) => `Tu cita del ${p.fecha} a las ${p.horaInicio} ha sido anulada.`,
+    motivo: (nota) => `Motivo: ${nota}`,
+    reservar: 'Puedes volver a reservar cuando lo necesites.',
+  },
+  EN: {
+    asunto: 'Your appointment has been cancelled',
+    hola: 'Hello,',
+    cuerpo: (p) => `Your appointment on ${p.fecha} at ${p.horaInicio} has been cancelled.`,
+    motivo: (nota) => `Reason: ${nota}`,
+    reservar: 'You can book again whenever you need to.',
+  },
+  FR: {
+    asunto: 'Votre rendez-vous a été annulé',
+    hola: 'Bonjour,',
+    cuerpo: (p) => `Votre rendez-vous du ${p.fecha} à ${p.horaInicio} a été annulé.`,
+    motivo: (nota) => `Motif : ${nota}`,
+    reservar: 'Vous pouvez reprendre rendez-vous quand vous le souhaitez.',
+  },
+}
+
+// Resumen diario de citas (lo ve el PROFESIONAL) — en su idioma.
+const RESUMEN_MESSAGES = {
+  ES: { asunto: 'Resumen de citas del día', encabezado: (n) => `Tienes ${n} cita(s) confirmada(s) hoy:` },
+  EN: { asunto: 'Daily appointment summary', encabezado: (n) => `You have ${n} confirmed appointment(s) today:` },
+  FR: { asunto: 'Résumé des rendez-vous du jour', encabezado: (n) => `Vous avez ${n} rendez-vous confirmé(s) aujourd’hui :` },
+}
+
+// ── Construcción del mensaje según el tipo (y el idioma) ──────────────────────
+// Exportada para pruebas de las plantillas por idioma (sin enviar nada real).
+export function construirMensaje(tipo, payload = {}, idioma = 'ES') {
   if (tipo === 'ANULACION') {
-    const lineas = [
-      'Hola,',
-      '',
-      `Tu cita del ${payload.fecha} a las ${payload.horaInicio} ha sido anulada.`,
-    ]
-    if (payload.notaAnulacion) lineas.push(`Motivo: ${payload.notaAnulacion}`)
-    lineas.push('', 'Puedes volver a reservar cuando lo necesites.')
+    const m = ANULACION_MESSAGES[idioma] || ANULACION_MESSAGES.ES
+    const lineas = [m.hola, '', m.cuerpo(payload)]
+    if (payload.notaAnulacion) lineas.push(m.motivo(payload.notaAnulacion))
+    lineas.push('', m.reservar)
     const texto = lineas.join('\n')
     return {
-      asunto: 'Tu cita ha sido anulada',
+      asunto: m.asunto,
       texto,
       html: `<p>${texto.replace(/\n/g, '<br>')}</p>`,
     }
   }
 
   if (tipo === 'RESUMEN_DIARIO') {
+    const m = RESUMEN_MESSAGES[idioma] || RESUMEN_MESSAGES.ES
     const citas = payload.citas || []
-    const items = citas
-      .map((c) => `• ${c.horaInicio} - ${c.horaFin}`)
-      .join('\n')
-    const texto = `Tienes ${citas.length} cita(s) confirmada(s) hoy:\n${items}`
+    const items = citas.map((c) => `• ${c.horaInicio} - ${c.horaFin}`).join('\n')
+    const texto = `${m.encabezado(citas.length)}\n${items}`
     return {
-      asunto: 'Resumen de citas del día',
+      asunto: m.asunto,
       texto,
       html: `<p>${texto.replace(/\n/g, '<br>')}</p>`,
     }
