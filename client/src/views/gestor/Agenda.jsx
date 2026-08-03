@@ -345,7 +345,7 @@ function AgendarCitaModal({ fechaInicial, onClose, onCreated }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-t-2xl bg-white p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-xl sm:rounded-2xl sm:pb-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-navy-800">{t('agenda.scheduleAppointment')}</h3>
           <button onClick={onClose} className="rounded-lg p-1 text-navy-400 hover:bg-navy-50" aria-label={t('agenda.close')}>✕</button>
@@ -556,7 +556,7 @@ function CitaModal({ cita, onClose, onAprobar, onCompletar, onAnular, formatDay 
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-t-2xl bg-white p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-xl sm:rounded-2xl sm:pb-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <h3 className="text-lg font-bold text-navy-800">{cita.horaInicio} – {cita.horaFin}</h3>
           <button onClick={onClose} className="rounded-lg p-1 text-navy-400 hover:bg-navy-50" aria-label={t('agenda.close')}>✕</button>

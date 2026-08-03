@@ -436,7 +436,7 @@ function ClienteCard({ cliente, onEliminado }) {
           className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/50 p-0 sm:items-center sm:p-4"
           onClick={() => !eliminando && setConfirmando(false)}
         >
-          <div className="w-full max-w-sm rounded-t-2xl bg-white p-6 text-center sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-sm rounded-t-2xl bg-white p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-center sm:rounded-2xl sm:pb-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-navy-800">{t('clients.deleteClient')}</h3>
             <p className="mt-2 text-sm text-navy-600">{t('clients.confirmDeleteClient', { name: nombreCompleto })}</p>
             {errorDel && (

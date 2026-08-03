@@ -51,19 +51,23 @@ export default function GestorLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
+      {/* Header. `pt-[env(safe-area-inset-top)]` respeta el Dynamic Island / notch
+          del iPhone (requiere viewport-fit=cover; en Android/desktop env()=0). */}
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)]">
         <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               onClick={() => setMenuAbierto(true)}
-              className="rounded-lg p-1.5 text-navy-600 hover:bg-navy-50 md:hidden"
+              className="shrink-0 rounded-lg p-1.5 text-navy-600 hover:bg-navy-50 md:hidden"
               aria-label="Menú"
             >
               <span className="text-lg">☰</span>
             </button>
-            <button onClick={() => navigate('/')} className="flex items-center" aria-label="Kohtun">
-              <Logo />
+            {/* En móvil solo el icono (evita que el wordmark + selector de idioma
+                + "Cerrar sesión" se encimen a 393px); wordmark completo en ≥sm. */}
+            <button onClick={() => navigate('/')} className="flex min-w-0 items-center" aria-label="Kohtun">
+              <Logo variant="mark" className="sm:hidden" />
+              <span className="hidden sm:inline-flex"><Logo /></span>
             </button>
           </div>
           <div className="flex items-center gap-3">
@@ -105,8 +109,10 @@ export default function GestorLayout() {
           </div>
         )}
 
-        {/* Contenido principal */}
-        <main className="min-w-0 flex-1 px-4 py-6">
+        {/* Contenido principal. pb con safe-area: con viewport-fit=cover el
+            100vh llega hasta el borde inferior, así el contenido no queda
+            bajo el indicador de inicio del iPhone. */}
+        <main className="min-w-0 flex-1 px-4 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           <Outlet />
         </main>
       </div>

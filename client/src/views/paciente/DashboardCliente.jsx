@@ -133,7 +133,7 @@ export default function DashboardCliente() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-slate-50">
       <Navbar />
-      <main className="mx-auto max-w-5xl px-4 py-6">
+      <main className="mx-auto max-w-5xl px-4 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold tracking-tight text-navy-800">
             {t('clientDash.welcome')}, {user?.nombre}
@@ -299,7 +299,7 @@ export default function DashboardCliente() {
       {/* Modal de confirmación de cancelación */}
       {confirmando && proxima && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/50 p-0 sm:items-center sm:p-4" onClick={() => setConfirmando(false)}>
-          <div className="w-full max-w-sm rounded-t-2xl bg-white p-6 text-center sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-sm rounded-t-2xl bg-white p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-center sm:rounded-2xl sm:pb-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-navy-800">{t('clientDash.areYouSure')}</h3>
             {(() => {
               const costo = penalizacion(proxima).costoAhora

@@ -23,7 +23,7 @@ export default function Navbar() {
     : null
 
   return (
-    <header className="sticky top-0 z-20 bg-navy-800 text-white shadow-sm">
+    <header className="sticky top-0 z-20 bg-navy-800 text-white shadow-sm pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
         <button onClick={() => navigate('/')} className="flex items-center" aria-label="Kohtun">
           <Logo onDark />
