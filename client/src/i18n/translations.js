@@ -552,7 +552,7 @@ const translations = {
       addClient: {
         button: '+ Agregar cliente',
         title: 'Agregar cliente',
-        name: 'Nombre',
+        name: 'Cliente',
         namePlaceholder: 'Nombre del cliente',
         phone: 'Teléfono',
         email: 'Correo (opcional)',
@@ -1163,7 +1163,7 @@ const translations = {
       addClient: {
         button: '+ Add client',
         title: 'Add client',
-        name: 'First name',
+        name: 'Client',
         namePlaceholder: 'Client name',
         phone: 'Phone',
         email: 'Email (optional)',
@@ -1774,7 +1774,7 @@ const translations = {
       addClient: {
         button: '+ Ajouter un client',
         title: 'Ajouter un client',
-        name: 'Prénom',
+        name: 'Client',
         namePlaceholder: 'Nom du client',
         phone: 'Téléphone',
         email: 'E-mail (facultatif)',
