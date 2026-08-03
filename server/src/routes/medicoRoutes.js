@@ -42,12 +42,19 @@ router.get('/slug/:slug', async (req, res) => {
   const slug = String(req.params.slug || '').toLowerCase()
   const medico = await prisma.medico.findUnique({
     where: { slug },
-    select: { id: true, nombre: true, especialidad: true, slug: true },
+    select: { id: true, nombre: true, especialidad: true, slug: true, activo: true },
   })
   if (!medico) {
     return res.status(404).json({ error: tr(req.lang, 'error.enlaceNoEncontrado'), code: 'SLUG_INVALIDO' })
   }
-  res.json(medico)
+  // Profesional deshabilitado: el enlace resuelve pero ya no está operativo. Se
+  // responde con un mensaje claro (código propio) para que el frontend muestre
+  // "este enlace ya no está activo" en vez de un error genérico o un 404.
+  if (medico.activo === false) {
+    return res.status(403).json({ error: tr(req.lang, 'error.enlaceInactivo'), code: 'PROFESIONAL_INACTIVO' })
+  }
+  const { activo, ...publico } = medico
+  res.json(publico)
 })
 
 // PATCH /medicos/mi-slug  (profesional autenticado) — edita el slug una sola

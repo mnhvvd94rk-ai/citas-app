@@ -125,6 +125,14 @@ router.post('/registro-paciente', async (req, res) => {
       code: 'SLUG_INVALIDO',
     })
   }
+  // Profesional deshabilitado: su enlace ya no acepta nuevos registros. Mensaje
+  // claro (no un error genérico) para que el cliente pida el enlace correcto.
+  if (profesional.activo === false) {
+    return res.status(403).json({
+      error: 'Este enlace ya no está activo. Contacta a tu profesional para obtener su enlace de registro actual.',
+      code: 'PROFESIONAL_INACTIVO',
+    })
+  }
 
   // Detección temprana de colisiones para dar un mensaje claro (en vez del 409
   // genérico de Prisma). El correo y el documento son ÚNICOS a nivel global; el
@@ -519,6 +527,14 @@ router.post('/login-medico', async (req, res) => {
   const medico = await prisma.medico.findUnique({ where: { correo: data.correo } })
   if (!medico || !(await verifyPassword(data.password, medico.passwordHash))) {
     return res.status(401).json({ error: 'Credenciales inválidas' })
+  }
+  // Cuenta deshabilitada (p. ej. duplicada desactivada): credenciales correctas
+  // pero no puede iniciar sesión. 403 (autorización de negocio, no cierra sesión).
+  if (medico.activo === false) {
+    return res.status(403).json({
+      error: 'Esta cuenta ya no está activa. Si crees que es un error, contáctanos.',
+      code: 'MEDICO_INACTIVO',
+    })
   }
   const token = signToken({ id: medico.id, tipo: 'MEDICO' })
   res.json({ token, medico: sinPassword(medico) })

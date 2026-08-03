@@ -24,7 +24,7 @@ export default function RegistroPaciente() {
 
   // Resolución del enlace del profesional. Sin slug no se puede registrar: un
   // cliente siempre nace vinculado al profesional dueño del enlace.
-  // estadoEnlace: 'sin-enlace' | 'cargando' | 'ok' | 'invalido'
+  // estadoEnlace: 'sin-enlace' | 'cargando' | 'ok' | 'invalido' | 'inactivo'
   const [estadoEnlace, setEstadoEnlace] = useState(slug ? 'cargando' : 'sin-enlace')
   const [profesional, setProfesional] = useState(null)
 
@@ -61,9 +61,11 @@ export default function RegistroPaciente() {
           /* sin sesión recordada: se queda en 'registro' */
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelado) return
-        setEstadoEnlace('invalido')
+        // Profesional deshabilitado (enlace ya no operativo): mensaje propio,
+        // distinto del enlace inválido/inexistente.
+        setEstadoEnlace(err?.code === 'PROFESIONAL_INACTIVO' ? 'inactivo' : 'invalido')
       })
     return () => {
       cancelado = true
@@ -197,17 +199,17 @@ export default function RegistroPaciente() {
   const inputCls =
     'w-full rounded-xl border border-navy-200 px-4 py-3 text-navy-900 transition focus:border-navy-500 focus:ring-4 focus:ring-navy-100 focus:outline-none'
 
-  // Sin enlace de profesional (ruta genérica) o enlace inválido/caducado: no se
-  // permite el registro. Se explica que hace falta el enlace propio del profesional.
-  if (estadoEnlace === 'sin-enlace' || estadoEnlace === 'invalido') {
-    const esInvalido = estadoEnlace === 'invalido'
-    return (
-      <AvisoEnlace
-        t={t}
-        titulo={esInvalido ? t('reservar.invalidTitle') : t('reservar.needLinkTitle')}
-        mensaje={esInvalido ? t('reservar.invalidMsg') : t('reservar.needLinkMsg')}
-      />
-    )
+  // Sin enlace de profesional (ruta genérica), enlace inválido/caducado, o enlace
+  // de un profesional deshabilitado: no se permite el registro. Cada caso explica
+  // con claridad qué pasa (y, para el enlace inactivo, que pida el enlace correcto).
+  if (estadoEnlace === 'sin-enlace' || estadoEnlace === 'invalido' || estadoEnlace === 'inactivo') {
+    const avisos = {
+      invalido: { titulo: t('reservar.invalidTitle'), mensaje: t('reservar.invalidMsg') },
+      inactivo: { titulo: t('reservar.inactiveTitle'), mensaje: t('reservar.inactiveMsg') },
+      'sin-enlace': { titulo: t('reservar.needLinkTitle'), mensaje: t('reservar.needLinkMsg') },
+    }
+    const aviso = avisos[estadoEnlace]
+    return <AvisoEnlace t={t} titulo={aviso.titulo} mensaje={aviso.mensaje} />
   }
 
   // Resolviendo el enlace del profesional.

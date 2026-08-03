@@ -123,6 +123,14 @@ model Medico {
   slug             String?          @unique
   slugEditado      Boolean          @default(false)
 
+  // Cuenta activa/habilitada. Los profesionales nacen activos (true). Al marcar
+  // `activo = false` la cuenta queda deshabilitada SIN borrar datos: no puede
+  // iniciar sesión y su enlace público /reservar/<slug> deja de aceptar nuevos
+  // registros de clientes (se muestra un aviso claro). Sus datos existentes
+  // (clientes, citas, notas) se conservan intactos, solo dejan de ser accesibles
+  // vía el login normal. Se usa, p. ej., para desactivar una cuenta duplicada.
+  activo           Boolean          @default(true)
+
   // Idioma preferido para sus notificaciones (recordatorios al profesional).
   idiomaPreferido  String           @default("ES") // ES | EN | FR
 
