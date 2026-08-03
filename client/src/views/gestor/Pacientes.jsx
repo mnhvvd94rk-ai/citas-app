@@ -85,8 +85,23 @@ function dotEstado(estado) {
   }
 }
 
+// Iniciales: primera letra de las primeras DOS palabras del nombre completo
+// (nombre + apellido). Con una sola palabra usa esa inicial. Robusto para
+// clientes con el nombre completo en `nombre` (alta manual/CSV sin apellido)
+// o con nombre/apellido separados.
+function inicialesDe(nombreCompleto) {
+  return String(nombreCompleto || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join('')
+    .toUpperCase()
+}
+
 function Foto({ cliente, className }) {
-  const ini = `${cliente.nombre?.[0] || ''}${cliente.apellido?.[0] || ''}`.toUpperCase()
+  const ini = inicialesDe(`${cliente.nombre || ''} ${cliente.apellido || ''}`)
   if (cliente.fotoIdentidadUrl) return <img src={cliente.fotoIdentidadUrl} alt="" className={`object-cover ${className}`} />
   return <div className={`flex items-center justify-center bg-navy-700 font-bold text-brand-400 ${className}`}>{ini || '·'}</div>
 }
