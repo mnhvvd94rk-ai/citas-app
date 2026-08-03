@@ -5,6 +5,7 @@ import { useLanguage } from '../../context/LanguageContext.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import ImportarClientesModal from '../../components/ImportarClientesModal.jsx'
+import AgregarClienteModal from '../../components/AgregarClienteModal.jsx'
 import { formatFechaCorta, formatFechaHora, soloFecha, hoyISO } from '../../lib/format.js'
 
 /** Nombre de archivo seguro: sin acentos, minúsculas, con guiones. */
@@ -96,6 +97,7 @@ export default function Pacientes() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
   const [importar, setImportar] = useState(false)
+  const [agregar, setAgregar] = useState(false)
   const [aviso, setAviso] = useState(null)
 
   async function cargar() {
@@ -127,16 +129,35 @@ export default function Pacientes() {
           <h1 className="text-2xl font-bold tracking-tight text-navy-800">{t('clients.title')}</h1>
           <p className="mt-1 text-sm text-navy-500">{t('clients.subtitle')}</p>
         </div>
-        <button
-          onClick={() => setImportar(true)}
-          className="shrink-0 rounded-lg bg-navy-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-navy-800"
-        >
-          {t('clients.import.title')}
-        </button>
+        <div className="flex shrink-0 gap-2">
+          <button
+            onClick={() => setAgregar(true)}
+            className="rounded-lg border border-navy-300 bg-white px-4 py-2 text-sm font-semibold text-navy-700 transition hover:bg-navy-50"
+          >
+            {t('clients.addClient.button')}
+          </button>
+          <button
+            onClick={() => setImportar(true)}
+            className="rounded-lg bg-navy-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-navy-800"
+          >
+            {t('clients.import.title')}
+          </button>
+        </div>
       </div>
 
       {importar && (
         <ImportarClientesModal onClose={() => setImportar(false)} onImported={cargar} />
+      )}
+
+      {agregar && (
+        <AgregarClienteModal
+          onClose={() => setAgregar(false)}
+          onAdded={() => {
+            setAviso(t('clients.addClient.success'))
+            setTimeout(() => setAviso(null), 4000)
+            cargar()
+          }}
+        />
       )}
 
       {aviso && (
