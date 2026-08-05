@@ -22,6 +22,7 @@ const NuevaCita = lazy(() => import('./views/paciente/NuevaCita.jsx'))
 const Agenda = lazy(() => import('./views/gestor/Agenda.jsx'))
 const Disponibilidad = lazy(() => import('./views/gestor/Disponibilidad.jsx'))
 const Pacientes = lazy(() => import('./views/gestor/Pacientes.jsx'))
+const Equipo = lazy(() => import('./views/gestor/Equipo.jsx'))
 
 function Cargando() {
   return (
@@ -101,6 +102,9 @@ export default function App() {
           <Route path="citas-pendientes" element={<Navigate to="/gestor/agenda" replace />} />
           <Route path="disponibilidad" element={<Disponibilidad />} />
           <Route path="pacientes" element={<Pacientes />} />
+          {/* Equipo: solo tiene sentido en cuentas Pro; el backend protege sus
+              endpoints con 403 y el nav solo muestra el enlace si esNegocioPro. */}
+          <Route path="equipo" element={<Equipo />} />
         </Route>
 
         {/* Fallback */}

@@ -156,3 +156,83 @@ export function validarReserva({ tipoPaciente, slotsElegidos, slotsDisponibles }
 
   return { valido: true }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODO "NEGOCIO PRO" (cuentas con varios empleados). Todo lo de abajo es ADITIVO:
+// las funciones anteriores NO cambian, y estas solo las usan las ramas del motor
+// que se activan cuando el profesional tiene esNegocioPro=true. Un profesional
+// normal (sin empleados) nunca pasa por aquí.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Cuenta las citas activas (bloqueantes) de un empleado en una fecha dada. */
+function contarCitasActivas(citas, claveObjetivo) {
+  return citas.filter(
+    (c) => claveFecha(c.fecha) === claveObjetivo && ESTADOS_BLOQUEANTES.includes(c.estado),
+  ).length
+}
+
+// ── 4) slotsCombinados ───────────────────────────────────────────────────────
+/**
+ * Disponibilidad COMBINADA de todo un equipo para una fecha. Para cada empleado
+ * calcula sus slots libres con `slotsDisponibles` (reutilizado, misma lógica que
+ * un profesional normal) y los UNE por franja horaria: un slot aparece una sola
+ * vez aunque varios empleados lo ofrezcan (sin duplicar), y aparece si AL MENOS
+ * un empleado está libre en él (sin perder slots). Cada slot resultante lleva la
+ * lista `empleadosLibres` con los ids de los empleados libres en esa franja.
+ * @param {Array<{ empleadoId:number, disponibilidades:Array, citas:Array }>} empleadosData
+ * @param {any} fecha fecha objetivo (Date o "YYYY-MM-DD")
+ * @returns {Array<{ horaInicio:string, horaFin:string, empleadosLibres:number[] }>}
+ */
+export function slotsCombinados(empleadosData, fecha) {
+  const porSlot = new Map() // claveSlot -> { horaInicio, horaFin, empleadosLibres:[] }
+
+  for (const emp of empleadosData) {
+    const libres = slotsDisponibles(emp.disponibilidades, emp.citas, fecha)
+    for (const slot of libres) {
+      const clave = claveSlot(slot)
+      let entrada = porSlot.get(clave)
+      if (!entrada) {
+        entrada = { horaInicio: slot.horaInicio, horaFin: slot.horaFin, empleadosLibres: [] }
+        porSlot.set(clave, entrada)
+      }
+      entrada.empleadosLibres.push(emp.empleadoId)
+    }
+  }
+
+  const combinados = [...porSlot.values()]
+  combinados.sort((a, b) => aMinutos(a.horaInicio) - aMinutos(b.horaInicio))
+  return combinados
+}
+
+// ── 5) asignarEmpleado ───────────────────────────────────────────────────────
+/**
+ * Elige qué empleado atiende una reserva en una cuenta Pro (asignación
+ * automática). Candidatos = empleados libres para TODOS los slots elegidos
+ * (importante para citas dobles: un mismo empleado debe cubrir ambos bloques).
+ * Desempate: el que tenga MENOS citas activas ese día; si persiste, el de menor
+ * id (determinista). Devuelve el `empleadoId` o `null` si ninguno cubre.
+ * @param {Array<{ empleadoId:number, disponibilidades:Array, citas:Array }>} empleadosData
+ * @param {Array<{horaInicio:string,horaFin:string}>} slotsElegidos
+ * @param {any} fecha
+ * @returns {number|null}
+ */
+export function asignarEmpleado(empleadosData, slotsElegidos, fecha) {
+  const clavesElegidas = (slotsElegidos || []).map(claveSlot)
+  if (clavesElegidas.length === 0) return null
+
+  const candidatos = empleadosData.filter((emp) => {
+    const libres = new Set(
+      slotsDisponibles(emp.disponibilidades, emp.citas, fecha).map(claveSlot),
+    )
+    return clavesElegidas.every((k) => libres.has(k))
+  })
+  if (candidatos.length === 0) return null
+
+  const claveObjetivo = claveFecha(fecha)
+  candidatos.sort((a, b) => {
+    const carga = contarCitasActivas(a.citas, claveObjetivo) - contarCitasActivas(b.citas, claveObjetivo)
+    if (carga !== 0) return carga
+    return a.empleadoId - b.empleadoId
+  })
+  return candidatos[0].empleadoId
+}

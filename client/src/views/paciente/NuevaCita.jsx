@@ -22,6 +22,13 @@ export default function NuevaCita() {
   const [cargandoMedico, setCargandoMedico] = useState(true)
   const [errorMedico, setErrorMedico] = useState(null)
 
+  // Cuentas Pro ("equipo"): empleado de la última cita del cliente en este negocio
+  // (si tiene historial). Si existe, se ofrece "Repetir con X". `modoRepetir`
+  // activo → toda la disponibilidad se filtra a ese empleado y se reserva con él.
+  const [empleadoPreferido, setEmpleadoPreferido] = useState(null)
+  const [modoRepetir, setModoRepetir] = useState(false)
+  const empleadoFiltro = modoRepetir && empleadoPreferido ? empleadoPreferido.id : null
+
   const [fecha, setFecha] = useState('') // sin día pre-seleccionado; lo elige en el calendario
   const [motivo, setMotivo] = useState('')
   const [slots, setSlots] = useState([])
@@ -39,7 +46,18 @@ export default function NuevaCita() {
     setCargandoMedico(true)
     setErrorMedico(null)
     try {
-      setMedico(await medicosApi.miProfesional())
+      const m = await medicosApi.miProfesional()
+      setMedico(m)
+      // Solo cuentas Pro: ¿tiene el cliente historial con algún empleado? Si sí,
+      // se ofrece "Repetir con X" (y se activa por defecto: lo más común es querer
+      // a la misma persona). El endpoint devuelve { empleado: null } si no aplica.
+      if (m?.esNegocioPro) {
+        const { empleado } = await citasApi.miUltimoEmpleado().catch(() => ({ empleado: null }))
+        if (empleado) {
+          setEmpleadoPreferido(empleado)
+          setModoRepetir(true)
+        }
+      }
     } catch (err) {
       setErrorMedico(err)
     } finally {
@@ -56,7 +74,7 @@ export default function NuevaCita() {
     setErrorSlots(null)
     setSeleccion([])
     try {
-      const res = await citasApi.slotsDisponibles(medicoId, f)
+      const res = await citasApi.slotsDisponibles(medicoId, f, empleadoFiltro)
       setSlots(res.slots || [])
     } catch (err) {
       setErrorSlots(err)
@@ -66,11 +84,12 @@ export default function NuevaCita() {
     }
   }
 
-  // Carga slots cuando ya se conoce el profesional y hay un día elegido.
+  // Carga slots cuando ya se conoce el profesional y hay un día elegido. Se
+  // re-dispara al cambiar de modo (repetir ↔ equipo): la disponibilidad difiere.
   useEffect(() => {
     if (medico?.id && fecha) cargarSlots(medico.id, fecha)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [medico, fecha])
+  }, [medico, fecha, empleadoFiltro])
 
   const seleccionadas = new Set(seleccion.map(slotKey))
 
@@ -125,6 +144,8 @@ export default function NuevaCita() {
       }
       if (esNuevo) payload.motivoConsulta = motivo.trim()
       payload.tipoCita = tipoCita
+      // "Repetir con X": reserva forzando ese empleado (sin asignación automática).
+      if (empleadoFiltro) payload.empleadoId = empleadoFiltro
       setExito(await citasApi.reservar(payload))
     } catch (err) {
       setErrorReserva(err)
@@ -203,9 +224,49 @@ export default function NuevaCita() {
               </div>
             )}
 
+            {/* Cuentas Pro con historial: "Repetir con X" vs. todo el equipo. Al
+                cambiar de modo se limpia el día/slot elegido (la disponibilidad
+                difiere). Un profesional normal o un cliente sin historial no ve
+                nada de esto (empleadoPreferido === null). */}
+            {empleadoPreferido && (
+              <div className="mt-5 rounded-2xl border border-navy-200 bg-white p-4">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {[
+                    { on: true, label: t('team.repeatWith', { name: empleadoPreferido.nombre }) },
+                    { on: false, label: t('team.switchTeam') },
+                  ].map((o) => (
+                    <button
+                      key={String(o.on)}
+                      type="button"
+                      onClick={() => {
+                        if (modoRepetir === o.on) return
+                        setModoRepetir(o.on)
+                        setFecha('')
+                        setSlots([])
+                        setSeleccion([])
+                      }}
+                      aria-pressed={modoRepetir === o.on}
+                      className={`rounded-xl border px-3 py-3 text-sm font-semibold transition ${
+                        modoRepetir === o.on
+                          ? 'border-navy-700 bg-navy-700 text-white'
+                          : 'border-navy-200 bg-white text-navy-700 hover:border-navy-400'
+                      }`}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+                {modoRepetir && (
+                  <p className="mt-2 text-xs text-navy-500">
+                    {t('team.repeatNote', { name: empleadoPreferido.nombre })}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="mt-5">
               <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('newAppt.date')}</label>
-              <CalendarioDisponibilidad value={fecha} onSelect={(f) => setFecha(f)} />
+              <CalendarioDisponibilidad value={fecha} onSelect={(f) => setFecha(f)} empleadoId={empleadoFiltro} />
             </div>
 
             {!esNuevo && (
@@ -234,8 +295,26 @@ export default function NuevaCita() {
               ) : errorSlots ? (
                 <ErrorMessage error={errorSlots} onRetry={() => cargarSlots(medico.id, fecha)} />
               ) : slots.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-navy-200 bg-white py-10 text-center text-navy-500">
-                  {t('newAppt.noSlots')}
+                <div className="rounded-xl border border-dashed border-navy-200 bg-white py-8 px-4 text-center text-navy-500">
+                  {modoRepetir && empleadoPreferido ? (
+                    <>
+                      <p>{t('team.noAvailForMember', { name: empleadoPreferido.nombre })}</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModoRepetir(false)
+                          setFecha('')
+                          setSlots([])
+                          setSeleccion([])
+                        }}
+                        className="mt-3 rounded-xl bg-navy-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-navy-800"
+                      >
+                        {t('team.switchTeam')}
+                      </button>
+                    </>
+                  ) : (
+                    t('newAppt.noSlots')
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">

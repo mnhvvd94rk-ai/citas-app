@@ -26,7 +26,10 @@ function sumarDias(iso, n) {
 }
 
 // CRUD de disponibilidad horaria del profesional.
-export default function Disponibilidad() {
+// `empleadoId` (opcional): cuando se renderiza dentro del panel de Equipo (cuenta
+// Pro), acota toda la disponibilidad a ese empleado. Sin la prop (ruta normal
+// /gestor/disponibilidad) el comportamiento es exactamente el de siempre.
+export default function Disponibilidad({ empleadoId = null } = {}) {
   const { t } = useLanguage()
   const [lista, setLista] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -64,7 +67,7 @@ export default function Disponibilidad() {
     setCargando(true)
     setError(null)
     try {
-      const l = await disponibilidadApi.listar()
+      const l = await disponibilidadApi.listar(empleadoId ? { empleadoId } : undefined)
       setLista(l)
       // Poda la selección: descarta ids que ya no existen en la lista.
       setSel((prev) => new Set([...prev].filter((id) => l.some((d) => d.id === id))))
@@ -88,7 +91,11 @@ export default function Disponibilidad() {
     setErrorForm(null)
     setCreando(true)
     try {
-      await disponibilidadApi.crear({ ...form, duracionSlotMinutos: duracion })
+      await disponibilidadApi.crear({
+        ...form,
+        duracionSlotMinutos: duracion,
+        ...(empleadoId ? { empleadoId } : {}),
+      })
       await cargar()
     } catch (err) {
       setErrorForm(err)
@@ -209,6 +216,7 @@ export default function Disponibilidad() {
         horaInicio: rango.horaInicio,
         horaFin: rango.horaFin,
         duracionSlotMinutos: duracion,
+        ...(empleadoId ? { empleadoId } : {}),
       })
       setResultado(res)
       await cargar()

@@ -2,7 +2,12 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../services/db.js'
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js'
-import { slotsDisponibles, validarReserva } from '../services/slotEngine.js'
+import {
+  slotsDisponibles,
+  validarReserva,
+  slotsCombinados,
+  asignarEmpleado,
+} from '../services/slotEngine.js'
 import notificationService from '../services/notificationService.js'
 import { tr } from '../i18n/messages.js'
 
@@ -68,6 +73,9 @@ const reservarSchema = z.object({
   slotsElegidos: z.array(slotSchema).min(1),
   motivoConsulta: z.string().min(1).optional(),
   tipoCita: z.enum(['PRESENCIAL', 'VIDEOCONFERENCIA']).optional(),
+  // Solo cuentas Pro: "repetir con X". Si viene, se reserva forzando ESE empleado
+  // (sin asignación automática). Se ignora en cuentas normales.
+  empleadoId: z.number().int().positive().optional(),
 })
 
 /** Enlace único de Jitsi Meet para una cita de videoconferencia. */
@@ -102,6 +110,49 @@ async function resolverMedicoId(req, res) {
   return req.user.id
 }
 
+// Datos de perfil del empleado que ve el cliente (nunca datos internos).
+const EMPLEADO_BASICO = { id: true, nombre: true, fotoUrl: true, bio: true }
+
+// ── Helpers modo NEGOCIO PRO ─────────────────────────────────────────────────
+/**
+ * Arma los datos por empleado ACTIVO de un negocio para un día, en la forma que
+ * espera el motor (`slotsCombinados` / `asignarEmpleado`). Cada cita bloquea solo
+ * al empleado al que está asignada (empleadoId). Si `soloEmpleadoId` se pasa, se
+ * restringe a ese empleado (modo "repetir con X").
+ * @returns {Array<{ empleadoId:number, disponibilidades:Array, citas:Array }>}
+ */
+async function cargarEmpleadosDiaData(medicoId, fechaDate, soloEmpleadoId = null) {
+  const whereEmpleado = { medicoId, activo: true }
+  if (soloEmpleadoId != null) whereEmpleado.id = soloEmpleadoId
+  const empleados = await prisma.empleado.findMany({ where: whereEmpleado, select: { id: true } })
+  const ids = empleados.map((e) => e.id)
+  if (ids.length === 0) return []
+
+  const [disponibilidades, citas] = await Promise.all([
+    prisma.disponibilidad.findMany({ where: { medicoId, fecha: fechaDate, empleadoId: { in: ids } } }),
+    prisma.cita.findMany({ where: { medicoId, fecha: fechaDate, empleadoId: { in: ids } } }),
+  ])
+
+  return ids.map((empleadoId) => ({
+    empleadoId,
+    disponibilidades: disponibilidades.filter((d) => d.empleadoId === empleadoId),
+    citas: citas.filter((c) => c.empleadoId === empleadoId),
+  }))
+}
+
+/**
+ * Valida que `empleadoId` sea un empleado ACTIVO del negocio. Devuelve el empleado
+ * (o null) sin responder; el llamador decide el error/código apropiado.
+ */
+async function empleadoActivoDelNegocio(medicoId, empleadoId) {
+  if (empleadoId == null) return null
+  const empleado = await prisma.empleado.findFirst({
+    where: { id: empleadoId, medicoId, activo: true },
+    select: EMPLEADO_BASICO,
+  })
+  return empleado
+}
+
 // ── GET /citas/slots-disponibles ─────────────────────────────────────────────
 // Horarios libres de un día concreto (el `medicoId` del query se ignora).
 router.get('/slots-disponibles', requireAuth, async (req, res) => {
@@ -114,6 +165,22 @@ router.get('/slots-disponibles', requireAuth, async (req, res) => {
   }
 
   const fechaDate = parseFecha(fecha)
+  const medico = await prisma.medico.findUnique({
+    where: { id: medicoId },
+    select: { esNegocioPro: true },
+  })
+
+  // ── Cuenta NEGOCIO PRO: disponibilidad combinada del equipo (o de un empleado
+  //    concreto si se pide con ?empleadoId, para "repetir con X"). ──────────────
+  if (medico?.esNegocioPro) {
+    const empleadoId = req.query.empleadoId ? Number(req.query.empleadoId) : null
+    const empleadosData = await cargarEmpleadosDiaData(medicoId, fechaDate, empleadoId || null)
+    const combinados = slotsCombinados(empleadosData, fechaDate)
+    const libres = combinados.map((s) => ({ horaInicio: s.horaInicio, horaFin: s.horaFin }))
+    return res.json({ medicoId, fecha, slots: libres, empleadoId: empleadoId || null })
+  }
+
+  // ── Cuenta normal: comportamiento sin cambios ────────────────────────────────
   const [disponibilidades, citas] = await Promise.all([
     prisma.disponibilidad.findMany({ where: { medicoId, fecha: fechaDate } }),
     prisma.cita.findMany({ where: { medicoId, fecha: fechaDate } }),
@@ -141,7 +208,57 @@ router.get('/dias-disponibles', requireAuth, async (req, res) => {
   const primero = parseFecha(`${mes}-01`)
   const ultimoDiaNum = new Date(Date.UTC(anio, m, 0)).getUTCDate() // último día del mes
   const ultimo = parseFecha(`${mes}-${String(ultimoDiaNum).padStart(2, '0')}`)
+  const hoy = new Date().toISOString().slice(0, 10)
 
+  const medico = await prisma.medico.findUnique({
+    where: { id: medicoId },
+    select: { esNegocioPro: true },
+  })
+
+  // ── Cuenta NEGOCIO PRO: días con disponibilidad combinada del equipo (o de un
+  //    empleado concreto con ?empleadoId, para "repetir con X"). ────────────────
+  if (medico?.esNegocioPro) {
+    const empleadoId = req.query.empleadoId ? Number(req.query.empleadoId) : null
+    const whereEmpleado = { medicoId, activo: true }
+    if (empleadoId) whereEmpleado.id = empleadoId
+    const empleados = await prisma.empleado.findMany({ where: whereEmpleado, select: { id: true } })
+    const ids = empleados.map((e) => e.id)
+    const dias = []
+    if (ids.length > 0) {
+      const [disponibilidades, citas] = await Promise.all([
+        prisma.disponibilidad.findMany({
+          where: { medicoId, empleadoId: { in: ids }, fecha: { gte: primero, lte: ultimo } },
+        }),
+        prisma.cita.findMany({
+          where: { medicoId, empleadoId: { in: ids }, fecha: { gte: primero, lte: ultimo } },
+        }),
+      ])
+      // Agrupa por día y, dentro de cada día, por empleado.
+      const dispPorDia = {}
+      for (const d of disponibilidades) {
+        const k = d.fecha.toISOString().slice(0, 10)
+        ;(dispPorDia[k] ||= []).push(d)
+      }
+      const citasPorDia = {}
+      for (const c of citas) {
+        const k = c.fecha.toISOString().slice(0, 10)
+        ;(citasPorDia[k] ||= []).push(c)
+      }
+      for (const k of Object.keys(dispPorDia)) {
+        if (k < hoy) continue
+        const empleadosData = ids.map((id) => ({
+          empleadoId: id,
+          disponibilidades: dispPorDia[k].filter((d) => d.empleadoId === id),
+          citas: (citasPorDia[k] || []).filter((c) => c.empleadoId === id),
+        }))
+        if (slotsCombinados(empleadosData, parseFecha(k)).length > 0) dias.push(k)
+      }
+    }
+    dias.sort()
+    return res.json({ mes, dias, empleadoId: empleadoId || null })
+  }
+
+  // ── Cuenta normal: comportamiento sin cambios ────────────────────────────────
   const [disponibilidades, citas] = await Promise.all([
     prisma.disponibilidad.findMany({ where: { medicoId, fecha: { gte: primero, lte: ultimo } } }),
     prisma.cita.findMany({ where: { medicoId, fecha: { gte: primero, lte: ultimo } } }),
@@ -159,7 +276,6 @@ router.get('/dias-disponibles', requireAuth, async (req, res) => {
     ;(citasPorDia[k] ||= []).push(c)
   }
 
-  const hoy = new Date().toISOString().slice(0, 10)
   const dias = []
   for (const k of Object.keys(dispPorDia)) {
     if (k < hoy) continue // los días pasados no se ofrecen
@@ -200,15 +316,39 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
       .json({ error: tr(req.lang, 'error.motivoRequerido') })
   }
 
-  // c) Disponibilidades y citas del médico para esa fecha.
   const fechaDate = parseFecha(data.fecha)
-  const [disponibilidades, citas] = await Promise.all([
-    prisma.disponibilidad.findMany({ where: { medicoId, fecha: fechaDate } }),
-    prisma.cita.findMany({ where: { medicoId, fecha: fechaDate } }),
-  ])
+  const medico = await prisma.medico.findUnique({
+    where: { id: medicoId },
+    select: { costoCancelacion: true, diasAnticipacionRequierida: true, esNegocioPro: true },
+  })
 
-  // d) Slots libres + e) validación de reglas de negocio.
-  const libres = slotsDisponibles(disponibilidades, citas, fechaDate)
+  // c/d) Slots libres para esa fecha. Cuenta normal → disponibilidad del médico.
+  //      Cuenta Pro → disponibilidad combinada del equipo, o de UN empleado si el
+  //      cliente eligió "repetir con X" (data.empleadoId).
+  let libres
+  let empleadosData = null // solo se rellena en cuenta Pro (para asignación)
+  if (medico?.esNegocioPro) {
+    // Modo "repetir con X": valida que el empleado sea del negocio y esté activo.
+    if (data.empleadoId != null) {
+      const empleado = await empleadoActivoDelNegocio(medicoId, data.empleadoId)
+      if (!empleado) {
+        return res.status(404).json({ error: tr(req.lang, 'error.empleadoNoEncontrado') })
+      }
+    }
+    empleadosData = await cargarEmpleadosDiaData(medicoId, fechaDate, data.empleadoId ?? null)
+    libres = slotsCombinados(empleadosData, fechaDate).map((s) => ({
+      horaInicio: s.horaInicio,
+      horaFin: s.horaFin,
+    }))
+  } else {
+    const [disponibilidades, citas] = await Promise.all([
+      prisma.disponibilidad.findMany({ where: { medicoId, fecha: fechaDate } }),
+      prisma.cita.findMany({ where: { medicoId, fecha: fechaDate } }),
+    ])
+    libres = slotsDisponibles(disponibilidades, citas, fechaDate)
+  }
+
+  // e) Validación de reglas de negocio contra los slots libres correspondientes.
   const validacion = validarReserva({
     tipoPaciente: paciente.estado,
     slotsElegidos: data.slotsElegidos,
@@ -228,15 +368,32 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
   const horaFin = ordenados[ordenados.length - 1].horaFin
   const numeroSlots = ordenados.length
 
+  // g.2) Cuenta Pro: determina qué EMPLEADO atiende la cita.
+  //      - "Repetir con X" → ese empleado (validarReserva ya garantizó que los
+  //        slots elegidos están en SU disponibilidad, incl. ambos si es doble).
+  //      - Combinada → asignación automática: primero libre para TODOS los slots,
+  //        desempate por menos citas ese día. Si ninguno cubre (p.ej. un doble
+  //        que ningún empleado cubre entero) → 409.
+  let empleadoId = null
+  if (medico?.esNegocioPro) {
+    if (data.empleadoId != null) {
+      empleadoId = data.empleadoId
+    } else {
+      empleadoId = asignarEmpleado(empleadosData, data.slotsElegidos, fechaDate)
+      if (empleadoId == null) {
+        return res.status(409).json({
+          error: tr(req.lang, 'error.sinEmpleadoDisponible'),
+          code: 'SIN_EMPLEADO_DISPONIBLE',
+        })
+      }
+    }
+  }
+
   // h) Estado inicial según tipo de paciente.
   const estado = paciente.estado === 'NUEVO' ? 'PENDIENTE' : 'CONFIRMADA'
 
   // h.2) Penalización por cancelación: se copia de la configuración del médico.
   //      Si la cita es doble (2 slots), la anticipación requerida se dobla.
-  const medico = await prisma.medico.findUnique({
-    where: { id: medicoId },
-    select: { costoCancelacion: true, diasAnticipacionRequierida: true },
-  })
   const esDoble = numeroSlots === 2
   const costoCancelacion = medico?.costoCancelacion ?? 0
   const diasAnticipacionRequierida = (medico?.diasAnticipacionRequierida ?? 7) * (esDoble ? 2 : 1)
@@ -247,6 +404,7 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
     data: {
       pacienteId: paciente.id,
       medicoId,
+      empleadoId,
       fecha: fechaDate,
       horaInicio,
       horaFin,
@@ -436,10 +594,49 @@ router.post('/:id/recordar', requireAuth, requireRole('PACIENTE'), async (req, r
 router.get('/mis-citas', requireAuth, requireRole('PACIENTE'), async (req, res) => {
   const citas = await prisma.cita.findMany({
     where: { pacienteId: req.user.id },
-    include: { medico: { select: MEDICO_BASICO } },
+    // `empleado` solo viene en citas de cuentas Pro (en las normales es null); el
+    // dashboard muestra "Tu cita es con [nombre]" cuando existe.
+    include: {
+      medico: { select: MEDICO_BASICO },
+      empleado: { select: EMPLEADO_BASICO },
+    },
     orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }],
   })
   res.json(citas)
+})
+
+// ── GET /citas/mi-ultimo-empleado ────────────────────────────────────────────
+// Para "repetir con X": devuelve el empleado de la ÚLTIMA cita del cliente con SU
+// profesional (si tiene alguna cita histórica con empleado asignado en este
+// negocio). Devuelve { empleado: null } si no hay historial o el profesional no es
+// Pro. Nunca expone nada de otros profesionales (aislamiento por profesionalId).
+router.get('/mi-ultimo-empleado', requireAuth, requireRole('PACIENTE'), async (req, res) => {
+  const paciente = await prisma.usuario.findUnique({
+    where: { id: req.user.id },
+    select: { profesionalId: true },
+  })
+  if (!paciente?.profesionalId) return res.json({ empleado: null })
+
+  const medico = await prisma.medico.findUnique({
+    where: { id: paciente.profesionalId },
+    select: { esNegocioPro: true },
+  })
+  if (!medico?.esNegocioPro) return res.json({ empleado: null })
+
+  // Última cita (por fecha/hora) de este cliente con este profesional que tenga
+  // empleado asignado y activo.
+  const ultima = await prisma.cita.findFirst({
+    where: {
+      pacienteId: req.user.id,
+      medicoId: paciente.profesionalId,
+      empleadoId: { not: null },
+      empleado: { is: { activo: true } },
+    },
+    include: { empleado: { select: EMPLEADO_BASICO } },
+    orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }],
+  })
+
+  res.json({ empleado: ultima?.empleado ?? null })
 })
 
 // ── GET /citas/agenda ────────────────────────────────────────────────────────

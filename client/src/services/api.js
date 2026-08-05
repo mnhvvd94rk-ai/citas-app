@@ -152,6 +152,17 @@ export const medicosApi = {
   actualizarPerfil: (campos) => request('/medicos/mi-perfil', { method: 'PATCH', body: campos }),
 }
 
+// ── Equipo (empleados de una cuenta de negocio Pro) ──────────────────────────
+// Solo válido para profesionales con esNegocioPro=true; el backend responde 403
+// en cuentas normales.
+export const empleadosApi = {
+  listar: () => request('/medicos/mis-empleados'),
+  crear: (payload) => request('/medicos/mis-empleados', { method: 'POST', body: payload }),
+  actualizar: (id, payload) =>
+    request(`/medicos/mis-empleados/${id}`, { method: 'PATCH', body: payload }),
+  eliminar: (id) => request(`/medicos/mis-empleados/${id}`, { method: 'DELETE' }),
+}
+
 // ── Cliente (cuentas por profesional) ────────────────────────────────────────
 export const clientesApi = {
   // Profesionales asociados al mismo identificador (correo/teléfono) del cliente.
@@ -167,10 +178,18 @@ export const clientesApi = {
 
 // ── Citas ────────────────────────────────────────────────────────────────────
 export const citasApi = {
-  slotsDisponibles: (medicoId, fecha) =>
-    request(`/citas/slots-disponibles?medicoId=${medicoId}&fecha=${fecha}`),
+  // `empleadoId` opcional (cuentas Pro): filtra la disponibilidad a un empleado
+  // concreto ("repetir con X"). Sin él, el backend combina todo el equipo.
+  slotsDisponibles: (medicoId, fecha, empleadoId) =>
+    request(
+      `/citas/slots-disponibles?medicoId=${medicoId}&fecha=${fecha}` +
+        (empleadoId ? `&empleadoId=${empleadoId}` : ''),
+    ),
   // Días del mes (YYYY-MM) con al menos un slot libre, para pintar el calendario.
-  diasDisponibles: (mes) => request(`/citas/dias-disponibles?mes=${mes}`),
+  diasDisponibles: (mes, empleadoId) =>
+    request(`/citas/dias-disponibles?mes=${mes}` + (empleadoId ? `&empleadoId=${empleadoId}` : '')),
+  // Empleado de la última cita del cliente con su profesional (cuentas Pro).
+  miUltimoEmpleado: () => request('/citas/mi-ultimo-empleado'),
   reservar: (payload) => request('/citas/reservar', { method: 'POST', body: payload }),
   // El profesional agenda manualmente una cita para uno de sus clientes.
   crearManual: (payload) => request('/citas/crear-manual', { method: 'POST', body: payload }),
@@ -196,6 +215,7 @@ export const citasApi = {
 // ── Disponibilidad ───────────────────────────────────────────────────────────
 export const disponibilidadApi = {
   // listar() → todas; listar('YYYY-MM-DD') → un día; listar({desde,hasta}) → rango.
+  // Opcional `empleadoId` (cuentas Pro) para la disponibilidad de un empleado.
   listar: (params) => {
     const qs = new URLSearchParams()
     if (typeof params === 'string') qs.set('fecha', params)
@@ -203,6 +223,7 @@ export const disponibilidadApi = {
       if (params.fecha) qs.set('fecha', params.fecha)
       if (params.desde) qs.set('desde', params.desde)
       if (params.hasta) qs.set('hasta', params.hasta)
+      if (params.empleadoId) qs.set('empleadoId', params.empleadoId)
     }
     const q = qs.toString()
     return request(`/disponibilidad${q ? `?${q}` : ''}`)

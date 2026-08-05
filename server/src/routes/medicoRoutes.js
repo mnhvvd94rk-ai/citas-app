@@ -25,7 +25,7 @@ router.get('/mi-profesional', requireAuth, requireRole('PACIENTE'), async (req, 
     where: { id: cliente.profesionalId },
     select: {
       id: true, nombre: true, especialidad: true, telefono: true, correo: true,
-      fotoPerfilUrl: true, direccion: true, bio: true,
+      fotoPerfilUrl: true, direccion: true, bio: true, esNegocioPro: true,
     },
   })
   if (!medico) {
@@ -167,6 +167,148 @@ router.patch('/mi-perfil', requireAuth, requireRole('MEDICO'), async (req, res) 
     select: { id: true, telefono: true, direccion: true, bio: true },
   })
   res.json(actualizado)
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EQUIPO — Empleados de una cuenta de negocio Pro. Todas estas rutas exigen que
+// el profesional autenticado tenga esNegocioPro=true; una cuenta normal recibe
+// 403 y nunca ve/gestiona empleados. Es la base del modo "equipo" del motor de
+// citas (asignación automática y "repetir con X").
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Verifica que el profesional autenticado sea una cuenta Pro. Responde 403 y
+ * devuelve null si no lo es (o 404 si no existe). Si lo es, devuelve el medico.
+ */
+async function requireNegocioPro(req, res) {
+  const medico = await prisma.medico.findUnique({
+    where: { id: req.user.id },
+    select: { id: true, esNegocioPro: true },
+  })
+  if (!medico) {
+    res.status(404).json({ error: tr(req.lang, 'error.profesionalNoEncontrado') })
+    return null
+  }
+  if (!medico.esNegocioPro) {
+    res.status(403).json({ error: tr(req.lang, 'error.noEsNegocioPro'), code: 'NO_ES_NEGOCIO_PRO' })
+    return null
+  }
+  return medico
+}
+
+const EMPLEADO_PUBLICO = { id: true, nombre: true, bio: true, fotoUrl: true, activo: true }
+
+const crearEmpleadoSchema = z.object({
+  nombre: z.string().trim().min(1, 'El nombre es obligatorio').max(120),
+  bio: z.string().trim().max(1000).nullish(),
+  // Foto opcional como data URL (mismo criterio que la foto del profesional).
+  fotoUrl: z
+    .string()
+    .regex(/^data:image\/(png|jpe?g|webp);base64,/, 'Formato de imagen no válido')
+    .max(4_000_000)
+    .nullish(),
+})
+
+const actualizarEmpleadoSchema = z.object({
+  nombre: z.string().trim().min(1).max(120).optional(),
+  bio: z.string().trim().max(1000).nullish(),
+  fotoUrl: z
+    .string()
+    .regex(/^data:image\/(png|jpe?g|webp);base64,/, 'Formato de imagen no válido')
+    .max(4_000_000)
+    .nullish(),
+  activo: z.boolean().optional(),
+})
+
+// GET /medicos/mis-empleados — lista los empleados del negocio (activos e
+// inactivos; el panel muestra el estado). Solo cuentas Pro.
+router.get('/mis-empleados', requireAuth, requireRole('MEDICO'), async (req, res) => {
+  if (!(await requireNegocioPro(req, res))) return
+  const empleados = await prisma.empleado.findMany({
+    where: { medicoId: req.user.id },
+    select: EMPLEADO_PUBLICO,
+    orderBy: [{ activo: 'desc' }, { nombre: 'asc' }],
+  })
+  res.json(empleados)
+})
+
+// POST /medicos/mis-empleados — alta de un empleado. Solo cuentas Pro.
+router.post('/mis-empleados', requireAuth, requireRole('MEDICO'), async (req, res) => {
+  if (!(await requireNegocioPro(req, res))) return
+  const parsed = crearEmpleadoSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: tr(req.lang, 'error.datosInvalidos'),
+      detalles: parsed.error.issues.map((i) => ({ campo: i.path.join('.'), mensaje: i.message })),
+    })
+  }
+  const empleado = await prisma.empleado.create({
+    data: {
+      medicoId: req.user.id,
+      nombre: parsed.data.nombre,
+      bio: parsed.data.bio || null,
+      fotoUrl: parsed.data.fotoUrl || null,
+    },
+    select: EMPLEADO_PUBLICO,
+  })
+  res.status(201).json(empleado)
+})
+
+/** Carga un empleado y verifica que pertenezca al profesional autenticado. */
+async function cargarEmpleadoPropio(req, res) {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: tr(req.lang, 'error.idInvalido') })
+    return null
+  }
+  const empleado = await prisma.empleado.findUnique({ where: { id } })
+  if (!empleado) {
+    res.status(404).json({ error: tr(req.lang, 'error.empleadoNoEncontrado') })
+    return null
+  }
+  if (empleado.medicoId !== req.user.id) {
+    res.status(403).json({ error: tr(req.lang, 'error.empleadoAjeno') })
+    return null
+  }
+  return empleado
+}
+
+// PATCH /medicos/mis-empleados/:id — edita nombre/bio/foto o activa/desactiva.
+router.patch('/mis-empleados/:id', requireAuth, requireRole('MEDICO'), async (req, res) => {
+  if (!(await requireNegocioPro(req, res))) return
+  const empleado = await cargarEmpleadoPropio(req, res)
+  if (!empleado) return
+
+  const parsed = actualizarEmpleadoSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: tr(req.lang, 'error.datosInvalidos'),
+      detalles: parsed.error.issues.map((i) => ({ campo: i.path.join('.'), mensaje: i.message })),
+    })
+  }
+  const data = {}
+  if (parsed.data.nombre !== undefined) data.nombre = parsed.data.nombre
+  if (parsed.data.bio !== undefined) data.bio = parsed.data.bio || null
+  if (parsed.data.fotoUrl !== undefined) data.fotoUrl = parsed.data.fotoUrl || null
+  if (parsed.data.activo !== undefined) data.activo = parsed.data.activo
+
+  const actualizado = await prisma.empleado.update({
+    where: { id: empleado.id },
+    data,
+    select: EMPLEADO_PUBLICO,
+  })
+  res.json(actualizado)
+})
+
+// DELETE /medicos/mis-empleados/:id — "eliminar" es SOFT: marca activo=false para
+// conservar el historial de citas/disponibilidad y no romper referencias. El
+// empleado deja de aparecer en la disponibilidad combinada y en la asignación.
+router.delete('/mis-empleados/:id', requireAuth, requireRole('MEDICO'), async (req, res) => {
+  if (!(await requireNegocioPro(req, res))) return
+  const empleado = await cargarEmpleadoPropio(req, res)
+  if (!empleado) return
+  await prisma.empleado.update({ where: { id: empleado.id }, data: { activo: false } })
+  res.json({ ok: true, desactivado: empleado.id })
 })
 
 export default router

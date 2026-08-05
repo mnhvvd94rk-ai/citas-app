@@ -177,6 +177,22 @@ export default function DashboardCliente() {
                         <p className="text-2xl font-bold">{formatFechaLarga(proxima.fecha)}</p>
                         <p className="mt-1 text-lg text-white/90">{proxima.horaInicio} – {proxima.horaFin}</p>
                         {proxima.medico && <p className="mt-1 text-sm text-white/70">{proxima.medico.nombre}{proxima.medico.especialidad ? ` · ${proxima.medico.especialidad}` : ''}</p>}
+                        {/* Cuentas Pro: persona asignada. Solo aparece si la cita
+                            tiene empleado (en cuentas normales es null). */}
+                        {proxima.empleado && (
+                          <div className="mt-2 flex items-center gap-2">
+                            {proxima.empleado.fotoUrl ? (
+                              <img src={proxima.empleado.fotoUrl} alt={proxima.empleado.nombre} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/40" />
+                            ) : (
+                              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold">
+                                {(proxima.empleado.nombre || '?').trim().charAt(0).toUpperCase()}
+                              </span>
+                            )}
+                            <span className="text-sm font-medium text-white/90">
+                              {t('team.yourApptWith', { name: proxima.empleado.nombre })}
+                            </span>
+                          </div>
+                        )}
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <EstadoBadge estado={proxima.estado} />
                           {proxima.esDoble && <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-semibold">{t('clientDash.doubleSlot')}</span>}
@@ -240,6 +256,11 @@ export default function DashboardCliente() {
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-navy-800">{formatFechaCorta(c.fecha)}</p>
                             <p className="text-xs text-navy-500">{c.horaInicio} – {c.horaFin}</p>
+                            {c.empleado && (
+                              <p className="mt-0.5 truncate text-xs font-medium text-navy-600">
+                                {t('team.yourApptWith', { name: c.empleado.nombre })}
+                              </p>
+                            )}
                           </div>
                           <EstadoBadge estado={c.estado} />
                         </div>

@@ -40,6 +40,11 @@ const MESSAGES = {
     'error.dispConCitas':
       'No se puede eliminar: hay {ocupados} slot(s) con citas activas (PENDIENTE o CONFIRMADA) dentro de este rango.',
     'error.clienteConCitas': 'Este cliente tiene citas pendientes. Cancélalas primero.',
+    'error.noEsNegocioPro': 'Esta función solo está disponible en cuentas de negocio con equipo.',
+    'error.empleadoNoEncontrado': 'Empleado no encontrado',
+    'error.empleadoAjeno': 'Este empleado no pertenece a tu cuenta',
+    'error.empleadoSinDisponibilidad': 'La persona elegida no tiene ese horario disponible.',
+    'error.sinEmpleadoDisponible': 'No hay nadie del equipo disponible en ese horario.',
   },
   EN: {
     'error.datosInvalidos': 'Invalid data',
@@ -72,6 +77,11 @@ const MESSAGES = {
     'error.dispConCitas':
       'Cannot delete: there are {ocupados} slot(s) with active appointments (PENDING or CONFIRMED) within this range.',
     'error.clienteConCitas': 'This client has pending appointments. Cancel them first.',
+    'error.noEsNegocioPro': 'This feature is only available on business accounts with a team.',
+    'error.empleadoNoEncontrado': 'Team member not found',
+    'error.empleadoAjeno': 'This team member does not belong to your account',
+    'error.empleadoSinDisponibilidad': 'The chosen person is not available at that time.',
+    'error.sinEmpleadoDisponible': 'No one on the team is available at that time.',
   },
   FR: {
     'error.datosInvalidos': 'Données invalides',
@@ -106,6 +116,11 @@ const MESSAGES = {
     'error.dispConCitas':
       'Suppression impossible : il y a {ocupados} créneau(x) avec des rendez-vous actifs (EN ATTENTE ou CONFIRMÉS) dans cette plage.',
     'error.clienteConCitas': 'Ce client a des rendez-vous en attente. Annulez-les d’abord.',
+    'error.noEsNegocioPro': 'Cette fonction est réservée aux comptes professionnels avec une équipe.',
+    'error.empleadoNoEncontrado': 'Membre de l’équipe introuvable',
+    'error.empleadoAjeno': 'Ce membre de l’équipe n’appartient pas à votre compte',
+    'error.empleadoSinDisponibilidad': 'La personne choisie n’est pas disponible à cette heure.',
+    'error.sinEmpleadoDisponible': 'Personne dans l’équipe n’est disponible à cette heure.',
   },
 }
 

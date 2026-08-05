@@ -11,8 +11,11 @@ const ymd = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
  * - Resalta los días con al menos un slot libre (clicables).
  * - Atenúa/deshabilita días pasados y sin disponibilidad.
  * Props: value (YYYY-MM-DD seleccionado), onSelect(fecha).
+ *   empleadoId (opcional, cuentas Pro): si se pasa, el calendario muestra solo
+ *   los días con disponibilidad de ESE empleado ("repetir con X"); sin él, la
+ *   disponibilidad combinada del equipo (o la del profesional normal).
  */
-export default function CalendarioDisponibilidad({ value, onSelect }) {
+export default function CalendarioDisponibilidad({ value, onSelect, empleadoId = null }) {
   const { t } = useLanguage()
   const hoy = hoyISO()
   const [hoyY, hoyM] = hoy.split('-').map(Number)
@@ -37,7 +40,7 @@ export default function CalendarioDisponibilidad({ value, onSelect }) {
     setError(false)
     setDias(new Set()) // limpia resaltados del mes anterior mientras carga
     citasApi
-      .diasDisponibles(mesParam)
+      .diasDisponibles(mesParam, empleadoId)
       .then((res) => {
         if (!cancelado) setDias(new Set(res?.dias || []))
       })
@@ -50,7 +53,7 @@ export default function CalendarioDisponibilidad({ value, onSelect }) {
     return () => {
       cancelado = true
     }
-  }, [mesParam, intento])
+  }, [mesParam, intento, empleadoId])
 
   // Celdas del mes con offset lunes-primero.
   const celdas = useMemo(() => {

@@ -49,10 +49,10 @@ datasource db {
 
 /// Paciente. estado: NUEVO | CONTINUIDAD (ver CONTEXT.md §5.4).
 model Usuario {
-  id                 Int            @id @default(autoincrement())
+  id                 Int      @id @default(autoincrement())
   nombre             String
   apellido           String
-  documentoIdentidad String         @unique
+  documentoIdentidad String   @unique
   fotoIdentidadUrl   String?
   firmaUrl           String?
   telefono           String
@@ -66,16 +66,16 @@ model Usuario {
   // Nullable: los clientes importados nacen sin contraseña; la crean ellos al
   // activar su cuenta (ver `cuentaActivada`).
   passwordHash       String?
-  estado             String         @default("NUEVO") // NUEVO | CONTINUIDAD
-  fechaRegistro      DateTime       @default(now())
-  idiomaPreferido    String         @default("ES") // ES | EN | FR (para notificaciones)
+  estado             String   @default("NUEVO") // NUEVO | CONTINUIDAD
+  fechaRegistro      DateTime @default(now())
+  idiomaPreferido    String   @default("ES") // ES | EN | FR (para notificaciones)
   // Los clientes creados por registro propio nacen activados (true). Los
   // importados por el profesional nacen en false: no pueden iniciar sesión
   // hasta que activan la cuenta y definen su propia contraseña.
-  cuentaActivada     Boolean        @default(true)
+  cuentaActivada     Boolean  @default(true)
 
   // Gestión del cliente por el profesional (no proviene del registro):
-  edadManual              Int?      // edad introducida a mano (no hay fecha de nacimiento)
+  edadManual              Int? // edad introducida a mano (no hay fecha de nacimiento)
   estadoTratamiento       String    @default("ACTIVO") // ACTIVO | COMPLETADO | EN_PAUSA
   tratamientoFinalizadoEn DateTime? // fecha en que se marcó COMPLETADO
 
@@ -84,22 +84,22 @@ model Usuario {
   // registrarse desde el enlace público del profesional (/reservar/:slug) o al
   // ser importado por él. Nullable por compatibilidad con filas antiguas; los
   // registros nuevos siempre lo llevan (no se permiten clientes sin profesional).
-  profesional        Medico?        @relation(fields: [profesionalId], references: [id])
-  profesionalId      Int?
+  profesional   Medico? @relation(fields: [profesionalId], references: [id])
+  profesionalId Int?
 
   // Vínculo explícito entre las cuentas de una misma persona con distintos
   // profesionales. La cuenta "raíz" (la primera) tiene identidadRaizId = null; las
   // cuentas añadidas después con "Agregar profesional" apuntan a la raíz. Así el
   // selector de "mis profesionales" agrupa por identidad explícita y no por
   // coincidencia casual de teléfono/correo.
-  identidadRaiz      Usuario?       @relation("IdentidadCliente", fields: [identidadRaizId], references: [id])
-  identidadRaizId    Int?
-  cuentasVinculadas  Usuario[]      @relation("IdentidadCliente")
+  identidadRaiz     Usuario?  @relation("IdentidadCliente", fields: [identidadRaizId], references: [id])
+  identidadRaizId   Int?
+  cuentasVinculadas Usuario[] @relation("IdentidadCliente")
 
-  citas              Cita[]
-  notas              NotaPaciente[]
-  pushSubscriptions  PushSubscription[]
-  dispositivos       DispositivoCliente[]
+  citas             Cita[]
+  notas             NotaPaciente[]
+  pushSubscriptions PushSubscription[]
+  dispositivos      DispositivoCliente[]
 
   @@unique([correo, profesionalId])
   @@index([profesionalId])
@@ -108,20 +108,20 @@ model Usuario {
 
 /// Gestor / médico.
 model Medico {
-  id               Int              @id @default(autoincrement())
-  nombre           String
-  especialidad     String
-  telefono         String?
-  correo           String           @unique
-  passwordHash     String
+  id           Int     @id @default(autoincrement())
+  nombre       String
+  especialidad String
+  telefono     String?
+  correo       String  @unique
+  passwordHash String
 
   // Identificador público para su enlace de registro de clientes
   // (https://kohtun.com/reservar/<slug>). Se genera automáticamente a partir
   // del nombre al registrarse, con sufijo numérico si ya existe. Editable una
   // sola vez desde el panel; `slugEditado` marca que esa edición ya se usó.
   // Nullable solo por compatibilidad con filas previas a este campo.
-  slug             String?          @unique
-  slugEditado      Boolean          @default(false)
+  slug        String? @unique
+  slugEditado Boolean @default(false)
 
   // Cuenta activa/habilitada. Los profesionales nacen activos (true). Al marcar
   // `activo = false` la cuenta queda deshabilitada SIN borrar datos: no puede
@@ -129,33 +129,65 @@ model Medico {
   // registros de clientes (se muestra un aviso claro). Sus datos existentes
   // (clientes, citas, notas) se conservan intactos, solo dejan de ser accesibles
   // vía el login normal. Se usa, p. ej., para desactivar una cuenta duplicada.
-  activo           Boolean          @default(true)
+  activo Boolean @default(true)
 
   // Idioma preferido para sus notificaciones (recordatorios al profesional).
-  idiomaPreferido  String           @default("ES") // ES | EN | FR
+  idiomaPreferido String @default("ES") // ES | EN | FR
 
   // Foto de perfil (opcional). Data URL / URL de imagen. Si es null, el frontend
   // usa el avatar genérico (inicial del nombre) como hasta ahora.
-  fotoPerfilUrl    String?
+  fotoPerfilUrl String?
 
   // Datos de perfil editables por el profesional y visibles para el cliente en su
   // dashboard. Todos opcionales (nullable) para no romper filas previas.
   // `direccion`: ubicación/consultorio en texto libre (calle, ciudad, país en una
   // línea; el nivel de detalle lo escribe el profesional). `bio`: descripción corta
   // del servicio. (El teléfono ya existe arriba, ahora también editable.)
-  direccion        String?
-  bio              String?
+  direccion String?
+  bio       String?
 
   // Configuración de penalización por cancelación tardía (por defecto):
   costoCancelacion           Float @default(0)
   diasAnticipacionRequierida Int   @default(7)
 
+  // Flag de "cuenta Pro" para negocios con varios empleados (ej. un spa con
+  // varias masajistas) gestionados desde una sola cuenta de dueño. Nace en false
+  // para TODAS las cuentas: los profesionales normales (que atienden ellos
+  // mismos) no ven ningún cambio de comportamiento ni de UI. Solo cuando es true
+  // se activan las ramas de "equipo" del motor de citas y las pantallas
+  // asociadas. Ver modelo Empleado.
+  esNegocioPro Boolean @default(false)
+
+  disponibilidades  Disponibilidad[]
+  citas             Cita[]
+  notas             NotaPaciente[]
+  clientes          Usuario[]
+  empleados         Empleado[]
+  pushSubscriptions PushSubscription[]
+  dispositivos      DispositivoCliente[]
+}
+
+/// Empleado de una cuenta de negocio Pro (esNegocioPro=true). Modela a cada
+/// persona que atiende dentro del negocio (ej. cada masajista de un spa). Solo
+/// existe para cuentas Pro; los profesionales normales no tienen empleados y todo
+/// su flujo ignora este modelo. La disponibilidad y las citas pueden asociarse a
+/// un empleado concreto (campos empleadoId nullable en Disponibilidad y Cita).
+/// No se borra en duro: al "eliminar" se marca activo=false para conservar el
+/// historial de citas/disponibilidad sin romper referencias.
+model Empleado {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  bio       String?
+  fotoUrl   String?
+  medico    Medico   @relation(fields: [medicoId], references: [id], onDelete: Cascade)
+  medicoId  Int
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
   disponibilidades Disponibilidad[]
   citas            Cita[]
-  notas            NotaPaciente[]
-  clientes         Usuario[]
-  pushSubscriptions PushSubscription[]
-  dispositivos     DispositivoCliente[]
+
+  @@index([medicoId])
 }
 
 /// Token de dispositivo (refresh token opaco) para el login semi-automático de
@@ -201,32 +233,45 @@ model PushSubscription {
 /// Rango de disponibilidad de un médico en un día. El slotEngine lo trocea
 /// en bloques de 45 min consecutivos sin huecos (CONTEXT.md §5.1).
 model Disponibilidad {
-  id         Int      @id @default(autoincrement())
-  medico     Medico   @relation(fields: [medicoId], references: [id])
-  medicoId   Int
-  fecha      DateTime // se usa solo la parte de fecha (ver decisión §1.b)
-  horaInicio String   // "HH:mm"
-  horaFin    String   // "HH:mm"
+  id              Int      @id @default(autoincrement())
+  medico          Medico   @relation(fields: [medicoId], references: [id])
+  medicoId        Int
+  fecha           DateTime // se usa solo la parte de fecha (ver decisión §1.b)
+  horaInicio      String // "HH:mm"
+  horaFin         String // "HH:mm"
   // Duración del bloque en minutos con que el slotEngine trocea esta franja.
   // Default 45 para compatibilidad con las franjas creadas antes de este campo.
-  duracionMinutos Int  @default(45)
+  duracionMinutos Int      @default(45)
+
+  // Empleado (solo cuentas Pro) al que pertenece esta franja. Nullable: en las
+  // cuentas normales (sin empleados) y en las franjas previas a este campo queda
+  // en null, y el motor de slots se comporta exactamente igual que antes. En una
+  // cuenta Pro, cada franja lleva el empleado que la ofrece.
+  empleado   Empleado? @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  empleadoId Int?
 
   @@index([medicoId, fecha])
+  @@index([empleadoId])
 }
 
 /// Cita reservada. estado: PENDIENTE | CONFIRMADA | ANULADA | COMPLETADA.
 model Cita {
-  id             Int      @id @default(autoincrement())
-  paciente       Usuario  @relation(fields: [pacienteId], references: [id])
+  id             Int       @id @default(autoincrement())
+  paciente       Usuario   @relation(fields: [pacienteId], references: [id])
   pacienteId     Int
-  medico         Medico   @relation(fields: [medicoId], references: [id])
+  medico         Medico    @relation(fields: [medicoId], references: [id])
   medicoId       Int
+  // Empleado que atendió/atenderá la cita (solo cuentas Pro). Nullable: en las
+  // cuentas normales queda en null. ON DELETE SET NULL para no perder la cita si
+  // algún día se borrara en duro un empleado (normalmente solo se desactiva).
+  empleado       Empleado? @relation(fields: [empleadoId], references: [id], onDelete: SetNull)
+  empleadoId     Int?
   fecha          DateTime // se usa solo la parte de fecha (ver decisión §1.b)
-  horaInicio     String   // "HH:mm"
-  horaFin        String   // "HH:mm"
-  numeroSlots    Int      @default(1) // 1 o 2 (CONTEXT.md §5.2 / §5.3)
-  estado         String   @default("PENDIENTE") // PENDIENTE | CONFIRMADA | ANULADA | COMPLETADA
-  motivoConsulta String?  // solo si el paciente es NUEVO
+  horaInicio     String // "HH:mm"
+  horaFin        String // "HH:mm"
+  numeroSlots    Int       @default(1) // 1 o 2 (CONTEXT.md §5.2 / §5.3)
+  estado         String    @default("PENDIENTE") // PENDIENTE | CONFIRMADA | ANULADA | COMPLETADA
+  motivoConsulta String? // solo si el paciente es NUEVO
   notaAnulacion  String?
 
   // Penalización por cancelación (copiada del médico al reservar). El campo
@@ -237,14 +282,15 @@ model Cita {
 
   // Modalidad de la cita. PRESENCIAL | VIDEOCONFERENCIA. Si es videoconferencia
   // se genera un enlace único de Jitsi Meet (gratis, sin API key).
-  tipoCita                String  @default("PRESENCIAL")
-  enlaceVideoconferencia  String?
+  tipoCita               String  @default("PRESENCIAL")
+  enlaceVideoconferencia String?
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([medicoId, fecha])
   @@index([pacienteId])
+  @@index([empleadoId])
 }
 
 /// Nota libre del médico sobre un paciente. Historial abierto, no atado a una
@@ -268,10 +314,10 @@ model NotaPaciente {
 /// Registro de notificación enviada/encolada. destinatarioId sin FK (ver §5).
 model Notificacion {
   id               Int       @id @default(autoincrement())
-  destinatarioId   Int       // sin FK: id de Usuario o Medico según tipoDestinatario
-  tipoDestinatario String    // PACIENTE | MEDICO
-  tipo             String    // ANULACION | RESUMEN_DIARIO
-  canal            String    // EMAIL | SMS | PUSH
+  destinatarioId   Int // sin FK: id de Usuario o Medico según tipoDestinatario
+  tipoDestinatario String // PACIENTE | MEDICO
+  tipo             String // ANULACION | RESUMEN_DIARIO
+  canal            String // EMAIL | SMS | PUSH
   estadoEnvio      String    @default("PENDIENTE") // PENDIENTE | ENVIADO | FALLIDO
   fechaEnvio       DateTime?
   createdAt        DateTime  @default(now())
@@ -284,7 +330,7 @@ model Notificacion {
 model NotificacionEnviada {
   id           Int      @id @default(autoincrement())
   citaId       Int
-  tipo         String   // 48h | 24h | 3h
+  tipo         String // 48h | 24h | 3h
   fechaEnviada DateTime @default(now())
 
   @@unique([citaId, tipo])

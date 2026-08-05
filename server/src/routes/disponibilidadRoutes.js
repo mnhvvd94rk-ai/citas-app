@@ -46,12 +46,35 @@ function parseOr400(schema, req, res) {
   return result.data
 }
 
+// Valida que un empleadoId (opcional) pertenezca al profesional autenticado.
+// Devuelve { ok:true } si no se envió empleado (cuenta normal) o si es válido;
+// si no, responde el error y devuelve { ok:false }. Los profesionales normales
+// nunca envían empleadoId, así que su flujo no cambia.
+async function validarEmpleado(empleadoId, req, res) {
+  if (empleadoId === undefined || empleadoId === null) return { ok: true, empleadoId: null }
+  const empleado = await prisma.empleado.findUnique({
+    where: { id: empleadoId },
+    select: { id: true, medicoId: true },
+  })
+  if (!empleado) {
+    res.status(404).json({ error: tr(req.lang, 'error.empleadoNoEncontrado') })
+    return { ok: false }
+  }
+  if (empleado.medicoId !== req.user.id) {
+    res.status(403).json({ error: tr(req.lang, 'error.empleadoAjeno') })
+    return { ok: false }
+  }
+  return { ok: true, empleadoId }
+}
+
 // ── Esquemas ─────────────────────────────────────────────────────────────────
 const crearDisponibilidadSchema = z
   .object({
     fecha: z.string().regex(FECHA_RE, 'Formato esperado YYYY-MM-DD'),
     horaInicio: z.string().regex(HORA_RE, 'Formato esperado HH:mm'),
     horaFin: z.string().regex(HORA_RE, 'Formato esperado HH:mm'),
+    // Empleado (solo cuentas Pro) al que pertenece esta franja. Opcional.
+    empleadoId: z.number().int().positive().optional(),
     // Duración del bloque con que el slotEngine trocea esta franja. Opcional por
     // compatibilidad con clientes previos (default 45), igual que el modo rango.
     duracionSlotMinutos: z
@@ -85,6 +108,8 @@ const crearRangoSchema = z
       .int()
       .min(15, 'La duración mínima es 15 minutos')
       .max(180, 'La duración máxima es 180 minutos'),
+    // Empleado (solo cuentas Pro) al que pertenece el rango. Opcional.
+    empleadoId: z.number().int().positive().optional(),
   })
   .refine((d) => d.fechaFin > d.fechaInicio, {
     message: 'fechaFin debe ser posterior a fechaInicio',
@@ -104,9 +129,13 @@ router.post('/', async (req, res) => {
   const data = parseOr400(crearDisponibilidadSchema, req, res)
   if (!data) return
 
+  const emp = await validarEmpleado(data.empleadoId, req, res)
+  if (!emp.ok) return
+
   const disponibilidad = await prisma.disponibilidad.create({
     data: {
       medicoId: req.user.id,
+      empleadoId: emp.empleadoId,
       fecha: parseFecha(data.fecha),
       horaInicio: data.horaInicio,
       horaFin: data.horaFin,
@@ -124,15 +153,21 @@ router.post('/rango', async (req, res) => {
   const data = parseOr400(crearRangoSchema, req, res)
   if (!data) return
 
+  const emp = await validarEmpleado(data.empleadoId, req, res)
+  if (!emp.ok) return
+
   const inicio = parseFecha(data.fechaInicio)
   const fin = parseFecha(data.fechaFin)
   const diasSet = new Set(data.diasSemana)
   const dur = data.duracionSlotMinutos
   const MS_DIA = 24 * 60 * 60 * 1000
 
-  // Disponibilidad ya existente del médico dentro del rango, para no duplicar.
+  // Disponibilidad ya existente del médico (y del mismo empleado, si aplica)
+  // dentro del rango, para no duplicar. El scope por empleado es clave: en una
+  // cuenta Pro dos empleados distintos pueden tener el mismo día/hora sin que
+  // uno bloquee al otro.
   const existentes = await prisma.disponibilidad.findMany({
-    where: { medicoId: req.user.id, fecha: { gte: inicio, lte: fin } },
+    where: { medicoId: req.user.id, empleadoId: emp.empleadoId, fecha: { gte: inicio, lte: fin } },
   })
   const yaExiste = new Set(
     existentes.map((d) => `${fechaISO(d.fecha)}|${d.horaInicio}|${d.horaFin}`),
@@ -157,6 +192,7 @@ router.post('/rango', async (req, res) => {
       yaExiste.add(clave)
       nuevas.push({
         medicoId: req.user.id,
+        empleadoId: emp.empleadoId,
         fecha: parseFecha(iso),
         horaInicio: bloque.horaInicio,
         horaFin: bloque.horaFin,
@@ -180,8 +216,16 @@ router.post('/rango', async (req, res) => {
 
 // ── GET /disponibilidad ──────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
-  const { fecha, desde, hasta } = req.query
+  const { fecha, desde, hasta, empleadoId } = req.query
   const where = { medicoId: req.user.id }
+
+  // Filtro opcional por empleado (solo cuentas Pro). El panel de equipo pide la
+  // disponibilidad de un empleado concreto. Sin el parámetro, la lista es la del
+  // profesional como hasta ahora (comportamiento normal intacto).
+  if (empleadoId !== undefined) {
+    const idNum = Number(empleadoId)
+    if (Number.isInteger(idNum) && idNum > 0) where.empleadoId = idNum
+  }
 
   if (fecha && FECHA_RE.test(fecha)) {
     where.fecha = parseFecha(fecha)
