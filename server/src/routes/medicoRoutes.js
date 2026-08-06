@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../services/db.js'
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js'
 import { slugify } from '../services/slug.js'
+import { esZonaHorariaValida } from '../services/timezone.js'
 import { tr } from '../i18n/messages.js'
 
 const router = Router()
@@ -42,7 +43,9 @@ router.get('/slug/:slug', async (req, res) => {
   const slug = String(req.params.slug || '').toLowerCase()
   const medico = await prisma.medico.findUnique({
     where: { slug },
-    select: { id: true, nombre: true, especialidad: true, slug: true, activo: true },
+    // `idiomaPreferido` se expone para sugerir (resaltar) ese idioma en la pantalla
+    // inicial de idioma del registro del cliente. No es dato sensible.
+    select: { id: true, nombre: true, especialidad: true, slug: true, activo: true, idiomaPreferido: true },
   })
   if (!medico) {
     return res.status(404).json({ error: tr(req.lang, 'error.enlaceNoEncontrado'), code: 'SLUG_INVALIDO' })
@@ -146,6 +149,12 @@ const perfilSchema = z.object({
   telefono: z.string().trim().max(40).nullish(),
   direccion: z.string().trim().max(300).nullish(),
   bio: z.string().trim().max(1000).nullish(),
+  // Zona horaria IANA del negocio (editable desde el panel). Se valida que sea real.
+  zonaHoraria: z
+    .string()
+    .trim()
+    .refine((tz) => esZonaHorariaValida(tz), { message: 'Zona horaria no válida' })
+    .optional(),
 })
 
 router.patch('/mi-perfil', requireAuth, requireRole('MEDICO'), async (req, res) => {
@@ -161,10 +170,13 @@ router.patch('/mi-perfil', requireAuth, requireRole('MEDICO'), async (req, res) 
   for (const campo of ['telefono', 'direccion', 'bio']) {
     if (parsed.data[campo] !== undefined) data[campo] = parsed.data[campo] || null
   }
+  // zonaHoraria: solo si se envió y es válida (nunca se pone a null: es obligatoria).
+  if (parsed.data.zonaHoraria) data.zonaHoraria = parsed.data.zonaHoraria
+
   const actualizado = await prisma.medico.update({
     where: { id: req.user.id },
     data,
-    select: { id: true, telefono: true, direccion: true, bio: true },
+    select: { id: true, telefono: true, direccion: true, bio: true, zonaHoraria: true },
   })
   res.json(actualizado)
 })

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
 import ErrorMessage from './ErrorMessage.jsx'
 import PhoneInput from './PhoneInput.jsx'
+import TimezoneSelect, { zonaHorariaDelNavegador } from './TimezoneSelect.jsx'
 
 // Tarjeta de perfil editable del profesional: teléfono (con selector de código de
 // país), dirección/ubicación y ficha biográfica. Estos datos los ve el cliente en
@@ -15,6 +16,7 @@ export default function PerfilProfesionalCard() {
   const [telefono, setTelefono] = useState(user?.telefono || '')
   const [direccion, setDireccion] = useState(user?.direccion || '')
   const [bio, setBio] = useState(user?.bio || '')
+  const [zonaHoraria, setZonaHoraria] = useState(user?.zonaHoraria || 'Europe/Brussels')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState(null)
   const [aviso, setAviso] = useState(false)
@@ -23,7 +25,8 @@ export default function PerfilProfesionalCard() {
   const sucio =
     (telefono || '') !== (user?.telefono || '') ||
     (direccion || '') !== (user?.direccion || '') ||
-    (bio || '') !== (user?.bio || '')
+    (bio || '') !== (user?.bio || '') ||
+    (zonaHoraria || '') !== (user?.zonaHoraria || 'Europe/Brussels')
 
   async function guardar(e) {
     e.preventDefault()
@@ -32,7 +35,7 @@ export default function PerfilProfesionalCard() {
     setAviso(false)
     setGuardando(true)
     try {
-      await medicosApi.actualizarPerfil({ telefono, direccion, bio })
+      await medicosApi.actualizarPerfil({ telefono, direccion, bio, zonaHoraria })
       await refreshUser()
       setAviso(true)
       setTimeout(() => setAviso(false), 3000)
@@ -65,6 +68,30 @@ export default function PerfilProfesionalCard() {
             className={inputCls}
           />
         </div>
+      </div>
+
+      <div className="mt-4">
+        <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('profileEdit.timezone')}</label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <TimezoneSelect value={zonaHoraria} onChange={setZonaHoraria} className={`${inputCls} sm:flex-1`} />
+          {/* Detección explícita: rellena el selector con la zona del dispositivo,
+              pero NO guarda hasta que el profesional pulse "Guardar cambios" (nunca
+              se cambia sola, para no desalinear citas ya agendadas). */}
+          <button
+            type="button"
+            onClick={() => setZonaHoraria(zonaHorariaDelNavegador())}
+            className="shrink-0 rounded-xl border border-navy-300 bg-white px-4 py-3 text-sm font-semibold text-navy-700 transition hover:bg-navy-50"
+          >
+            {t('profileEdit.detectTz')}
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-navy-500">{t('profileEdit.timezoneHint')}</p>
+        {/* Sugerencia cuando el dispositivo está en otra zona que la elegida. */}
+        {zonaHorariaDelNavegador() !== zonaHoraria && (
+          <p className="mt-1 text-xs font-medium text-brand-600">
+            {t('profileEdit.detectedHint', { tz: zonaHorariaDelNavegador() })}
+          </p>
+        )}
       </div>
 
       <div className="mt-4">

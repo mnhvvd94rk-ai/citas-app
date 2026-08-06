@@ -237,6 +237,10 @@ export const disponibilidadApi = {
 export const pacientesApi = {
   listar: () => request('/pacientes'),
   importar: (clientes) => request('/pacientes/importar', { method: 'POST', body: { clientes } }),
+  // Corrección masiva de idioma: fija el idioma del profesional a sus clientes sin
+  // idioma explícito. dryRun=true solo cuenta cuántos se verían afectados.
+  aplicarMiIdioma: (dryRun = false) =>
+    request('/pacientes/aplicar-mi-idioma', { method: 'POST', body: { dryRun } }),
   actualizar: (id, data) => request(`/pacientes/${id}`, { method: 'PATCH', body: data }),
   eliminar: (id) => request(`/pacientes/${id}`, { method: 'DELETE' }),
   notas: (pacienteId) => request(`/notas/${pacienteId}`),

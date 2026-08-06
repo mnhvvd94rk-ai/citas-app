@@ -17,10 +17,14 @@ export default function RegistroPaciente() {
   const navigate = useNavigate()
   const { slug } = useParams() // presente solo en /reservar/:slug
   const { login } = useAuth()
-  const { t, lang } = useLanguage()
+  const { t, lang, setLang } = useLanguage()
   const [paso, setPaso] = useState(0)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState(null)
+  // Idioma de notificaciones ELEGIDO explícitamente por el cliente (ES|EN|FR).
+  // null hasta que toca un botón en la pantalla inicial de idioma; sin elección no
+  // se entra al wizard. Al elegir se guarda con idiomaPreferidoExplicito=true.
+  const [idiomaElegido, setIdiomaElegido] = useState(null)
 
   // Resolución del enlace del profesional. Sin slug no se puede registrar: un
   // cliente siempre nace vinculado al profesional dueño del enlace.
@@ -137,7 +141,9 @@ export default function RegistroPaciente() {
         fotoIdentidadUrl: foto || undefined,
         firmaUrl: firma || undefined,
         slug, // vincula el nuevo cliente al profesional dueño del enlace
-        idiomaPreferido: lang.toUpperCase(), // idioma elegido en pantalla al registrarse
+        // Idioma ELEGIDO explícitamente en la pantalla inicial (no heredado). El
+        // backend lo marca como idiomaPreferidoExplicito=true al venir presente.
+        idiomaPreferido: idiomaElegido || lang.toUpperCase(),
       }
       const res = await authApi.registroPaciente(payload)
       login(res.token, res)
@@ -282,6 +288,65 @@ export default function RegistroPaciente() {
                 {t('reservar.imNew')}
               </button>
             </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Pantalla inicial OBLIGATORIA de idioma: el cliente elige en qué idioma quiere
+  // recibir sus notificaciones (pregunta mostrada en los 3 idiomas a la vez). Se
+  // resalta como sugerencia el idioma del profesional, pero debe confirmar con un
+  // clic; sin elegir no entra al wizard. Al elegir también cambia el idioma de la
+  // interfaz para que el resto del registro se vea en ese idioma.
+  if (!idiomaElegido) {
+    const sugerido = (profesional?.idiomaPreferido || lang.toUpperCase()).toUpperCase()
+    const OPCIONES = [
+      { code: 'ES', label: 'Español' },
+      { code: 'EN', label: 'English' },
+      { code: 'FR', label: 'Français' },
+    ]
+    const elegir = (code) => {
+      setIdiomaElegido(code)
+      setLang(code.toLowerCase())
+    }
+    return (
+      <div className="flex min-h-screen flex-col bg-navy-50 px-6 py-8">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="text-sm font-medium text-navy-500 hover:text-navy-700">← {t('common.back')}</Link>
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-md rounded-2xl bg-white p-7 shadow-xl shadow-navy-900/5 ring-1 ring-navy-100">
+            {profesional && <p className="mb-3 text-center text-sm text-navy-500">{t('reservar.withPro')} {profesional.nombre}</p>}
+            {/* Pregunta trilingüe (a propósito en los 3 idiomas a la vez). */}
+            <div className="space-y-1 text-center">
+              <p className="text-base font-bold text-navy-800">¿En qué idioma quieres recibir tus notificaciones?</p>
+              <p className="text-sm font-semibold text-navy-600">In which language would you like to receive your notifications?</p>
+              <p className="text-sm font-semibold text-navy-600">Dans quelle langue souhaitez-vous recevoir vos notifications ?</p>
+            </div>
+            <div className="mt-6 space-y-3">
+              {OPCIONES.map((o) => {
+                const esSugerido = o.code === sugerido
+                return (
+                  <button
+                    key={o.code}
+                    onClick={() => elegir(o.code)}
+                    className={`flex w-full items-center justify-between rounded-2xl border-2 px-5 py-4 text-left text-lg font-semibold transition ${
+                      esSugerido
+                        ? 'border-brand-500 bg-brand-50 text-navy-800 ring-2 ring-brand-200'
+                        : 'border-navy-200 bg-white text-navy-700 hover:border-navy-400'
+                    }`}
+                  >
+                    <span>{o.label}</span>
+                    {esSugerido && (
+                      <span className="rounded-full bg-brand-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                        {t('reservar.langSuggested')}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>

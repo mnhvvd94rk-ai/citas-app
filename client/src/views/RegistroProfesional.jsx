@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext.jsx'
 import ErrorMessage from '../components/ErrorMessage.jsx'
 import LanguageSelector from '../components/LanguageSelector.jsx'
 import PhoneInput from '../components/PhoneInput.jsx'
+import TimezoneSelect, { zonaHorariaDelNavegador } from '../components/TimezoneSelect.jsx'
 
 // Registro self-serve del profesional. POST /auth/registro-medico → auto-login.
 export default function RegistroProfesional() {
@@ -20,6 +21,9 @@ export default function RegistroProfesional() {
     correo: '',
     password: '',
     confirmar: '',
+    // Default útil: la zona del navegador (corregible en el selector). Determina el
+    // cálculo correcto de los recordatorios de sus clientes.
+    zonaHoraria: zonaHorariaDelNavegador(),
   })
   const [acepta, setAcepta] = useState(false)
   const [enviando, setEnviando] = useState(false)
@@ -53,6 +57,7 @@ export default function RegistroProfesional() {
         correo: form.correo.trim(),
         password: form.password,
         telefono: form.telefono.trim() || undefined,
+        zonaHoraria: form.zonaHoraria || undefined,
       }
       const res = await authApi.registroMedico(payload)
       // El backend devuelve token → auto-login para entrar directo al panel.
@@ -133,6 +138,15 @@ export default function RegistroProfesional() {
                   <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('registerPro.confirmPassword')}</label>
                   <input name="confirmar" type="password" value={form.confirmar} onChange={setCampo} className={inputCls} placeholder="••••••••" />
                 </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('registerPro.timezone')}</label>
+                <TimezoneSelect
+                  value={form.zonaHoraria}
+                  onChange={(v) => setForm((f) => ({ ...f, zonaHoraria: v }))}
+                  className={inputCls}
+                />
+                <p className="mt-1 text-xs text-navy-500">{t('registerPro.timezoneHint')}</p>
               </div>
 
               <label className="flex items-start gap-3">

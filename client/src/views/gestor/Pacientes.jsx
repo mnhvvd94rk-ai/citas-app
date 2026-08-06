@@ -6,6 +6,7 @@ import Spinner from '../../components/Spinner.jsx'
 import ErrorMessage from '../../components/ErrorMessage.jsx'
 import ImportarClientesModal from '../../components/ImportarClientesModal.jsx'
 import AgregarClienteModal from '../../components/AgregarClienteModal.jsx'
+import AplicarIdiomaButton from '../../components/AplicarIdiomaButton.jsx'
 import { formatFechaCorta, formatFechaHora, soloFecha, hoyISO } from '../../lib/format.js'
 
 /** Nombre de archivo seguro: sin acentos, minúsculas, con guiones. */
@@ -143,6 +144,9 @@ export default function Pacientes() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-navy-800">{t('clients.title')}</h1>
           <p className="mt-1 text-sm text-navy-500">{t('clients.subtitle')}</p>
+          <div className="mt-3">
+            <AplicarIdiomaButton onApplied={cargar} />
+          </div>
         </div>
         <div className="flex shrink-0 gap-2">
           <button

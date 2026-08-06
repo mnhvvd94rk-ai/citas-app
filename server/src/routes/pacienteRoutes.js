@@ -115,6 +115,13 @@ router.post('/importar', async (req, res) => {
 
   // Los clientes importados quedan vinculados al profesional que los importa.
   const profesionalId = req.user.id
+  // Idioma del profesional: se hereda cuando la fila no trae idioma explícito, en
+  // vez de caer en un 'ES' fijo (BUG 2). Los clientes de Raquel (FR) ya no nacen ES.
+  const profesional = await prisma.medico.findUnique({
+    where: { id: profesionalId },
+    select: { idiomaPreferido: true },
+  })
+  const idiomaProfesional = profesional?.idiomaPreferido || 'ES'
 
   for (const c of parsed.data.clientes) {
     const correo = c.correo ? c.correo.toLowerCase() : `importado-${randomUUID()}@sin-correo.local`
@@ -130,7 +137,9 @@ router.post('/importar', async (req, res) => {
           cuentaActivada: false,
           estado: 'NUEVO',
           profesionalId,
-          idiomaPreferido: c.idiomaPreferido || 'ES',
+          // Explícito solo si vino en la fila; si no, hereda el del profesional.
+          idiomaPreferido: c.idiomaPreferido || idiomaProfesional,
+          idiomaPreferidoExplicito: Boolean(c.idiomaPreferido),
         },
       })
       creados++
@@ -145,6 +154,34 @@ router.post('/importar', async (req, res) => {
   }
 
   res.status(201).json({ creados, duplicados, errores, total: parsed.data.clientes.length })
+})
+
+// ── POST /pacientes/aplicar-mi-idioma ────────────────────────────────────────
+// Corrección en lote (BUG 2): fija el idioma del PROFESIONAL a todos sus clientes
+// cuyo idioma NO se definió explícitamente (idiomaPreferidoExplicito=false). No
+// pisa a los clientes que eligieron su idioma a propósito. Tras aplicarlo, esos
+// clientes quedan marcados como explícitos. Devuelve cuántos se actualizarían/
+// actualizaron. Con `?dryRun=1` solo cuenta (para el texto de confirmación en UI).
+router.post('/aplicar-mi-idioma', async (req, res) => {
+  const profesional = await prisma.medico.findUnique({
+    where: { id: req.user.id },
+    select: { idiomaPreferido: true },
+  })
+  const idioma = profesional?.idiomaPreferido || 'ES'
+  const where = { profesionalId: req.user.id, idiomaPreferidoExplicito: false }
+
+  const candidatos = await prisma.usuario.count({ where })
+
+  // Vista previa: no modifica nada, solo informa cuántos se verían afectados.
+  if (req.query.dryRun === '1' || req.body?.dryRun === true) {
+    return res.json({ idioma, candidatos, actualizados: 0, dryRun: true })
+  }
+
+  const r = await prisma.usuario.updateMany({
+    where,
+    data: { idiomaPreferido: idioma, idiomaPreferidoExplicito: true },
+  })
+  res.json({ idioma, candidatos, actualizados: r.count })
 })
 
 // ── PATCH /pacientes/:id ─────────────────────────────────────────────────────
@@ -184,7 +221,11 @@ router.patch('/:id', async (req, res) => {
 
   const data = {}
   if (parsed.data.edadManual !== undefined) data.edadManual = parsed.data.edadManual
-  if (parsed.data.idiomaPreferido !== undefined) data.idiomaPreferido = parsed.data.idiomaPreferido
+  if (parsed.data.idiomaPreferido !== undefined) {
+    // El profesional fija el idioma de este cliente: queda explícito.
+    data.idiomaPreferido = parsed.data.idiomaPreferido
+    data.idiomaPreferidoExplicito = true
+  }
   if (parsed.data.estadoTratamiento !== undefined) {
     data.estadoTratamiento = parsed.data.estadoTratamiento
     // Marca/limpia la fecha de finalización al pasar a/desde COMPLETADO.

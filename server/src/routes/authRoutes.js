@@ -19,6 +19,7 @@ import {
   leerCookieDispositivo,
   opcionesCookie,
 } from '../services/deviceToken.js'
+import { esZonaHorariaValida } from '../services/timezone.js'
 
 // Base del frontend para construir el enlace de activación.
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://citas-app-client.vercel.app'
@@ -51,6 +52,14 @@ const registroMedicoSchema = z.object({
   password: z.string().min(6),
   costoCancelacion: z.number().min(0).optional(),
   diasAnticipacionRequierida: z.number().int().min(0).optional(),
+  // Zona horaria IANA del negocio (para el cálculo correcto de recordatorios).
+  // Opcional: si no se envía, se aplica el default del schema. Se valida que sea
+  // una zona real para no guardar basura.
+  zonaHoraria: z
+    .string()
+    .trim()
+    .refine((tz) => esZonaHorariaValida(tz), { message: 'Zona horaria no válida' })
+    .optional(),
 })
 
 const loginSchema = z.object({
@@ -186,7 +195,11 @@ router.post('/registro-paciente', async (req, res) => {
         firmaUrl: data.firmaUrl,
         estado: 'NUEVO',
         profesionalId: profesional.id,
-        idiomaPreferido: data.idiomaPreferido || 'ES',
+        // Idioma: si el cliente lo eligió explícitamente, se respeta y se marca
+        // como explícito; si no, HEREDA el idioma del profesional (no un 'ES'
+        // fijo) y queda como no-explícito (corregible en lote por el profesional).
+        idiomaPreferido: data.idiomaPreferido || profesional.idiomaPreferido || 'ES',
+        idiomaPreferidoExplicito: Boolean(data.idiomaPreferido),
       },
     })
     const token = signToken({ id: usuario.id, tipo: 'PACIENTE' })
@@ -232,6 +245,7 @@ router.post('/registro-medico', async (req, res) => {
         correo: data.correo,
         passwordHash,
         slug,
+        ...(data.zonaHoraria && { zonaHoraria: data.zonaHoraria }),
         ...(data.costoCancelacion !== undefined && { costoCancelacion: data.costoCancelacion }),
         ...(data.diasAnticipacionRequierida !== undefined && {
           diasAnticipacionRequierida: data.diasAnticipacionRequierida,
@@ -573,9 +587,11 @@ router.patch('/me', requireAuth, async (req, res) => {
     return res.json({ tipo, medico: sinPassword(medico) })
   }
 
+  // El cliente elige su idioma explícitamente: se marca como explícito para que
+  // la corrección en lote del profesional ("aplicar mi idioma") no lo pise.
   const usuario = await prisma.usuario.update({
     where: { id },
-    data: { idiomaPreferido: data.idiomaPreferido },
+    data: { idiomaPreferido: data.idiomaPreferido, idiomaPreferidoExplicito: true },
   })
   res.json({ tipo, usuario: sinPassword(usuario) })
 })

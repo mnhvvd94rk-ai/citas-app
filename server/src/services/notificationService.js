@@ -9,27 +9,87 @@ import { prisma } from './db.js'
 // El envío es best-effort: nunca lanza al llamador. Devuelve
 //   { ok: true, notificacionId } | { ok: false, error }
 
-// Plantillas de recordatorio de cita en 3 idiomas (payload: { marca, hora, profesional }).
-const REMINDER_MESSAGES = {
+// Recordatorio de cita: el texto se construye DINÁMICAMENTE a partir del tiempo
+// REAL que falta (payload.minutosRestantes, ya calculado con la zona horaria del
+// profesional) + la hora exacta local. Nunca es un texto fijo por marca 48/24/3h:
+// así, aunque el job dispare en el borde de la ventana de tolerancia, el mensaje
+// es siempre preciso. Siempre se incluye la fecha+hora exacta como referencia
+// inequívoca, además de la cuenta atrás aproximada.
+const REMINDER_L = {
   ES: {
-    '48h': () => ({ asunto: 'Recordatorio: tu cita en 48 horas', texto: '📅 Recordatorio: Tu cita en 48 horas. Cancélala antes de esta fecha si necesitas.' }),
-    '24h': (p) => ({ asunto: 'Recordatorio: tu cita mañana', texto: `📅 ¡Mañana es tu cita! A las ${p.hora} con ${p.profesional}.` }),
-    '3h': () => ({ asunto: 'Tu cita comienza en 3 horas', texto: '⏰ Tu cita comienza en 3 horas. Llega 10 minutos antes.' }),
-    // Recordatorio tardío/plano (Regla A): indica fecha y hora, sin fingir "faltan X".
-    recordatorio: (p) => ({ asunto: 'Recordatorio de tu cita', texto: `📅 Recordatorio: tu cita es el ${p.fecha} a las ${p.hora} con ${p.profesional}.` }),
+    asuntoBase: 'Recordatorio de tu cita',
+    asuntoCon: (cuando) => `Recordatorio: tu cita ${cuando}`,
+    cuando: (min) => {
+      const horas = Math.round(min / 60)
+      if (min < 30) return 'muy pronto'
+      if (min < 90) return 'en aproximadamente 1 hora'
+      if (horas < 21) return `en aproximadamente ${horas} horas`
+      if (horas <= 30) return 'mañana'
+      const dias = Math.round(horas / 24)
+      return `en aproximadamente ${dias} ${dias === 1 ? 'día' : 'días'}`
+    },
+    cuerpo: ({ profesional, fechaLocal, hora, cuando, cerca }) => {
+      const con = profesional ? ` con ${profesional}` : ''
+      const cabeza = cuando ? `📅 Recordatorio: tu cita${con} es ${cuando}` : `📅 Recordatorio de tu cita${con}`
+      const cola = cerca ? 'Llega 10 minutos antes.' : 'Si lo necesitas, puedes cancelar con antelación.'
+      return `${cabeza} — el ${fechaLocal} a las ${hora}. ${cola}`
+    },
   },
   EN: {
-    '48h': () => ({ asunto: 'Reminder: your appointment in 48 hours', texto: '📅 Reminder: Your appointment in 48 hours. Cancel before this date if needed.' }),
-    '24h': (p) => ({ asunto: 'Reminder: your appointment tomorrow', texto: `📅 Your appointment is tomorrow! At ${p.hora} with ${p.profesional}.` }),
-    '3h': () => ({ asunto: 'Your appointment starts in 3 hours', texto: '⏰ Your appointment starts in 3 hours. Arrive 10 minutes early.' }),
-    recordatorio: (p) => ({ asunto: 'Appointment reminder', texto: `📅 Reminder: your appointment is on ${p.fecha} at ${p.hora} with ${p.profesional}.` }),
+    asuntoBase: 'Appointment reminder',
+    asuntoCon: (cuando) => `Reminder: your appointment ${cuando}`,
+    cuando: (min) => {
+      const horas = Math.round(min / 60)
+      if (min < 30) return 'very soon'
+      if (min < 90) return 'in about 1 hour'
+      if (horas < 21) return `in about ${horas} hours`
+      if (horas <= 30) return 'tomorrow'
+      const dias = Math.round(horas / 24)
+      return `in about ${dias} ${dias === 1 ? 'day' : 'days'}`
+    },
+    cuerpo: ({ profesional, fechaLocal, hora, cuando, cerca }) => {
+      const con = profesional ? ` with ${profesional}` : ''
+      const cabeza = cuando ? `📅 Reminder: your appointment${con} is ${cuando}` : `📅 Reminder of your appointment${con}`
+      const cola = cerca ? 'Arrive 10 minutes early.' : 'You can cancel in advance if needed.'
+      return `${cabeza} — on ${fechaLocal} at ${hora}. ${cola}`
+    },
   },
   FR: {
-    '48h': () => ({ asunto: 'Rappel : votre rendez-vous dans 48 heures', texto: '📅 Rappel: Votre rendez-vous dans 48 heures. Annulez avant cette date si nécessaire.' }),
-    '24h': (p) => ({ asunto: 'Rappel : votre rendez-vous demain', texto: `📅 Votre rendez-vous est demain! À ${p.hora} avec ${p.profesional}.` }),
-    '3h': () => ({ asunto: 'Votre rendez-vous commence dans 3 heures', texto: '⏰ Votre rendez-vous commence dans 3 heures. Arrivez 10 minutes plus tôt.' }),
-    recordatorio: (p) => ({ asunto: 'Rappel de votre rendez-vous', texto: `📅 Rappel : votre rendez-vous est le ${p.fecha} à ${p.hora} avec ${p.profesional}.` }),
+    asuntoBase: 'Rappel de votre rendez-vous',
+    asuntoCon: (cuando) => `Rappel : votre rendez-vous ${cuando}`,
+    cuando: (min) => {
+      const horas = Math.round(min / 60)
+      if (min < 30) return 'très bientôt'
+      if (min < 90) return 'dans environ 1 heure'
+      if (horas < 21) return `dans environ ${horas} heures`
+      if (horas <= 30) return 'demain'
+      const dias = Math.round(horas / 24)
+      return `dans environ ${dias} ${dias === 1 ? 'jour' : 'jours'}`
+    },
+    cuerpo: ({ profesional, fechaLocal, hora, cuando, cerca }) => {
+      const con = profesional ? ` avec ${profesional}` : ''
+      const cabeza = cuando ? `📅 Rappel : votre rendez-vous${con} est ${cuando}` : `📅 Rappel de votre rendez-vous${con}`
+      const cola = cerca ? 'Arrivez 10 minutes plus tôt.' : 'Vous pouvez annuler à l’avance si nécessaire.'
+      return `${cabeza} — le ${fechaLocal} à ${hora}. ${cola}`
+    },
   },
+}
+
+/** Construye el recordatorio dinámico (asunto + texto) en el idioma dado. */
+function construirRecordatorio(payload, idioma) {
+  const L = REMINDER_L[idioma] || REMINDER_L.ES
+  const min = Number.isFinite(payload.minutosRestantes) ? payload.minutosRestantes : null
+  const cuando = min != null ? L.cuando(min) : null
+  const cerca = min != null && min <= 4 * 60
+  const asunto = cuando ? L.asuntoCon(cuando) : L.asuntoBase
+  const texto = L.cuerpo({
+    profesional: payload.profesional,
+    fechaLocal: payload.fechaLocal || payload.fecha,
+    hora: payload.hora,
+    cuando,
+    cerca,
+  })
+  return { asunto, texto }
 }
 
 // Línea de videoconferencia añadida a los recordatorios (por idioma).
@@ -100,13 +160,12 @@ export function construirMensaje(tipo, payload = {}, idioma = 'ES') {
     }
   }
 
-  // Recordatorio automático de cita: se construye en el idioma del cliente.
+  // Recordatorio automático de cita: se construye en el idioma del cliente, con
+  // texto DINÁMICO según el tiempo real restante (nunca fijo por marca 48/24/3h).
   if (tipo === 'RECORDATORIO_CITA') {
-    const lang = REMINDER_MESSAGES[idioma] ? idioma : 'ES'
-    const fn = REMINDER_MESSAGES[lang][payload.marca]
-    const base = fn ? fn(payload) : { asunto: 'Recordatorio de cita', texto: payload.texto || '' }
-    const { asunto } = base
-    let texto = base.texto
+    const lang = REMINDER_L[idioma] ? idioma : 'ES'
+    const { asunto } = construirRecordatorio(payload, lang)
+    let texto = construirRecordatorio(payload, lang).texto
     // Si la cita es por videoconferencia, adjunta el enlace para unirse.
     if (payload.enlaceVideoconferencia) {
       texto += (VIDEO_LINE[lang] || VIDEO_LINE.ES)(payload.enlaceVideoconferencia)

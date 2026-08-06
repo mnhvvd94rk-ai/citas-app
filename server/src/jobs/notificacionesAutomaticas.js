@@ -6,6 +6,7 @@
 import cron from 'node-cron'
 import { prisma } from '../services/db.js'
 import notificationService from '../services/notificationService.js'
+import { wallTimeToInstant, ZONA_HORARIA_DEFAULT } from '../services/timezone.js'
 
 const TOLERANCIA_MIN = 5 // ventana ±5 min alrededor de la marca exacta
 const MARCAS = [
@@ -14,10 +15,16 @@ const MARCAS = [
   { tipo: '3h', minutos: 3 * 60 },
 ]
 
-/** Instante (Date) de una cita a partir de su fecha (medianoche UTC) y horaInicio. */
+/**
+ * Instante UTC REAL de una cita. La hora (fecha + horaInicio) es hora "de pared"
+ * en la ZONA HORARIA del profesional dueño; se convierte a UTC con esa zona (y su
+ * horario de verano). Antes se tomaba como UTC crudo, lo que desfasaba los
+ * recordatorios según la zona (BUG 1).
+ */
 function instanteCita(cita) {
   const ymd = cita.fecha.toISOString().slice(0, 10)
-  return new Date(`${ymd}T${cita.horaInicio}:00.000Z`)
+  const tz = cita.medico?.zonaHoraria || ZONA_HORARIA_DEFAULT
+  return wallTimeToInstant(ymd, cita.horaInicio, tz)
 }
 
 /**
@@ -33,7 +40,7 @@ export async function ejecutar(ahora = new Date()) {
     where: { estado: 'CONFIRMADA', fecha: { gte: desde, lte: en3dias } },
     include: {
       paciente: { select: { id: true, correo: true, telefono: true, idiomaPreferido: true } },
-      medico: { select: { nombre: true, idiomaPreferido: true } },
+      medico: { select: { nombre: true, idiomaPreferido: true, zonaHoraria: true } },
     },
   })
 
@@ -65,6 +72,13 @@ export async function ejecutar(ahora = new Date()) {
         const payload = {
           marca: marca.tipo,
           hora: cita.horaInicio,
+          // Fecha local de la cita (YYYY-MM-DD, la parte de fecha ya es el día local).
+          fechaLocal: cita.fecha.toISOString().slice(0, 10),
+          // Minutos REALES que faltan al momento del envío (ya con zona horaria
+          // correcta). El texto del recordatorio se redacta a partir de esto, no
+          // de la marca, para que sea siempre preciso aunque el job dispare en el
+          // borde de la ventana de tolerancia (BUG 1).
+          minutosRestantes: Math.round(diffMin),
           profesional: cita.medico?.nombre || '',
           citaId: cita.id,
           enlaceVideoconferencia:

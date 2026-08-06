@@ -69,6 +69,13 @@ model Usuario {
   estado             String   @default("NUEVO") // NUEVO | CONTINUIDAD
   fechaRegistro      DateTime @default(now())
   idiomaPreferido    String   @default("ES") // ES | EN | FR (para notificaciones)
+  // ¿El idioma se definió EXPLÍCITAMENTE (el cliente lo eligió, el profesional lo
+  // fijó, o vino en la importación) o es solo un valor heredado/por defecto? Los
+  // clientes nacen en false cuando el idioma se HEREDA del profesional (o cae en
+  // el default); pasa a true cuando alguien lo elige a propósito. La acción
+  // "aplicar mi idioma a mis clientes" del profesional solo toca los que están en
+  // false, para no pisar una elección deliberada.
+  idiomaPreferidoExplicito Boolean @default(false)
   // Los clientes creados por registro propio nacen activados (true). Los
   // importados por el profesional nacen en false: no pueden iniciar sesión
   // hasta que activan la cuenta y definen su propia contraseña.
@@ -133,6 +140,15 @@ model Medico {
 
   // Idioma preferido para sus notificaciones (recordatorios al profesional).
   idiomaPreferido String @default("ES") // ES | EN | FR
+
+  // Zona horaria IANA del negocio (ej. "Europe/Brussels", "America/Mexico_City").
+  // El motor de notificaciones la usa SIEMPRE para convertir la hora "de pared" de
+  // una cita (fecha + horaInicio, sin zona) al instante UTC real y calcular el
+  // tiempo restante correcto. Sin esto, la hora se interpretaba como UTC y los
+  // recordatorios salían desfasados según la zona del profesional. Default
+  // "Europe/Brussels" solo para registros nuevos que no la especifiquen; los
+  // profesionales existentes se corrigen a su zona real explícitamente.
+  zonaHoraria     String @default("Europe/Brussels")
 
   // Foto de perfil (opcional). Data URL / URL de imagen. Si es null, el frontend
   // usa el avatar genérico (inicial del nombre) como hasta ahora.
