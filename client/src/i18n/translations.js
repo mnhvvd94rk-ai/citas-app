@@ -238,6 +238,12 @@ const translations = {
       blocked: 'Notificaciones bloqueadas. Actívalas en los ajustes del navegador.',
       iosInstall: 'Para activar notificaciones en iPhone, primero instala esta app desde el botón compartir → Añadir a pantalla de inicio.',
     },
+    tzBanner: {
+      text: 'Detectamos que tu dispositivo está en la zona horaria {detected}, pero tu cuenta usa {current}. ¿Quieres actualizarla?',
+      update: 'Actualizar a {detected}',
+      updating: 'Actualizando…',
+      keep: 'No, mantener la actual',
+    },
     activate: {
       accountNotActivated: '¿No has activado tu cuenta?',
       activateHereLink: 'Actívala aquí',
@@ -904,6 +910,12 @@ const translations = {
       blocked: 'Notifications are blocked. Enable them in your browser settings.',
       iosInstall: 'To enable notifications on iPhone, first install this app from the Share button → Add to Home Screen.',
     },
+    tzBanner: {
+      text: 'We detected your device is in the {detected} time zone, but your account uses {current}. Update it?',
+      update: 'Update to {detected}',
+      updating: 'Updating…',
+      keep: 'No, keep current',
+    },
     activate: {
       accountNotActivated: "Haven't activated your account?",
       activateHereLink: 'Activate it here',
@@ -1563,6 +1575,12 @@ const translations = {
       working: 'Un instant…',
       blocked: 'Notifications bloquées. Activez-les dans les réglages du navigateur.',
       iosInstall: 'Pour activer les notifications sur iPhone, installez d’abord cette app via le bouton Partager → Sur l’écran d’accueil.',
+    },
+    tzBanner: {
+      text: 'Nous avons détecté que votre appareil est dans le fuseau {detected}, mais votre compte utilise {current}. Mettre à jour ?',
+      update: 'Mettre à jour vers {detected}',
+      updating: 'Mise à jour…',
+      keep: 'Non, garder l’actuel',
     },
     activate: {
       accountNotActivated: 'Vous n’avez pas activé votre compte ?',

@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext.jsx'
 import { authApi } from '../services/api.js'
 import LanguageSelector from './LanguageSelector.jsx'
 import Logo from './Logo.jsx'
+import TimezoneBanner from './TimezoneBanner.jsx'
 
 // Dashboard profesional estilo Calendly: header + sidebar estrecho de 3 opciones
 // (colapsable en móvil) + contenido principal.
@@ -88,6 +89,11 @@ export default function GestorLayout() {
           </div>
         </div>
       </header>
+
+      {/* Aviso de zona horaria: si el dispositivo difiere de la cuenta, ofrece
+          actualizar (solo con confirmación). Corrige a los profesionales que nunca
+          pasaron por el registro con detección automática. */}
+      <TimezoneBanner />
 
       <div className="mx-auto flex w-full max-w-6xl flex-1">
         {/* Sidebar desktop */}
