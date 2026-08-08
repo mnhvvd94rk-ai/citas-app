@@ -9,7 +9,26 @@ import {
   asignarEmpleado,
 } from '../services/slotEngine.js'
 import notificationService from '../services/notificationService.js'
+import { ZONA_HORARIA_DEFAULT } from '../services/timezone.js'
 import { tr } from '../i18n/messages.js'
+
+/**
+ * Zona horaria con la que se ANCLA una cita: la de la franja de disponibilidad que
+ * cubre el slot elegido (donde el profesional definió esa hora de pared). Si no se
+ * encuentra franja cubridora, cae a `fallback` (la zona actual del médico/default).
+ * Así la cita hereda la zona en que se DEFINIÓ el horario, no la del momento de
+ * reservar (que podría diferir si el profesional viajó tras publicar su agenda).
+ */
+function zonaDeCobertura(disps, horaInicio, horaFin, fallback) {
+  const ini = Number(horaInicio.slice(0, 2)) * 60 + Number(horaInicio.slice(3, 5))
+  const fin = Number(horaFin.slice(0, 2)) * 60 + Number(horaFin.slice(3, 5))
+  const cubridora = (disps || []).find((d) => {
+    const dIni = Number(d.horaInicio.slice(0, 2)) * 60 + Number(d.horaInicio.slice(3, 5))
+    const dFin = Number(d.horaFin.slice(0, 2)) * 60 + Number(d.horaFin.slice(3, 5))
+    return dIni <= ini && fin <= dFin
+  })
+  return cubridora?.zonaHorariaCreacion || fallback
+}
 
 const router = Router()
 
@@ -319,7 +338,7 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
   const fechaDate = parseFecha(data.fecha)
   const medico = await prisma.medico.findUnique({
     where: { id: medicoId },
-    select: { costoCancelacion: true, diasAnticipacionRequierida: true, esNegocioPro: true },
+    select: { costoCancelacion: true, diasAnticipacionRequierida: true, esNegocioPro: true, zonaHoraria: true },
   })
 
   // c/d) Slots libres para esa fecha. Cuenta normal → disponibilidad del médico.
@@ -327,6 +346,7 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
   //      cliente eligió "repetir con X" (data.empleadoId).
   let libres
   let empleadosData = null // solo se rellena en cuenta Pro (para asignación)
+  let dispsMedico = null // franjas del médico (cuenta normal), para anclar la zona
   if (medico?.esNegocioPro) {
     // Modo "repetir con X": valida que el empleado sea del negocio y esté activo.
     if (data.empleadoId != null) {
@@ -345,6 +365,7 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
       prisma.disponibilidad.findMany({ where: { medicoId, fecha: fechaDate } }),
       prisma.cita.findMany({ where: { medicoId, fecha: fechaDate } }),
     ])
+    dispsMedico = disponibilidades
     libres = slotsDisponibles(disponibilidades, citas, fechaDate)
   }
 
@@ -398,6 +419,17 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
   const costoCancelacion = medico?.costoCancelacion ?? 0
   const diasAnticipacionRequierida = (medico?.diasAnticipacionRequierida ?? 7) * (esDoble ? 2 : 1)
 
+  // h.3) Zona horaria con la que se ANCLA la cita (modelo Google Calendar): la de
+  //      la franja que definió ese horario (Pro → franja del empleado asignado;
+  //      normal → franja del médico). Fallback: zona actual del médico o default.
+  //      El recordatorio usará SIEMPRE esta zona, nunca la del profesional al
+  //      momento de notificar → la cita no se mueve aunque él viaje.
+  const zonaFallback = medico?.zonaHoraria || ZONA_HORARIA_DEFAULT
+  const dispsZona = medico?.esNegocioPro
+    ? empleadosData?.find((e) => e.empleadoId === empleadoId)?.disponibilidades
+    : dispsMedico
+  const zonaHorariaCreacion = zonaDeCobertura(dispsZona, horaInicio, horaFin, zonaFallback)
+
   // i) Crea la cita.
   const tipoCita = data.tipoCita === 'VIDEOCONFERENCIA' ? 'VIDEOCONFERENCIA' : 'PRESENCIAL'
   let cita = await prisma.cita.create({
@@ -415,6 +447,7 @@ router.post('/reservar', requireAuth, requireRole('PACIENTE'), async (req, res) 
       diasAnticipacionRequierida,
       esDoble,
       tipoCita,
+      zonaHorariaCreacion,
     },
   })
 
@@ -492,10 +525,11 @@ router.post('/crear-manual', requireAuth, requireRole('MEDICO'), async (req, res
   // d) Penalización por cancelación copiada del profesional (igual que reservar).
   const medico = await prisma.medico.findUnique({
     where: { id: medicoId },
-    select: { costoCancelacion: true, diasAnticipacionRequierida: true },
+    select: { costoCancelacion: true, diasAnticipacionRequierida: true, zonaHoraria: true },
   })
 
-  // e) Crea la cita CONFIRMADA.
+  // e) Crea la cita CONFIRMADA. El profesional la agenda directamente: se ancla a
+  //    SU zona horaria activa en este momento (modelo Google Calendar).
   const tipoCita = data.tipoCita === 'VIDEOCONFERENCIA' ? 'VIDEOCONFERENCIA' : 'PRESENCIAL'
   let cita = await prisma.cita.create({
     data: {
@@ -510,6 +544,7 @@ router.post('/crear-manual', requireAuth, requireRole('MEDICO'), async (req, res
       diasAnticipacionRequierida: medico?.diasAnticipacionRequierida ?? 7,
       esDoble: false,
       tipoCita,
+      zonaHorariaCreacion: medico?.zonaHoraria || ZONA_HORARIA_DEFAULT,
     },
   })
 

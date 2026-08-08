@@ -2,15 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
-import { authApi } from '../services/api.js'
+import { authApi, medicosApi } from '../services/api.js'
 import LanguageSelector from './LanguageSelector.jsx'
 import Logo from './Logo.jsx'
-import TimezoneBanner from './TimezoneBanner.jsx'
+import { zonaHorariaDelNavegador } from '../lib/tz.js'
 
 // Dashboard profesional estilo Calendly: header + sidebar estrecho de 3 opciones
 // (colapsable en móvil) + contenido principal.
 export default function GestorLayout() {
-  const { user, logout } = useAuth()
+  const { user, logout, refreshUser } = useAuth()
   const { t, lang } = useLanguage()
   const navigate = useNavigate()
   const [menuAbierto, setMenuAbierto] = useState(false)
@@ -23,6 +23,24 @@ export default function GestorLayout() {
     langRef.current = lang
     authApi.actualizarIdioma(lang.toUpperCase()).catch(() => {})
   }, [lang])
+
+  // Zona horaria "en vivo" (como el reloj del teléfono): cada vez que el profesional
+  // carga su panel, si la zona real de su dispositivo difiere de la guardada, se
+  // actualiza en SILENCIO (sin preguntar). Esto NO mueve las citas ya agendadas:
+  // cada cita quedó anclada a su propia zona al crearse (zonaHorariaCreacion); solo
+  // afecta a lo que se cree a partir de ahora.
+  const tzSyncRef = useRef(false)
+  useEffect(() => {
+    if (!user?.zonaHoraria || tzSyncRef.current) return
+    const zonaDispositivo = zonaHorariaDelNavegador()
+    if (zonaDispositivo && zonaDispositivo !== user.zonaHoraria) {
+      tzSyncRef.current = true
+      medicosApi
+        .actualizarPerfil({ zonaHoraria: zonaDispositivo })
+        .then(() => refreshUser())
+        .catch(() => { tzSyncRef.current = false })
+    }
+  }, [user?.zonaHoraria, refreshUser])
 
   const nav = [
     { to: '/gestor/agenda', label: t('tabs.agenda'), icon: '📅' },
@@ -89,11 +107,6 @@ export default function GestorLayout() {
           </div>
         </div>
       </header>
-
-      {/* Aviso de zona horaria: si el dispositivo difiere de la cuenta, ofrece
-          actualizar (solo con confirmación). Corrige a los profesionales que nunca
-          pasaron por el registro con detección automática. */}
-      <TimezoneBanner />
 
       <div className="mx-auto flex w-full max-w-6xl flex-1">
         {/* Sidebar desktop */}

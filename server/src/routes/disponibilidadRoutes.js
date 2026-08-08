@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../services/db.js'
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js'
 import { generarSlots, slotsDisponibles } from '../services/slotEngine.js'
+import { ZONA_HORARIA_DEFAULT } from '../services/timezone.js'
 import { tr } from '../i18n/messages.js'
 
 const router = Router()
@@ -65,6 +66,13 @@ async function validarEmpleado(empleadoId, req, res) {
     return { ok: false }
   }
   return { ok: true, empleadoId }
+}
+
+// Zona horaria ACTIVA del profesional (su dispositivo, sincronizada en vivo). Se
+// ancla en cada franja que crea (modelo Google Calendar). Fallback: default.
+async function zonaActualDelMedico(medicoId) {
+  const m = await prisma.medico.findUnique({ where: { id: medicoId }, select: { zonaHoraria: true } })
+  return m?.zonaHoraria || ZONA_HORARIA_DEFAULT
 }
 
 // ── Esquemas ─────────────────────────────────────────────────────────────────
@@ -140,6 +148,7 @@ router.post('/', async (req, res) => {
       horaInicio: data.horaInicio,
       horaFin: data.horaFin,
       duracionMinutos: data.duracionSlotMinutos,
+      zonaHorariaCreacion: await zonaActualDelMedico(req.user.id),
     },
   })
   res.status(201).json(disponibilidad)
@@ -156,6 +165,7 @@ router.post('/rango', async (req, res) => {
   const emp = await validarEmpleado(data.empleadoId, req, res)
   if (!emp.ok) return
 
+  const zonaCreacion = await zonaActualDelMedico(req.user.id)
   const inicio = parseFecha(data.fechaInicio)
   const fin = parseFecha(data.fechaFin)
   const diasSet = new Set(data.diasSemana)
@@ -197,6 +207,7 @@ router.post('/rango', async (req, res) => {
         horaInicio: bloque.horaInicio,
         horaFin: bloque.horaFin,
         duracionMinutos: dur,
+        zonaHorariaCreacion: zonaCreacion,
       })
       creadosEnDia++
     }

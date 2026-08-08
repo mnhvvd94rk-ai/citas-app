@@ -16,14 +16,16 @@ const MARCAS = [
 ]
 
 /**
- * Instante UTC REAL de una cita. La hora (fecha + horaInicio) es hora "de pared"
- * en la ZONA HORARIA del profesional dueño; se convierte a UTC con esa zona (y su
- * horario de verano). Antes se tomaba como UTC crudo, lo que desfasaba los
- * recordatorios según la zona (BUG 1).
+ * Instante UTC REAL de una cita. La hora (fecha + horaInicio) es hora "de pared";
+ * se convierte a UTC con la ZONA HORARIA ANCLADA en la propia cita al agendarse
+ * (`zonaHorariaCreacion`), NUNCA con la zona actual del profesional. Así, aunque el
+ * profesional viaje y su `medico.zonaHoraria` cambie, una cita ya agendada mantiene
+ * su hora original (modelo Google Calendar). Fallback para citas previas sin zona
+ * anclada: la zona actual del médico, y por último el default.
  */
-function instanteCita(cita) {
+export function instanteCita(cita) {
   const ymd = cita.fecha.toISOString().slice(0, 10)
-  const tz = cita.medico?.zonaHoraria || ZONA_HORARIA_DEFAULT
+  const tz = cita.zonaHorariaCreacion || cita.medico?.zonaHoraria || ZONA_HORARIA_DEFAULT
   return wallTimeToInstant(ymd, cita.horaInicio, tz)
 }
 
