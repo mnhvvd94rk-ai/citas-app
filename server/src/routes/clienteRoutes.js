@@ -139,7 +139,12 @@ router.post('/agregar-profesional', requireAuth, requireRole('PACIENTE'), async 
         estado: 'NUEVO',
         cuentaActivada: true,
         profesionalId: profesional.id,
+        // Hereda el idioma del cliente original Y su carácter explícito: si ya lo
+        // había elegido a propósito, la cuenta con el nuevo profesional también nace
+        // como explícita, de modo que el botón "Aplicar mi idioma" de ese profesional
+        // no la sobrescriba sin querer.
         idiomaPreferido: yo.idiomaPreferido,
+        idiomaPreferidoExplicito: yo.idiomaPreferidoExplicito,
         identidadRaizId: raiz, // vínculo explícito con su identidad
       },
     })
