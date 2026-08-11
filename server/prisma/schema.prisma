@@ -81,6 +81,15 @@ model Usuario {
   // hasta que activan la cuenta y definen su propia contraseña.
   cuentaActivada     Boolean  @default(true)
 
+  // Anti-fuerza-bruta de la ACTIVACIÓN DIRECTA por teléfono (ver
+  // /auth/activacion-directa): contador de intentos FALLIDOS consecutivos de
+  // confirmación de teléfono y momento del último intento. Al alcanzar el máximo,
+  // el servidor BLOQUEA nuevos intentos durante una ventana de tiempo, sin
+  // depender del límite visual del frontend. Se reinicia a 0 al acertar (o cuando
+  // la ventana de bloqueo ya expiró).
+  intentosActivacionFallidos Int       @default(0)
+  ultimoIntentoActivacion    DateTime?
+
   // Gestión del cliente por el profesional (no proviene del registro):
   edadManual              Int? // edad introducida a mano (no hay fecha de nacimiento)
   estadoTratamiento       String    @default("ACTIVO") // ACTIVO | COMPLETADO | EN_PAUSA

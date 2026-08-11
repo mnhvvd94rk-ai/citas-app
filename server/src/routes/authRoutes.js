@@ -149,6 +149,31 @@ router.post('/registro-paciente', async (req, res) => {
   // es como un cliente se registra con un segundo profesional: mismo teléfono,
   // correo distinto). Por eso el teléfono nunca bloquea el registro.
   const correo = data.correo.trim()
+
+  // Cuenta pre-registrada (por el propio profesional, manual o CSV) que aún no se
+  // ha activado: nace con cuentaActivada=false y sin contraseña. Si el cliente
+  // intenta registrarse por el enlace de ESE MISMO profesional y sus datos
+  // (correo o teléfono) coinciden con esa cuenta, NO es un duplicado: es una
+  // cuenta incompleta que puede completar. En vez de bloquear, se le ofrece el
+  // flujo de activación directa (confirmar teléfono + crear contraseña). El
+  // filtro por profesionalId es clave: una coincidencia con OTRO profesional no
+  // entra aquí (no se puede activar una cuenta ajena por el enlace equivocado).
+  const pendientePropia = await prisma.usuario.findFirst({
+    where: {
+      profesionalId: profesional.id,
+      cuentaActivada: false,
+      OR: [{ correo }, { correo: correo.toLowerCase() }, { telefono: data.telefono }],
+    },
+    select: { id: true },
+  })
+  if (pendientePropia) {
+    return res.status(409).json({
+      code: 'ACTIVACION_DISPONIBLE',
+      profesionalNombre: profesional.nombre,
+      error: 'Ya tienes una cuenta con este profesional. Confirma tu teléfono para activarla.',
+    })
+  }
+
   const [porCorreo, porDocumento, porTelefono] = await Promise.all([
     prisma.usuario.findFirst({ where: { OR: [{ correo }, { correo: correo.toLowerCase() }] } }),
     prisma.usuario.findFirst({ where: { documentoIdentidad: data.documentoIdentidad } }),
@@ -531,6 +556,166 @@ router.post('/completar-activacion', async (req, res) => {
   })
 
   res.json({ ok: true, mensaje: 'Cuenta activada. Ya puedes iniciar sesión.' })
+})
+
+// ── Activación directa por el enlace del profesional ──────────────────────────
+// Puerta ADICIONAL al correo de activación: cuando un cliente pre-registrado (sin
+// contraseña) llega por /reservar/:slug de SU MISMO profesional, puede completar
+// su cuenta confirmando el teléfono registrado (prueba de identidad) y creando su
+// contraseña, sin esperar ningún correo. No reemplaza al enlace por email.
+
+// Throttle server-side de la confirmación de teléfono: tras MAX fallos seguidos,
+// el servidor BLOQUEA la cuenta durante VENTANA_MS (independiente del límite
+// visual del frontend). El contador se persiste en Usuario y se reinicia al
+// acertar o cuando la ventana ya expiró.
+const MAX_INTENTOS_ACTIVACION = 5
+const VENTANA_BLOQUEO_ACTIVACION_MS = 15 * 60 * 1000 // 15 minutos
+
+function respuestaBloqueada(minutos) {
+  return {
+    fail: {
+      status: 429,
+      code: 'ACTIVACION_BLOQUEADA',
+      error: `Demasiados intentos fallidos. Espera unos ${minutos} minutos e inténtalo de nuevo, o contacta a tu profesional para activar tu cuenta.`,
+      reintentarEnMinutos: minutos,
+    },
+  }
+}
+
+/**
+ * Localiza la cuenta PENDIENTE (cuentaActivada=false) bajo el profesional del
+ * `slug` que corresponde al cliente, y confirma que el `telefono` dado coincide
+ * EXACTAMENTE con el guardado. Prioriza el correo tecleado en el registro (así el
+ * contador de intentos funciona aunque el teléfono sea incorrecto); si no hay
+ * coincidencia por correo (p.ej. cuenta importada sin correo real), cae al
+ * teléfono exacto. Aplica el throttle server-side: bloquea tras MAX fallos y
+ * mutará el contador en cada intento (fallo suma, acierto reinicia). No revela si
+ * la cuenta existe cuando no se puede localizar (mismo TELEFONO_NO_COINCIDE),
+ * para no permitir enumeración. Devuelve { profesional, usuario } o
+ * { fail: {status, code, error} }.
+ */
+async function resolverActivacionPendiente({ slug, correo, telefono }) {
+  const profesional = await prisma.medico.findUnique({ where: { slug } })
+  if (!profesional || profesional.activo === false) {
+    return { fail: { status: 404, code: 'SLUG_INVALIDO', error: 'El enlace no es válido.' } }
+  }
+
+  const tel = String(telefono || '').trim()
+  const mail = correo ? String(correo).trim() : ''
+  let usuario = null
+  if (mail) {
+    usuario = await prisma.usuario.findFirst({
+      where: {
+        profesionalId: profesional.id,
+        cuentaActivada: false,
+        OR: [{ correo: mail }, { correo: mail.toLowerCase() }],
+      },
+    })
+  }
+  if (!usuario) {
+    usuario = await prisma.usuario.findFirst({
+      where: { profesionalId: profesional.id, cuentaActivada: false, telefono: tel },
+    })
+  }
+
+  // Cuenta no localizable: respuesta genérica (anti-enumeración). Sin cuenta no
+  // hay contador que tocar ni bloqueo posible por esta vía.
+  if (!usuario) {
+    return { fail: { status: 401, code: 'TELEFONO_NO_COINCIDE', error: 'El teléfono no coincide con la cuenta registrada.' } }
+  }
+
+  const ahora = new Date()
+  const ultimo = usuario.ultimoIntentoActivacion ? new Date(usuario.ultimoIntentoActivacion) : null
+  const enVentana = ultimo && ahora.getTime() - ultimo.getTime() < VENTANA_BLOQUEO_ACTIVACION_MS
+  const fallosPrevios = usuario.intentosActivacionFallidos || 0
+
+  // Ya bloqueada y todavía dentro de la ventana: rechaza sin ni siquiera comparar
+  // el teléfono (protege aunque el frontend ignore el límite).
+  if (fallosPrevios >= MAX_INTENTOS_ACTIVACION && enVentana) {
+    const restanteMs = VENTANA_BLOQUEO_ACTIVACION_MS - (ahora.getTime() - ultimo.getTime())
+    return respuestaBloqueada(Math.max(1, Math.ceil(restanteMs / 60000)))
+  }
+
+  // Base del contador: si la ventana ya expiró, el ciclo se reinicia (empieza de 0).
+  const base = fallosPrevios >= MAX_INTENTOS_ACTIVACION && !enVentana ? 0 : fallosPrevios
+
+  // El teléfono confirmado debe coincidir EXACTAMENTE con el registrado. Un
+  // teléfono vacío guardado (importado sin teléfono) nunca coincide: esa cuenta
+  // solo se puede activar por el enlace de correo.
+  if (!tel || usuario.telefono !== tel) {
+    const nuevos = base + 1
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { intentosActivacionFallidos: nuevos, ultimoIntentoActivacion: ahora },
+    })
+    if (nuevos >= MAX_INTENTOS_ACTIVACION) {
+      return respuestaBloqueada(Math.ceil(VENTANA_BLOQUEO_ACTIVACION_MS / 60000))
+    }
+    return { fail: { status: 401, code: 'TELEFONO_NO_COINCIDE', error: 'El teléfono no coincide con la cuenta registrada.' } }
+  }
+
+  // Acierto: reinicia el contador si venía acumulando.
+  if (fallosPrevios !== 0 || usuario.ultimoIntentoActivacion) {
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { intentosActivacionFallidos: 0, ultimoIntentoActivacion: null },
+    })
+    usuario.intentosActivacionFallidos = 0
+    usuario.ultimoIntentoActivacion = null
+  }
+  return { profesional, usuario }
+}
+
+// POST /auth/activacion-directa/verificar — paso 1: confirma que el teléfono
+// coincide, sin mutar nada. Permite separar el conteo de intentos (teléfono) del
+// paso de crear la contraseña.
+const activacionVerificarSchema = z.object({
+  slug: z.string().min(1),
+  correo: z.string().email().optional(),
+  telefono: z.string().min(1),
+})
+router.post('/activacion-directa/verificar', async (req, res) => {
+  const data = parseOr400(activacionVerificarSchema, req.body, res)
+  if (!data) return
+  const r = await resolverActivacionPendiente(data)
+  if (r.fail) return res.status(r.fail.status).json({ error: r.fail.error, code: r.fail.code })
+  res.json({ ok: true })
+})
+
+// POST /auth/activacion-directa — paso 2: teléfono correcto + contraseña nueva.
+// Marca cuentaActivada=true, fija el idioma elegido como explícito y autentica
+// al cliente (JWT + cookie de dispositivo), igual que un registro normal.
+const activacionDirectaSchema = z.object({
+  slug: z.string().min(1),
+  correo: z.string().email().optional(),
+  telefono: z.string().min(1),
+  password: z.string().min(6),
+  idiomaPreferido: z.enum(['ES', 'EN', 'FR']).optional(),
+})
+router.post('/activacion-directa', async (req, res) => {
+  const data = parseOr400(activacionDirectaSchema, req.body, res)
+  if (!data) return
+
+  const r = await resolverActivacionPendiente(data)
+  if (r.fail) return res.status(r.fail.status).json({ error: r.fail.error, code: r.fail.code })
+  const { profesional, usuario } = r
+
+  const passwordHash = await hashPassword(data.password)
+  const actualizado = await prisma.usuario.update({
+    where: { id: usuario.id },
+    data: {
+      passwordHash,
+      cuentaActivada: true,
+      // Idioma elegido explícitamente en la pantalla trilingüe del flujo: se
+      // respeta y se marca como explícito (la corrección en lote no lo pisa).
+      idiomaPreferido: data.idiomaPreferido || usuario.idiomaPreferido || profesional.idiomaPreferido || 'ES',
+      idiomaPreferidoExplicito: Boolean(data.idiomaPreferido) || usuario.idiomaPreferidoExplicito,
+    },
+  })
+
+  const token = signToken({ id: actualizado.id, tipo: 'PACIENTE' })
+  await emitirDispositivo(res, actualizado.id, profesional.id)
+  res.json({ token, usuario: sinPassword(actualizado) })
 })
 
 // POST /auth/login-medico

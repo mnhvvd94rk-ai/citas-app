@@ -135,6 +135,17 @@ export const authApi = {
     request('/auth/activar-cuenta', { method: 'POST', body: { correo }, auth: false }),
   completarActivacion: (token, password) =>
     request('/auth/completar-activacion', { method: 'POST', body: { token, password }, auth: false }),
+  // Activación directa por el enlace del profesional (cuenta pre-registrada sin
+  // contraseña). Paso 1: confirmar el teléfono registrado; paso 2: crear la
+  // contraseña, que activa la cuenta y autentica al cliente.
+  activacionVerificar: (slug, correo, telefono) =>
+    request('/auth/activacion-directa/verificar', { method: 'POST', body: { slug, correo, telefono }, auth: false }),
+  activacionDirecta: ({ slug, correo, telefono, password, idiomaPreferido }) =>
+    request('/auth/activacion-directa', {
+      method: 'POST',
+      body: { slug, correo, telefono, password, idiomaPreferido },
+      auth: false,
+    }),
 }
 
 // ── Profesional ──────────────────────────────────────────────────────────────

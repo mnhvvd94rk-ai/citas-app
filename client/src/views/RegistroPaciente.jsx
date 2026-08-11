@@ -12,6 +12,9 @@ import EntrarConCodigo from '../components/EntrarConCodigo.jsx'
 import PhoneInput from '../components/PhoneInput.jsx'
 
 const N_STEPS = 6
+// Máximo de intentos para confirmar el teléfono al activar una cuenta pendiente
+// antes de sugerir contactar al profesional.
+const MAX_INTENTOS_ACTIVACION = 5
 
 export default function RegistroPaciente() {
   const navigate = useNavigate()
@@ -33,11 +36,20 @@ export default function RegistroPaciente() {
   const [profesional, setProfesional] = useState(null)
 
   // vista: 'registro' (multi-paso) | 'login' (email/tel + contraseña) | 'auto'
-  // (semi-automático "Hola de nuevo"). saludo = nombre del cliente recordado.
+  // (semi-automático "Hola de nuevo") | 'activar' (completar una cuenta
+  // pre-registrada del MISMO profesional: confirmar teléfono + crear contraseña).
+  // saludo = nombre del cliente recordado.
   const [vista, setVista] = useState('registro')
   const [saludo, setSaludo] = useState('')
   const [accion, setAccion] = useState(false) // procesando continuar/login
   const [credencial, setCredencial] = useState({ identificador: '', password: '' })
+
+  // Flujo de activación directa (vista 'activar'). Dos subpasos: 'telefono'
+  // (confirmar el número registrado) y 'password' (crear la contraseña real).
+  const [activarPaso, setActivarPaso] = useState('telefono')
+  const [activarTelefono, setActivarTelefono] = useState('')
+  const [activarPass, setActivarPass] = useState({ password: '', confirmar: '' })
+  const [activarIntentos, setActivarIntentos] = useState(0)
 
   useEffect(() => {
     if (!slug) {
@@ -149,9 +161,76 @@ export default function RegistroPaciente() {
       login(res.token, res)
       navigate('/paciente/citas', { replace: true })
     } catch (err) {
+      // La cuenta ya existe bajo ESTE profesional pero sin activar (pre-registrada
+      // manual/CSV): no es un error, es una cuenta que el cliente puede completar.
+      // Se pasa al flujo de activación (confirmar teléfono + crear contraseña).
+      if (err.code === 'ACTIVACION_DISPONIBLE') {
+        setError(null)
+        setActivarPaso('telefono')
+        setActivarTelefono('')
+        setActivarPass({ password: '', confirmar: '' })
+        setActivarIntentos(0)
+        setVista('activar')
+        return
+      }
       setError(err)
     } finally {
       setEnviando(false)
+    }
+  }
+
+  // Paso 1 de la activación: confirmar el teléfono registrado. No muta nada; solo
+  // valida. Cada fallo cuenta hacia el límite antes de sugerir contactar al pro.
+  async function verificarTelefonoActivacion() {
+    if (activarIntentos >= MAX_INTENTOS_ACTIVACION) return
+    if (!activarTelefono.trim()) return setError({ message: t('register.errPhone') })
+    setError(null)
+    setAccion(true)
+    try {
+      await authApi.activacionVerificar(slug, cuenta.correo.trim() || undefined, activarTelefono.trim())
+      setActivarPaso('password')
+    } catch (err) {
+      if (err.code === 'TELEFONO_NO_COINCIDE') {
+        setActivarIntentos((n) => n + 1)
+      } else if (err.code === 'ACTIVACION_BLOQUEADA') {
+        // El servidor bloqueó la cuenta (throttle). Refleja el bloqueo en la UI
+        // aunque el contador local aún no llegara al máximo.
+        setActivarIntentos(MAX_INTENTOS_ACTIVACION)
+      }
+      setError(err)
+    } finally {
+      setAccion(false)
+    }
+  }
+
+  // Paso 2 de la activación: crear la contraseña. Activa la cuenta y autentica.
+  async function activarConContrasena() {
+    if (activarPass.password.length < 6) return setError({ message: t('register.errPwLen') })
+    if (activarPass.password !== activarPass.confirmar) return setError({ message: t('register.errPwMatch') })
+    setError(null)
+    setAccion(true)
+    try {
+      const res = await authApi.activacionDirecta({
+        slug,
+        correo: cuenta.correo.trim() || undefined,
+        telefono: activarTelefono.trim(),
+        password: activarPass.password,
+        idiomaPreferido: idiomaElegido || lang.toUpperCase(),
+      })
+      login(res.token, res)
+      navigate('/paciente/citas', { replace: true })
+    } catch (err) {
+      // Si el teléfono dejó de coincidir (p.ej. otra pestaña), vuelve al paso 1.
+      if (err.code === 'TELEFONO_NO_COINCIDE') {
+        setActivarIntentos((n) => n + 1)
+        setActivarPaso('telefono')
+      } else if (err.code === 'ACTIVACION_BLOQUEADA') {
+        setActivarIntentos(MAX_INTENTOS_ACTIVACION)
+        setActivarPaso('telefono')
+      }
+      setError(err)
+    } finally {
+      setAccion(false)
     }
   }
 
@@ -347,6 +426,98 @@ export default function RegistroPaciente() {
                 )
               })}
             </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Flujo de activación de una cuenta pre-registrada del MISMO profesional. El
+  // idioma ya se eligió en la pantalla trilingüe (idiomaElegido), así que aquí
+  // solo se confirma el teléfono y se crea la contraseña. Puerta ADICIONAL al
+  // correo de activación: no lo reemplaza.
+  if (vista === 'activar') {
+    const bloqueado = activarIntentos >= MAX_INTENTOS_ACTIVACION
+    const intentosRestantes = MAX_INTENTOS_ACTIVACION - activarIntentos
+    return (
+      <div className="flex min-h-screen flex-col bg-navy-50 px-6 py-8">
+        <div className="flex items-center justify-between">
+          <button onClick={() => { setError(null); setVista('registro') }} className="text-sm font-medium text-navy-500 hover:text-navy-700">
+            ← {t('common.back')}
+          </button>
+          <LanguageSelector />
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-7 shadow-xl shadow-navy-900/5 ring-1 ring-navy-100">
+            <h1 className="text-xl font-bold text-navy-800">{t('reservar.activarTitle')}</h1>
+            <p className="mt-2 text-sm text-navy-600">
+              {t('reservar.activarMsg', { name: profesional?.nombre || '' })}
+            </p>
+
+            {error && <ErrorMessage error={error} className="mt-4" />}
+
+            {activarPaso === 'telefono' && (
+              <div className="mt-5 space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('reservar.activarConfirmPhone')}</label>
+                  <PhoneInput value={activarTelefono} onChange={setActivarTelefono} inputClassName={inputCls} />
+                </div>
+                {bloqueado ? (
+                  <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{t('reservar.activarBlocked')}</p>
+                ) : (
+                  <>
+                    {activarIntentos > 0 && (
+                      <p className="text-xs text-navy-500">{t('reservar.activarAttemptsLeft', { n: intentosRestantes })}</p>
+                    )}
+                    <button
+                      onClick={verificarTelefonoActivacion}
+                      disabled={accion}
+                      className="w-full rounded-xl bg-navy-700 py-3.5 font-semibold text-white shadow-lg shadow-navy-900/20 transition hover:bg-navy-800 disabled:bg-navy-300"
+                    >
+                      {accion ? t('reservar.activarVerifying') : t('reservar.activarVerify')}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {activarPaso === 'password' && (
+              <div className="mt-5 space-y-4">
+                <div>
+                  <p className="text-sm font-semibold text-navy-800">{t('reservar.activarSetPassword')}</p>
+                  <p className="text-xs text-navy-500">{t('reservar.activarSetPasswordHint')}</p>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('common.password')}</label>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={activarPass.password}
+                    onChange={(e) => setActivarPass((p) => ({ ...p, password: e.target.value }))}
+                    className={inputCls}
+                    placeholder={t('register.pwPlaceholder')}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-navy-700">{t('register.confirmPassword')}</label>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={activarPass.confirmar}
+                    onChange={(e) => setActivarPass((p) => ({ ...p, confirmar: e.target.value }))}
+                    className={inputCls}
+                    placeholder={t('register.pwConfirmPlaceholder')}
+                  />
+                </div>
+                <button
+                  onClick={activarConContrasena}
+                  disabled={accion}
+                  className="w-full rounded-xl bg-navy-700 py-3.5 font-semibold text-white shadow-lg shadow-navy-900/20 transition hover:bg-navy-800 disabled:bg-navy-300"
+                >
+                  {accion ? t('reservar.activarActivating') : t('reservar.activarEnter')}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
