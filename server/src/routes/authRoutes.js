@@ -52,6 +52,9 @@ const registroMedicoSchema = z.object({
   password: z.string().min(6),
   costoCancelacion: z.number().min(0).optional(),
   diasAnticipacionRequierida: z.number().int().min(0).optional(),
+  // Plan elegido en la pantalla inicial del registro (Básica/Pro). Fija
+  // esNegocioPro EN EL MOMENTO de crear la cuenta; nunca se vuelve a preguntar.
+  esNegocioPro: z.boolean().optional(),
   // Zona horaria IANA del negocio (para el cálculo correcto de recordatorios).
   // Opcional: si no se envía, se aplica el default del schema. Se valida que sea
   // una zona real para no guardar basura.
@@ -270,6 +273,9 @@ router.post('/registro-medico', async (req, res) => {
         correo: data.correo,
         passwordHash,
         slug,
+        // Plan elegido al registrarse: Pro activa el modo negocio/equipo desde ya.
+        // Si no viene, cae en el default del schema (false = Básica).
+        ...(data.esNegocioPro !== undefined && { esNegocioPro: data.esNegocioPro }),
         ...(data.zonaHoraria && { zonaHoraria: data.zonaHoraria }),
         ...(data.costoCancelacion !== undefined && { costoCancelacion: data.costoCancelacion }),
         ...(data.diasAnticipacionRequierida !== undefined && {

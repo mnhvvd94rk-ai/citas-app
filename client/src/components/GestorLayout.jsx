@@ -45,11 +45,12 @@ export default function GestorLayout() {
   const nav = [
     { to: '/gestor/agenda', label: t('tabs.agenda'), icon: '📅' },
     { to: '/gestor/disponibilidad', label: t('tabs.availability'), icon: '⚙️' },
-    { to: '/gestor/pacientes', label: t('tabs.clients'), icon: '👥' },
+    { to: '/gestor/clientes', label: t('tabs.clients'), icon: '👥' },
     // "Mi Equipo" solo para cuentas de negocio Pro; un profesional normal no lo ve.
     ...(user?.esNegocioPro
       ? [{ to: '/gestor/equipo', label: t('tabs.team'), icon: '💆' }]
-      : []),
+      // "Actualizar a Pro" solo para cuentas Básicas; una cuenta Pro no lo ve.
+      : [{ to: '/gestor/pro', label: t('tabs.upgradePro'), icon: '⭐' }]),
   ]
 
   function handleLogout() {

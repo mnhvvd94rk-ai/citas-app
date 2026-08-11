@@ -23,6 +23,7 @@ const Agenda = lazy(() => import('./views/gestor/Agenda.jsx'))
 const Disponibilidad = lazy(() => import('./views/gestor/Disponibilidad.jsx'))
 const Pacientes = lazy(() => import('./views/gestor/Pacientes.jsx'))
 const Equipo = lazy(() => import('./views/gestor/Equipo.jsx'))
+const ActualizarPro = lazy(() => import('./views/gestor/ActualizarPro.jsx'))
 
 function Cargando() {
   return (
@@ -53,25 +54,27 @@ export default function App() {
         <Route path="/ayuda" element={<FAQPage />} />
         <Route path="/historia" element={<HistoriaPage />} />
         <Route path="/nuestra-historia" element={<HistoriaPage />} />
-        {/* Rutas de cliente: /*-cliente son las canónicas; /*-paciente se
-            mantienen como alias para no romper enlaces guardados/compartidos. */}
+        {/* Rutas canónicas SIN terminología médica. Las variantes con términos de
+            salud (-medico, -paciente) se mantienen como REDIRECCIÓN silenciosa para
+            no romper enlaces guardados/compartidos; nunca dan error, solo redirigen. */}
         {/* Registro de cliente vinculado a un profesional por su enlace propio.
             El profesionalId viaja implícito en el slug de la URL. */}
         <Route path="/reservar/:slug" element={<RegistroPaciente />} />
         {/* Rutas genéricas (sin slug): ya no permiten crear clientes huérfanos;
             muestran un aviso pidiendo el enlace del profesional. */}
         <Route path="/registro-cliente" element={<RegistroPaciente />} />
-        <Route path="/registro-paciente" element={<RegistroPaciente />} />
+        <Route path="/registro-paciente" element={<Navigate to="/registro-cliente" replace />} />
         <Route path="/registro-profesional" element={<RegistroProfesional />} />
-        <Route path="/registro-medico" element={<RegistroProfesional />} />
+        <Route path="/registro-medico" element={<Navigate to="/registro-profesional" replace />} />
         <Route path="/login-cliente" element={<LoginPaciente />} />
-        <Route path="/login-paciente" element={<LoginPaciente />} />
-        <Route path="/login-medico" element={<LoginMedico />} />
+        <Route path="/login-paciente" element={<Navigate to="/login-cliente" replace />} />
+        <Route path="/login-profesional" element={<LoginMedico />} />
+        <Route path="/login-medico" element={<Navigate to="/login-profesional" replace />} />
         <Route path="/activar-cuenta" element={<ActivarCuenta />} />
 
-        {/* Paciente */}
+        {/* Cliente (rutas canónicas). Las /paciente/* redirigen a /cliente/*. */}
         <Route
-          path="/paciente/citas"
+          path="/cliente/citas"
           element={
             <ProtectedRoute rol="PACIENTE">
               <DashboardCliente />
@@ -79,13 +82,15 @@ export default function App() {
           }
         />
         <Route
-          path="/paciente/nueva-cita"
+          path="/cliente/nueva-cita"
           element={
             <ProtectedRoute rol="PACIENTE">
               <NuevaCita />
             </ProtectedRoute>
           }
         />
+        <Route path="/paciente/citas" element={<Navigate to="/cliente/citas" replace />} />
+        <Route path="/paciente/nueva-cita" element={<Navigate to="/cliente/nueva-cita" replace />} />
 
         {/* Gestor (layout con pestañas) */}
         <Route
@@ -101,7 +106,12 @@ export default function App() {
           {/* /gestor/citas-pendientes se integró en la agenda (calendario) */}
           <Route path="citas-pendientes" element={<Navigate to="/gestor/agenda" replace />} />
           <Route path="disponibilidad" element={<Disponibilidad />} />
-          <Route path="pacientes" element={<Pacientes />} />
+          <Route path="clientes" element={<Pacientes />} />
+          {/* /gestor/pacientes: alias con término de salud → redirige a /gestor/clientes. */}
+          <Route path="pacientes" element={<Navigate to="/gestor/clientes" replace />} />
+          {/* "Actualizar a Pro": solo llegan aquí cuentas Básicas desde el menú.
+              La propia vista redirige a "equipo" si ya es Pro. */}
+          <Route path="pro" element={<ActualizarPro />} />
           {/* Equipo: solo tiene sentido en cuentas Pro; el backend protege sus
               endpoints con 403 y el nav solo muestra el enlace si esNegocioPro. */}
           <Route path="equipo" element={<Equipo />} />

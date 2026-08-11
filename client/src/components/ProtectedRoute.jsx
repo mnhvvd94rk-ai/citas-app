@@ -24,7 +24,7 @@ export default function ProtectedRoute({ children, rol }) {
   }
 
   if (rol && tipo !== rol) {
-    const destino = tipo === 'MEDICO' ? '/gestor/agenda' : '/paciente/citas'
+    const destino = tipo === 'MEDICO' ? '/gestor/agenda' : '/cliente/citas'
     return <Navigate to={destino} replace />
   }
 

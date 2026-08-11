@@ -181,6 +181,19 @@ router.patch('/mi-perfil', requireAuth, requireRole('MEDICO'), async (req, res) 
   res.json(actualizado)
 })
 
+// POST /medicos/actualizar-pro  (profesional autenticado) — convierte una cuenta
+// Básica (esNegocioPro=false) en Pro. Solo tiene sentido para cuentas básicas: una
+// cuenta que ya es Pro simplemente recibe su estado actual (idempotente, sin error).
+// Es la acción del botón "Actualizar a Pro" del menú del profesional.
+router.post('/actualizar-pro', requireAuth, requireRole('MEDICO'), async (req, res) => {
+  const actualizado = await prisma.medico.update({
+    where: { id: req.user.id },
+    data: { esNegocioPro: true },
+    select: { id: true, esNegocioPro: true },
+  })
+  res.json(actualizado)
+})
+
 // ─────────────────────────────────────────────────────────────────────────────
 // EQUIPO — Empleados de una cuenta de negocio Pro. Todas estas rutas exigen que
 // el profesional autenticado tenga esNegocioPro=true; una cuenta normal recibe

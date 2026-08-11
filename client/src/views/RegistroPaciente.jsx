@@ -159,7 +159,7 @@ export default function RegistroPaciente() {
       }
       const res = await authApi.registroPaciente(payload)
       login(res.token, res)
-      navigate('/paciente/citas', { replace: true })
+      navigate('/cliente/citas', { replace: true })
     } catch (err) {
       // La cuenta ya existe bajo ESTE profesional pero sin activar (pre-registrada
       // manual/CSV): no es un error, es una cuenta que el cliente puede completar.
@@ -218,7 +218,7 @@ export default function RegistroPaciente() {
         idiomaPreferido: idiomaElegido || lang.toUpperCase(),
       })
       login(res.token, res)
-      navigate('/paciente/citas', { replace: true })
+      navigate('/cliente/citas', { replace: true })
     } catch (err) {
       // Si el teléfono dejó de coincidir (p.ej. otra pestaña), vuelve al paso 1.
       if (err.code === 'TELEFONO_NO_COINCIDE') {
@@ -241,7 +241,7 @@ export default function RegistroPaciente() {
     try {
       const res = await authApi.dispositivoCanjear(slug)
       login(res.token, res)
-      navigate('/paciente/citas', { replace: true })
+      navigate('/cliente/citas', { replace: true })
     } catch (err) {
       // El token murió entre el saludo y el clic: cae al login manual.
       setError(err)
@@ -273,7 +273,7 @@ export default function RegistroPaciente() {
     try {
       const res = await authApi.clienteLogin(slug, credencial.identificador.trim(), credencial.password)
       login(res.token, res)
-      navigate('/paciente/citas', { replace: true })
+      navigate('/cliente/citas', { replace: true })
     } catch (err) {
       setError(err)
     } finally {

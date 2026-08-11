@@ -161,6 +161,8 @@ export const medicosApi = {
   // Actualiza datos de perfil del profesional visibles para el cliente
   // (teléfono, dirección, bio). Solo se envían los campos presentes.
   actualizarPerfil: (campos) => request('/medicos/mi-perfil', { method: 'PATCH', body: campos }),
+  // Convierte la cuenta Básica actual en Pro (botón "Actualizar a Pro").
+  actualizarPro: () => request('/medicos/actualizar-pro', { method: 'POST' }),
 }
 
 // ── Equipo (empleados de una cuenta de negocio Pro) ──────────────────────────

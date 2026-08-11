@@ -28,7 +28,7 @@ export default function LoginPaciente() {
 
   function entrar(res) {
     login(res.token, res)
-    navigate('/paciente/citas', { replace: true })
+    navigate('/cliente/citas', { replace: true })
   }
 
   async function onSubmit(e) {

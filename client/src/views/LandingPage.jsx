@@ -66,7 +66,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(tipo === 'MEDICO' ? '/gestor/agenda' : '/paciente/citas', { replace: true })
+      navigate(tipo === 'MEDICO' ? '/gestor/agenda' : '/cliente/citas', { replace: true })
     }
   }, [isAuthenticated, tipo, navigate])
 
@@ -151,7 +151,7 @@ export default function LandingPage() {
               <span className="text-xs font-medium uppercase tracking-wide text-white/60">{t('landingPublic.navClients')}</span>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <button onClick={() => navigate('/login-medico')} className="w-full max-w-xs rounded-xl bg-white/95 px-8 py-4 text-lg font-bold text-navy-800 shadow-lg transition hover:-translate-y-0.5 hover:bg-white sm:w-auto">
+              <button onClick={() => navigate('/login-profesional')} className="w-full max-w-xs rounded-xl bg-white/95 px-8 py-4 text-lg font-bold text-navy-800 shadow-lg transition hover:-translate-y-0.5 hover:bg-white sm:w-auto">
                 {t('landing.proAccess')}
               </button>
               <span className="text-xs font-medium uppercase tracking-wide text-white/60">{t('landingPublic.navPros')}</span>
@@ -215,7 +215,7 @@ export default function LandingPage() {
               <div className="rounded-2xl bg-navy-800 p-8 text-center text-white shadow-lg ring-1 ring-navy-900">
                 <h3 className="text-xl font-bold">{t('landingPublic.priceProTitle')}</h3>
                 <p className="mt-2 text-white/80">{t('landingPublic.priceProDesc')}</p>
-                <button onClick={() => navigate('/login-medico')} className="mt-5 w-full rounded-xl bg-brand-500 py-3 font-semibold text-white transition hover:bg-brand-600">
+                <button onClick={() => navigate('/login-profesional')} className="mt-5 w-full rounded-xl bg-brand-500 py-3 font-semibold text-white transition hover:bg-brand-600">
                   {t('landing.proAccess')}
                 </button>
               </div>

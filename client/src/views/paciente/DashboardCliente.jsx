@@ -229,7 +229,7 @@ export default function DashboardCliente() {
               ) : (
                 <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-lg text-white/80">{t('clientDash.noUpcoming')}</p>
-                  <button onClick={() => navigate('/paciente/nueva-cita')} className="w-fit rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-navy-800 transition hover:bg-navy-50">
+                  <button onClick={() => navigate('/cliente/nueva-cita')} className="w-fit rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-navy-800 transition hover:bg-navy-50">
                     {t('dashboard.newAppt')}
                   </button>
                 </div>
@@ -242,7 +242,7 @@ export default function DashboardCliente() {
               <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:col-span-1">
                 <div className="mb-3 flex items-center justify-between">
                   <h2 className="font-bold text-navy-800">{t('clientDash.myAppts')}</h2>
-                  <button onClick={() => navigate('/paciente/nueva-cita')} className="rounded-lg bg-navy-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-navy-800">
+                  <button onClick={() => navigate('/cliente/nueva-cita')} className="rounded-lg bg-navy-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-navy-800">
                     {t('dashboard.newAppt')}
                   </button>
                 </div>

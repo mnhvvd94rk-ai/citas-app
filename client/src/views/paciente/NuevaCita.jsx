@@ -178,7 +178,7 @@ export default function NuevaCita() {
               <p className="mt-1 font-semibold">{exito.horaInicio} – {exito.horaFin}</p>
             </div>
             <button
-              onClick={() => navigate('/paciente/citas')}
+              onClick={() => navigate('/cliente/citas')}
               className="mt-6 w-full rounded-xl bg-navy-700 py-3.5 font-semibold text-white transition hover:bg-navy-800"
             >
               {t('newAppt.viewAppts')}
@@ -193,7 +193,7 @@ export default function NuevaCita() {
     <div className="min-h-screen bg-navy-50">
       <Navbar />
       <main className="mx-auto max-w-2xl px-4 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-        <button onClick={() => navigate('/paciente/citas')} className="text-sm font-medium text-navy-500 hover:text-navy-700">
+        <button onClick={() => navigate('/cliente/citas')} className="text-sm font-medium text-navy-500 hover:text-navy-700">
           ← {t('newAppt.backLink')}
         </button>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-navy-800">{t('newAppt.title')}</h1>

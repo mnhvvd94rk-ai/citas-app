@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext.jsx'
 import ErrorMessage from '../components/ErrorMessage.jsx'
 import LanguageSelector from '../components/LanguageSelector.jsx'
 import PhoneInput from '../components/PhoneInput.jsx'
+import PlanCard from '../components/PlanCard.jsx'
 import { zonaHorariaDelNavegador } from '../lib/tz.js'
 
 // Registro self-serve del profesional. POST /auth/registro-medico → auto-login.
@@ -29,6 +30,12 @@ export default function RegistroProfesional() {
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState(null)
   const [exito, setExito] = useState(false)
+  // Plan elegido en la PANTALLA INICIAL del registro. Mientras es null se muestra
+  // la elección Básica/Pro; al confirmar, se revela el formulario y el valor queda
+  // fijado para el POST (esNegocioPro). Esta pantalla vive solo aquí, en el momento
+  // de crear la cuenta: el login normal nunca la muestra.
+  const [plan, setPlan] = useState(null) // null | 'basica' | 'pro' (confirmado)
+  const [eleccion, setEleccion] = useState('basica') // tarjeta resaltada (Básica por defecto)
 
   function setCampo(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -58,6 +65,8 @@ export default function RegistroProfesional() {
         password: form.password,
         telefono: form.telefono.trim() || undefined,
         zonaHoraria: form.zonaHoraria || undefined,
+        // Fija el plan elegido al crear la cuenta. Pro se decide UNA sola vez aquí.
+        esNegocioPro: plan === 'pro',
       }
       const res = await authApi.registroMedico(payload)
       // El backend devuelve token → auto-login para entrar directo al panel.
@@ -91,12 +100,64 @@ export default function RegistroProfesional() {
     )
   }
 
+  // ── Pantalla inicial: elección de plan (aparece EXACTAMENTE una vez, antes del
+  // formulario). Al confirmar se fija `plan` y se revela el formulario. ──────────
+  if (!plan) {
+    const nombrePlan = eleccion === 'pro' ? t('plans.proName') : t('plans.basicName')
+    return (
+      <div className="flex min-h-screen flex-col bg-navy-50 px-6 py-8">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="text-sm font-medium text-navy-500 hover:text-navy-700">
+            ← {t('common.back')}
+          </Link>
+          <LanguageSelector />
+        </div>
+
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-md">
+            <h1 className="text-center text-2xl font-bold tracking-tight text-navy-800">
+              {t('plans.chooseTitle')}
+            </h1>
+            <p className="mt-1 mb-7 text-center text-sm text-navy-500">{t('plans.chooseSubtitle')}</p>
+
+            <div className="space-y-5">
+              <PlanCard
+                plan="basica"
+                selected={eleccion === 'basica'}
+                onSelect={setEleccion}
+                badge={t('plans.mostPopular')}
+              />
+              <PlanCard
+                plan="pro"
+                selected={eleccion === 'pro'}
+                onSelect={setEleccion}
+                note={t('plans.freeTrial')}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setPlan(eleccion)}
+              className="mt-7 w-full rounded-xl bg-navy-700 py-3.5 font-semibold text-white shadow-lg shadow-navy-900/20 transition hover:bg-navy-800"
+            >
+              {t('plans.continueWith').replace('{plan}', nombrePlan)}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-navy-50 px-6 py-8">
       <div className="flex items-center justify-between">
-        <Link to="/" className="text-sm font-medium text-navy-500 hover:text-navy-700">
+        <button
+          type="button"
+          onClick={() => setPlan(null)}
+          className="text-sm font-medium text-navy-500 hover:text-navy-700"
+        >
           ← {t('common.back')}
-        </Link>
+        </button>
         <LanguageSelector />
       </div>
 
@@ -165,7 +226,7 @@ export default function RegistroProfesional() {
             </form>
 
             <p className="mt-5 text-center text-sm text-navy-500">
-              <Link to="/login-medico" className="font-semibold text-brand-600 hover:underline">
+              <Link to="/login-profesional" className="font-semibold text-brand-600 hover:underline">
                 {t('registerPro.alreadyHaveAccount')}
               </Link>
             </p>
