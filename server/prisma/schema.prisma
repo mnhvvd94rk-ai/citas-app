@@ -190,6 +190,22 @@ model Medico {
   empleados         Empleado[]
   pushSubscriptions PushSubscription[]
   dispositivos      DispositivoCliente[]
+  anuncios          Anuncio[]
+}
+
+/// Anuncio corto que un profesional publica para sus propios clientes (ej.
+/// "Cerrado por vacaciones", "Nueva promoción este mes"). Se muestra en el
+/// dashboard del cliente, del más reciente al más antiguo. `activo=false` es un
+/// soft-delete: el profesional lo oculta de sus clientes sin borrar el registro.
+model Anuncio {
+  id            Int      @id @default(autoincrement())
+  medicoId      Int
+  medico        Medico   @relation(fields: [medicoId], references: [id], onDelete: Cascade)
+  texto         String
+  fechaCreacion DateTime @default(now())
+  activo        Boolean  @default(true)
+
+  @@index([medicoId, activo])
 }
 
 /// Empleado de una cuenta de negocio Pro (esNegocioPro=true). Modela a cada

@@ -32,7 +32,14 @@ router.get('/mi-profesional', requireAuth, requireRole('PACIENTE'), async (req, 
   if (!medico) {
     return res.status(404).json({ error: tr(req.lang, 'error.profesionalNoEncontrado') })
   }
-  res.json(medico)
+  // Anuncios ACTIVOS del profesional, del más reciente al más antiguo. Se envían
+  // junto al perfil para que el dashboard del cliente los muestre en su sección.
+  const anuncios = await prisma.anuncio.findMany({
+    where: { medicoId: medico.id, activo: true },
+    orderBy: { fechaCreacion: 'desc' },
+    select: { id: true, texto: true, fechaCreacion: true },
+  })
+  res.json({ ...medico, anuncios })
 })
 
 // GET /medicos/slug/:slug  (público) — resuelve el enlace de registro
@@ -179,6 +186,62 @@ router.patch('/mi-perfil', requireAuth, requireRole('MEDICO'), async (req, res) 
     select: { id: true, telefono: true, direccion: true, bio: true, zonaHoraria: true },
   })
   res.json(actualizado)
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ANUNCIOS — mensajes cortos que el profesional publica para sus propios clientes
+// (ej. "Cerrado por vacaciones"). Se muestran en el dashboard del cliente. El
+// borrado es SOFT (activo=false): se oculta sin perder el registro.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const anuncioSchema = z.object({
+  texto: z.string().trim().min(1, 'El anuncio no puede estar vacío').max(500),
+})
+
+// POST /medicos/mis-anuncios — crea un anuncio del profesional autenticado.
+router.post('/mis-anuncios', requireAuth, requireRole('MEDICO'), async (req, res) => {
+  const parsed = anuncioSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: tr(req.lang, 'error.datosInvalidos'),
+      detalles: parsed.error.issues.map((i) => ({ campo: i.path.join('.'), mensaje: i.message })),
+    })
+  }
+  const anuncio = await prisma.anuncio.create({
+    data: { medicoId: req.user.id, texto: parsed.data.texto },
+    select: { id: true, texto: true, fechaCreacion: true },
+  })
+  res.status(201).json(anuncio)
+})
+
+// GET /medicos/mis-anuncios — lista los anuncios ACTIVOS del profesional (para su
+// panel), del más reciente al más antiguo.
+router.get('/mis-anuncios', requireAuth, requireRole('MEDICO'), async (req, res) => {
+  const anuncios = await prisma.anuncio.findMany({
+    where: { medicoId: req.user.id, activo: true },
+    orderBy: { fechaCreacion: 'desc' },
+    select: { id: true, texto: true, fechaCreacion: true },
+  })
+  res.json(anuncios)
+})
+
+// DELETE /medicos/mis-anuncios/:id — SOFT-delete (activo=false). Solo el dueño
+// puede ocultar sus propios anuncios; el registro se conserva en BD.
+router.delete('/mis-anuncios/:id', requireAuth, requireRole('MEDICO'), async (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: tr(req.lang, 'error.datosInvalidos') })
+  }
+  // updateMany con el medicoId garantiza que no se pueda tocar el anuncio de otro:
+  // si el id no existe o no es suyo, count=0 → 404.
+  const { count } = await prisma.anuncio.updateMany({
+    where: { id, medicoId: req.user.id, activo: true },
+    data: { activo: false },
+  })
+  if (count === 0) {
+    return res.status(404).json({ error: tr(req.lang, 'error.anuncioNoEncontrado'), code: 'ANUNCIO_NO_ENCONTRADO' })
+  }
+  res.json({ ok: true })
 })
 
 // POST /medicos/actualizar-pro  (profesional autenticado) — convierte una cuenta

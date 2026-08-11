@@ -305,12 +305,26 @@ export default function DashboardCliente() {
                 )}
               </section>
 
-              {/* 3. Anuncios */}
+              {/* 3. Anuncios — anuncios activos del profesional (más reciente
+                  primero). Si no hay ninguno, se muestra el mensaje vacío de antes. */}
               <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
                 <h2 className="mb-3 font-bold text-navy-800">{t('clientDash.announcements')}</h2>
-                <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-center text-sm text-navy-400">
-                  {t('clientDash.noAnnouncements')}
-                </div>
+                {medico?.anuncios?.length ? (
+                  <ul className="space-y-2">
+                    {medico.anuncios.map((a) => (
+                      <li key={a.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p className="whitespace-pre-wrap break-words text-sm text-navy-800">{a.texto}</p>
+                        <p className="mt-1 text-xs text-navy-400">
+                          {new Date(a.fechaCreacion).toLocaleDateString(lang)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-center text-sm text-navy-400">
+                    {t('clientDash.noAnnouncements')}
+                  </div>
+                )}
               </section>
             </div>
           </>

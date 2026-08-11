@@ -165,6 +165,14 @@ export const medicosApi = {
   actualizarPro: () => request('/medicos/actualizar-pro', { method: 'POST' }),
 }
 
+// ── Anuncios del profesional (visibles para sus clientes) ────────────────────
+export const anunciosApi = {
+  listar: () => request('/medicos/mis-anuncios'),
+  crear: (texto) => request('/medicos/mis-anuncios', { method: 'POST', body: { texto } }),
+  // Soft-delete: el backend pone activo=false (no borra el registro).
+  quitar: (id) => request(`/medicos/mis-anuncios/${id}`, { method: 'DELETE' }),
+}
+
 // ── Equipo (empleados de una cuenta de negocio Pro) ──────────────────────────
 // Solo válido para profesionales con esNegocioPro=true; el backend responde 403
 // en cuentas normales.
